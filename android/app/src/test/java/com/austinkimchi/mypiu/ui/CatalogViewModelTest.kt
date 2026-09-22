@@ -7,12 +7,14 @@ import com.austinkimchi.mypiu.core.model.CatalogSearchPage
 import com.austinkimchi.mypiu.core.model.CatalogSong
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
@@ -116,12 +118,62 @@ class CatalogViewModelTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun oldAccountFavoriteResponseCannotSettleNewAccountsMutation() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val firstStarted = CompletableDeferred<Unit>()
+            val firstResult = CompletableDeferred<Boolean>()
+            val secondStarted = CompletableDeferred<Unit>()
+            val secondResult = CompletableDeferred<Boolean>()
+            var requestCount = 0
+            val source = FakeCatalogDataSource { _, _, _ ->
+                if (requestCount++ == 0) {
+                    firstStarted.complete(Unit)
+                    firstResult.await()
+                } else {
+                    secondStarted.complete(Unit)
+                    secondResult.await()
+                }
+            }
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+
+            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single())
+            runCurrent()
+            assertTrue(firstStarted.isCompleted)
+            assertEquals(setOf("song"), viewModel.state.value.updatingFavorites)
+
+            viewModel.updateSession("two", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            runCurrent()
+            assertTrue(viewModel.state.value.updatingFavorites.isEmpty())
+            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single())
+            runCurrent()
+            assertTrue(secondStarted.isCompleted)
+
+            firstResult.complete(true)
+            runCurrent()
+            assertEquals(setOf("song"), viewModel.state.value.updatingFavorites)
+
+            secondResult.complete(true)
+            advanceUntilIdle()
+            assertTrue(viewModel.state.value.updatingFavorites.isEmpty())
+            assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }
 
 private data class Search(val query: String, val cursor: String?, val version: PiuGameVersion)
 
 private class FakeCatalogDataSource(
     private val favoriteFailure: Exception? = null,
+    private val favoriteHandler: (suspend (String, Boolean, PiuGameVersion) -> Boolean)? = null,
 ) : CatalogDataSource {
     val searches = mutableListOf<Search>()
     val cacheReads = mutableListOf<String>()
@@ -134,6 +186,7 @@ private class FakeCatalogDataSource(
     }
 
     override suspend fun setFavorite(slug: String, saved: Boolean, version: PiuGameVersion): Boolean {
+        favoriteHandler?.let { return it(slug, saved, version) }
         favoriteFailure?.let { throw it }
         return saved
     }

@@ -10,6 +10,7 @@ import com.austinkimchi.mypiu.core.model.CatalogSong
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,7 +21,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() {
-    private data class PendingFavorite(val previous: Boolean, val requested: Boolean)
+    private data class PendingFavorite(val id: UUID, val previous: Boolean, val requested: Boolean)
 
     private val mutableState = MutableStateFlow(CatalogUiState())
     val state: StateFlow<CatalogUiState> = mutableState.asStateFlow()
@@ -60,6 +61,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 feed = if (!accountConnected && it.feed.requiresAccount) CatalogFeed.CATALOG else it.feed,
                 version = preferredVersion ?: it.version,
                 listing = CatalogListing(),
+                updatingFavorites = emptySet(),
                 favoriteError = null,
                 chartHistory = null,
             )
@@ -80,7 +82,13 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         confirmedFavorites.clear()
         historyJob?.cancel()
         mutableState.update {
-            it.copy(version = version, listing = CatalogListing(), favoriteError = null, chartHistory = null)
+            it.copy(
+                version = version,
+                listing = CatalogListing(),
+                updatingFavorites = emptySet(),
+                favoriteError = null,
+                chartHistory = null,
+            )
         }
         reload(debounce = false)
     }
@@ -128,7 +136,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         val snapshot = mutableState.value
         if (!snapshot.isMyPiuConnected || pendingFavorites.containsKey(song.slug)) return
         val requested = !song.isFavorite
-        val mutation = PendingFavorite(song.isFavorite, requested)
+        val mutation = PendingFavorite(UUID.randomUUID(), song.isFavorite, requested)
         val version = snapshot.version
         val scope = snapshot.cacheScope ?: return
         pendingFavorites[song.slug] = mutation
@@ -143,10 +151,10 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         viewModelScope.launch {
             try {
                 val authoritative = repository.setFavorite(song.slug, requested, version)
-                pendingFavorites.remove(song.slug)
+                val isCurrentMutation = finishFavoriteMutation(song.slug, mutation)
                 runCatching { repository.cacheFavorite(authoritative, song.slug, version, scope) }
                 val current = mutableState.value
-                if (current.version == version && current.cacheScope == scope) {
+                if (isCurrentMutation && current.version == version && current.cacheScope == scope) {
                     confirmedFavorites[song.slug] = authoritative
                     val listing = if (current.feed == CatalogFeed.FAVORITES && !authoritative) {
                         current.listing.removeSong(song.slug)
@@ -158,13 +166,18 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                     }
                 }
             } catch (error: CancellationException) {
-                pendingFavorites.remove(song.slug)
-                rollbackFavorite(song.slug, mutation, version, scope)
+                if (finishFavoriteMutation(song.slug, mutation)) {
+                    rollbackFavorite(song.slug, mutation, version, scope)
+                }
                 throw error
             } catch (error: Exception) {
-                pendingFavorites.remove(song.slug)
-                rollbackFavorite(song.slug, mutation, version, scope)
-                if (mutableState.value.version == version && mutableState.value.cacheScope == scope) {
+                val isCurrentMutation = finishFavoriteMutation(song.slug, mutation)
+                if (isCurrentMutation) rollbackFavorite(song.slug, mutation, version, scope)
+                if (
+                    isCurrentMutation &&
+                    mutableState.value.version == version &&
+                    mutableState.value.cacheScope == scope
+                ) {
                     noteAuthorizationFailure(error)
                     mutableState.update {
                         it.copy(favoriteError = error.message ?: "The favorite could not be updated.")
@@ -329,6 +342,12 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 updatingFavorites = pendingFavorites.keys.toSet(),
             )
         }
+    }
+
+    private fun finishFavoriteMutation(slug: String, mutation: PendingFavorite): Boolean {
+        if (pendingFavorites[slug]?.id != mutation.id) return false
+        pendingFavorites.remove(slug)
+        return true
     }
 
     private fun noteAuthorizationFailure(error: Exception) {
