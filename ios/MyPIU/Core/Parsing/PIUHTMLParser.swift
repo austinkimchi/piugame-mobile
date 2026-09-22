@@ -107,7 +107,8 @@ struct PIUHTMLParser: Sendable {
         let digits = try root.select(".stepBall_in .numw img").array().compactMap { image -> String? in
             let source = try image.attr("src")
             let filename = URL(string: source)?.deletingPathExtension().lastPathComponent ?? source
-            return filename.firstMatch(of: /(?:num_|_)(\d)$/)?.1.map(String.init)
+            guard let digit = filename.last, digit.isNumber else { return nil }
+            return String(digit)
         }
         return digits.isEmpty ? nil : digits.joined()
     }

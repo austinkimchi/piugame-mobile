@@ -37,7 +37,7 @@ final class AppModel: ObservableObject {
             self.credentials = credentials
             selectedVersion = credentials.version
             state = .restoring
-            await sync(using: credentials, saveAfterSuccess: false)
+            _ = await sync(using: credentials, saveAfterSuccess: false)
         } catch {
             state = .failed(error.localizedDescription)
         }
