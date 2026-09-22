@@ -181,7 +181,6 @@ final class SongCatalogModel: ObservableObject {
 
         let mutationID = UUID()
         let catalogRequestID = requestID
-        let query = currentQuery
         let version = currentVersion
         let previousValue = song.isFavorite
         guard listing.setFavorite(saved, forSlug: song.slug) else { return }
@@ -197,17 +196,14 @@ final class SongCatalogModel: ObservableObject {
         do {
             let authoritativeValue = try await update(song.slug, saved, version)
             guard favoriteRequestIDs[song.slug] == mutationID else { return }
-            guard requestID == catalogRequestID,
-                  currentVersion == version,
-                  currentCacheScope == cacheScope else { return }
-
-            listing.setFavorite(authoritativeValue, forSlug: song.slug)
-            try? await cache.save(
-                listing,
-                query: query,
+            try? await cache.setFavorite(
+                authoritativeValue,
+                forSlug: song.slug,
                 version: version,
                 scope: cacheScope
             )
+            guard currentVersion == version, currentCacheScope == cacheScope else { return }
+            listing.setFavorite(authoritativeValue, forSlug: song.slug)
         } catch is CancellationError {
             rollbackFavorite(
                 previousValue,

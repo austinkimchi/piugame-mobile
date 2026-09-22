@@ -100,6 +100,35 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(newest?.listing.songs.first?.slug, "battle-no-1")
     }
 
+    func testCatalogCachePropagatesFavoriteWithinAccountAndVersion() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        var listing = CatalogListing()
+        listing.replace(with: page)
+        try await cache.save(listing, query: "one", version: .phoenix2, scope: "account:one")
+        try await cache.save(listing, query: "two", version: .phoenix2, scope: "account:one")
+        try await cache.save(listing, query: "one", version: .phoenix, scope: "account:one")
+        try await cache.save(listing, query: "one", version: .phoenix2, scope: "account:two")
+
+        try await cache.setFavorite(
+            false,
+            forSlug: "battle-no-1",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+
+        let firstQuery = await cache.load(query: "one", version: .phoenix2, scope: "account:one")
+        let secondQuery = await cache.load(query: "two", version: .phoenix2, scope: "account:one")
+        let otherVersion = await cache.load(query: "one", version: .phoenix, scope: "account:one")
+        let otherAccount = await cache.load(query: "one", version: .phoenix2, scope: "account:two")
+        XCTAssertEqual(firstQuery?.listing.songs.first?.isFavorite, false)
+        XCTAssertEqual(secondQuery?.listing.songs.first?.isFavorite, false)
+        XCTAssertEqual(otherVersion?.listing.songs.first?.isFavorite, true)
+        XCTAssertEqual(otherAccount?.listing.songs.first?.isFavorite, true)
+    }
+
     @MainActor
     func testLoadedCatalogSkipsDuplicateMountRequestButReloadsForAnotherAccount() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -210,6 +239,49 @@ final class CatalogTests: XCTestCase {
             scope: "account:one"
         )
         XCTAssertEqual(cached?.listing.songs.first?.isFavorite, false)
+    }
+
+    @MainActor
+    func testSuccessfulFavoriteUpdateSurvivesQueryReload() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let catalog = SongCatalogModel(cache: cache)
+        let search: SongCatalogModel.CatalogSearch = { _, _, _ in page }
+        await catalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: search
+        )
+        let song = try XCTUnwrap(catalog.listing.songs.first)
+
+        await catalog.setFavorite(false, for: song) { _, _, _ in
+            await catalog.reload(
+                query: "another query",
+                version: .phoenix2,
+                cacheScope: "account:one",
+                debounce: false,
+                using: search
+            )
+            return false
+        }
+
+        XCTAssertEqual(catalog.listing.songs.first?.isFavorite, false)
+        let originalQuery = await cache.load(
+            query: "battle",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+        let currentQuery = await cache.load(
+            query: "another query",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+        XCTAssertEqual(originalQuery?.listing.songs.first?.isFavorite, false)
+        XCTAssertEqual(currentQuery?.listing.songs.first?.isFavorite, false)
     }
 
     @MainActor
