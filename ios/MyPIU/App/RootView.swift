@@ -38,6 +38,7 @@ struct RootView: View {
             guard oldScope != newScope else { return }
             homePath = NavigationPath()
             songsPath = NavigationPath()
+            progressPath = NavigationPath()
         }
         .onReceive(appModel.favoriteChanges) { change in
             guard change.accountID == appModel.myPIUAccount?.id else { return }
