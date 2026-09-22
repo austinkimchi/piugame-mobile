@@ -127,7 +127,7 @@ final class PerformanceTests: XCTestCase {
             chartToken: "big-daddy:s:19",
             bestScore: 928_767,
             previousBestScore: nil,
-            delta: nil,
+            delta: 8_767,
             bestGrade: "aa",
             bestPlate: "fg",
             mode: "S",
@@ -140,6 +140,9 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(play.displayChartToken, "S19")
         XCTAssertEqual(chart.id, "Big Daddy:big-daddy:s:19")
         XCTAssertEqual(chart.displayChartToken, "S19")
+        let accessibilityValue = performanceChartAccessibilityValue(chart)
+        XCTAssertTrue(accessibilityValue.contains("Rank 3"))
+        XCTAssertTrue(accessibilityValue.contains("Improved by"))
     }
 
     func testPerformanceAccessibilityLabelsDescribeChartsAndFailedGrades() {

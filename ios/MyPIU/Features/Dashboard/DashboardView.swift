@@ -265,13 +265,7 @@ struct PerformanceChartRow: View {
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(chart.songName)
-        .accessibilityValue(
-            [
-                performanceChartTokenAccessibilityLabel(chart.displayChartToken),
-                performanceGradeLabel(chart.bestGrade),
-                chart.bestScore?.formatted() ?? "Score unavailable"
-            ].joined(separator: ", ")
-        )
+        .accessibilityValue(performanceChartAccessibilityValue(chart))
     }
 }
 
@@ -312,6 +306,20 @@ func performanceChartTokenAccessibilityLabel(_ token: String) -> String {
     case "C": return "Co-op level \(level)"
     default: return token
     }
+}
+
+func performanceChartAccessibilityValue(_ chart: MyPIUPerformanceDashboard.Chart) -> String {
+    var parts: [String] = []
+    if let rank = chart.topPlayRank {
+        parts.append("Rank \(rank)")
+    }
+    parts.append(performanceChartTokenAccessibilityLabel(chart.displayChartToken))
+    parts.append(performanceGradeLabel(chart.bestGrade))
+    parts.append(chart.bestScore?.formatted() ?? "Score unavailable")
+    if let delta = chart.delta, delta > 0 {
+        parts.append("Improved by \(delta.formatted())")
+    }
+    return parts.joined(separator: ", ")
 }
 
 func performanceDateLabel(_ value: String?) -> String {
