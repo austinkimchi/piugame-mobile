@@ -68,3 +68,31 @@ test("rejects a PIUGAME session for another linked player", () => {
     /different linked player/
   );
 });
+
+test("skips recent plays without a complete chart token", () => {
+  const payload = parseSyncPayload({
+    version: "phoenix2",
+    profile: `<div class="profile_name"><div class="name_w"><span class="t2">PKIMCHI#7501</span></div></div>`,
+    recent: `
+      <ul class="recently_playeList">
+        <li>
+          <div class="song_name"><p>INCOMPLETE</p></div>
+          <div class="stepBall_in"><div class="numw"><img src="/l_img/stepball/full/s_num_1.png"></div></div>
+        </li>
+        <li>
+          <div class="song_name"><p>COMPLETE</p></div>
+          <div class="stepBall_in"><div class="tw"><img src="/l_img/stepball/full/s_text.png"></div><div class="numw"><img src="/l_img/stepball/full/s_num_1.png"><img src="/l_img/stepball/full/s_num_6.png"></div></div>
+        </li>
+      </ul>`,
+    pumbility: ""
+  }, {
+    username: "pkimchi",
+    expectedDisplayName: "PKIMCHI#7501",
+    installationId: "fixture-install"
+  });
+
+  assert.equal(payload.recentPlays.length, 1);
+  assert.equal(payload.recentPlays[0].songName, "COMPLETE");
+  assert.equal(payload.recentPlays[0].mode, "S");
+  assert.equal(payload.recentPlays[0].level, "16");
+});

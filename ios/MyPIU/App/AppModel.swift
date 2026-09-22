@@ -39,6 +39,7 @@ final class AppModel: ObservableObject {
     private var volatilePendingRevocations: [MyPIUAccessToken] = []
     private var hasRestored = false
     private var isRetryingPendingRevocations = false
+    private var shouldRetryPendingRevocations = false
 
     init(
         credentialStore: KeychainCredentialStore = KeychainCredentialStore(),
@@ -256,10 +257,20 @@ final class AppModel: ObservableObject {
     }
 
     private func retryPendingMyPIURevocations() async {
-        guard !isRetryingPendingRevocations else { return }
+        guard !isRetryingPendingRevocations else {
+            shouldRetryPendingRevocations = true
+            return
+        }
         isRetryingPendingRevocations = true
         defer { isRetryingPendingRevocations = false }
 
+        repeat {
+            shouldRetryPendingRevocations = false
+            await drainPendingMyPIURevocations()
+        } while shouldRetryPendingRevocations
+    }
+
+    private func drainPendingMyPIURevocations() async {
         let persistedTokens = (try? tokenStore.pendingRevocations()) ?? []
         var candidates = persistedTokens.map { (token: $0, persisted: true) }
         for token in volatilePendingRevocations
