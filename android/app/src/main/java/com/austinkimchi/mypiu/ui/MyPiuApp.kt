@@ -74,6 +74,9 @@ import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.PiuProfile
 import com.austinkimchi.mypiu.core.model.RecentPlay
 import java.text.NumberFormat
+import kotlinx.serialization.json.Json
+
+private val catalogSongJson = Json { ignoreUnknownKeys = true }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +90,10 @@ fun MyPiuApp(
     var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
     var selectedSongSlug by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedChartToken by rememberSaveable { mutableStateOf<String?>(null) }
-    var selectedSongFallback by remember { mutableStateOf<CatalogSong?>(null) }
+    var selectedSongFallbackJson by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedSongFallback = remember(selectedSongFallbackJson) {
+        selectedSongFallbackJson?.let { runCatching { catalogSongJson.decodeFromString<CatalogSong>(it) }.getOrNull() }
+    }
     val listedSong = selectedSongSlug?.let(catalogViewModel::song)
     val selectedSong = listedSong ?: selectedSongFallback?.takeIf { it.slug == selectedSongSlug }
     val preferredCatalogVersion = state.account?.piuGameVersion ?: state.piuVersion
@@ -97,14 +103,14 @@ fun MyPiuApp(
             selectedChartToken = null
         } else {
             selectedSongSlug = null
-            selectedSongFallback = null
+            selectedSongFallbackJson = null
         }
     }
 
     BackHandler(enabled = selectedSongSlug != null, onBack = ::navigateBack)
 
     LaunchedEffect(listedSong) {
-        if (listedSong != null) selectedSongFallback = listedSong
+        if (listedSong != null) selectedSongFallbackJson = catalogSongJson.encodeToString(listedSong)
     }
     LaunchedEffect(
         state.account?.id,
@@ -193,7 +199,7 @@ fun MyPiuApp(
                             destination = item
                             selectedSongSlug = null
                             selectedChartToken = null
-                            selectedSongFallback = null
+                            selectedSongFallbackJson = null
                         },
                         icon = {
                             Icon(
@@ -227,7 +233,7 @@ fun MyPiuApp(
                     onLoadMore = catalogViewModel::loadMore,
                     onToggleFavorite = catalogViewModel::toggleFavorite,
                     onSongClick = {
-                        selectedSongFallback = it
+                        selectedSongFallbackJson = catalogSongJson.encodeToString(it)
                         selectedSongSlug = it.slug
                     },
                 )
