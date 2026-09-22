@@ -10,6 +10,7 @@ import com.austinkimchi.mypiu.core.network.MyPiuApiClient
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.network.OAuthCoordinator
 import com.austinkimchi.mypiu.core.network.PiuGameClient
+import com.austinkimchi.mypiu.core.network.PiuGameException
 import com.austinkimchi.mypiu.core.security.SessionStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -98,8 +99,12 @@ class SyncRepository(
         retryPendingRevocations()
     }
 
-    private suspend fun fetch(credentials: PiuCredentials): PiuSnapshot =
+    private suspend fun fetch(credentials: PiuCredentials): PiuSnapshot = try {
         piuClient(credentials.version).loginAndFetch(credentials.username, credentials.password)
+    } catch (error: PiuGameException.AuthenticationFailed) {
+        if (sessionStore.credentials() == credentials) sessionStore.clearCredentials()
+        throw error
+    }
 
     private suspend fun upload(snapshot: PiuSnapshot, accessToken: String): MyPiuSyncResult =
         apiClient.upload(snapshot, accessToken, installationId, appVersion)
