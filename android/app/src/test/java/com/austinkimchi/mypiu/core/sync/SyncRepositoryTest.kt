@@ -1,6 +1,7 @@
 package com.austinkimchi.mypiu.core.sync
 
 import com.austinkimchi.mypiu.core.model.MyPiuAccessToken
+import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.network.MyPiuApiClient
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.network.OAuthCoordinator
@@ -19,18 +20,20 @@ class SyncRepositoryTest {
         val sessionStore = SessionStore(MemorySecretStore())
         val token = MyPiuAccessToken("token", Long.MAX_VALUE, "installation")
         sessionStore.saveAccessToken(token)
-        sessionStore.saveAccountId(token.value, "account-one")
+        sessionStore.saveAccountIdentity(token.value, "account-one", PiuGameVersion.PHOENIX)
         val repository = repository(sessionStore)
 
         val connected = repository.connectionState()
 
         assertTrue(connected.isMyPiuConnected)
         assertEquals("account-one", connected.accountId)
+        assertEquals(PiuGameVersion.PHOENIX, connected.accountVersion)
 
         sessionStore.saveAccessToken(MyPiuAccessToken("replacement", Long.MAX_VALUE, "installation"))
         val replacement = repository.connectionState()
         assertTrue(replacement.isMyPiuConnected)
         assertNull(replacement.accountId)
+        assertNull(replacement.accountVersion)
     }
 
     @Test
@@ -38,13 +41,14 @@ class SyncRepositoryTest {
         val sessionStore = SessionStore(MemorySecretStore())
         val token = MyPiuAccessToken("expired", 0, "installation")
         sessionStore.saveAccessToken(token)
-        sessionStore.saveAccountId(token.value, "account-one")
+        sessionStore.saveAccountIdentity(token.value, "account-one", PiuGameVersion.PHOENIX)
 
         val connection = repository(sessionStore).connectionState()
 
         assertFalse(connection.isMyPiuConnected)
         assertNull(connection.accountId)
-        assertNull(sessionStore.accountId(token.value))
+        assertNull(connection.accountVersion)
+        assertNull(sessionStore.accountIdentity(token.value))
     }
 
     @Test
@@ -52,7 +56,7 @@ class SyncRepositoryTest {
         val sessionStore = SessionStore(MemorySecretStore())
         val token = MyPiuAccessToken("token", Long.MAX_VALUE, "installation")
         sessionStore.saveAccessToken(token)
-        sessionStore.saveAccountId(token.value, "deleted-account")
+        sessionStore.saveAccountIdentity(token.value, "deleted-account", PiuGameVersion.PHOENIX)
 
         val cleared = repository(sessionStore).clearUnauthorizedSession(
             MyPiuApiException(404, "account_not_found"),
@@ -60,7 +64,7 @@ class SyncRepositoryTest {
 
         assertTrue(cleared)
         assertNull(sessionStore.accessToken())
-        assertNull(sessionStore.accountId(token.value))
+        assertNull(sessionStore.accountIdentity(token.value))
     }
 
     private fun repository(sessionStore: SessionStore): SyncRepository {

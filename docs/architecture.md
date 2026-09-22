@@ -11,7 +11,7 @@ The native apps have independent App Store and Play Store releases, signing asse
 The app is a native MyPIU client, not a web container.
 
 - iOS uses SwiftUI, URLSession, Keychain, BackgroundTasks, and platform navigation.
-- Android uses Kotlin, Jetpack Compose, Android Keystore, OkHttp, WorkManager, and an account-scoped local catalog cache. Its encrypted cache identity is bound to the current MyPIU access token so offline restoration cannot cross account boundaries.
+- Android uses Kotlin, Jetpack Compose, Android Keystore, OkHttp, WorkManager, and an account-scoped local catalog cache. Its encrypted account ID and preferred catalog version are bound to the current MyPIU access token so offline restoration cannot cross account or version boundaries.
 - The backend remains the source of truth for catalog metadata, community data, favorites, recommendations, and cross-device history.
 - The device is the source of PIUGAME network traffic and PIUGAME credentials.
 

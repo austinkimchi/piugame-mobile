@@ -106,7 +106,7 @@ fun MyPiuApp(
     val isRestoringSelectedVersion = selectedSong != null &&
         (!selectedVersionReady || (selectedSongVersion != null && catalogState.version != selectedSongVersion))
     val catalogAccountId = state.account?.id ?: state.accountId
-    val preferredCatalogVersion = state.account?.piuGameVersion ?: state.piuVersion
+    val preferredCatalogVersion = state.account?.piuGameVersion ?: state.accountPiuGameVersion ?: state.piuVersion
 
     fun navigateBack() {
         if (selectedChartToken != null) {

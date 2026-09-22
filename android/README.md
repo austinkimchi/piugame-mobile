@@ -17,7 +17,7 @@ The debug APK is written under `app/build/outputs/apk/debug/`.
 ## Security boundary
 
 - PIUGAME credentials and MyPIU access tokens are encrypted with an app-scoped Android Keystore AES-GCM key.
-- The MyPIU account ID used to scope offline catalog data is encrypted and bound to the current access-token value; token replacement, expiry, account deletion, and sign-out invalidate it.
+- The MyPIU account ID and preferred PIU version used to restore offline catalog data are encrypted and bound to the current access-token value; token replacement, expiry, account deletion, and sign-out invalidate them.
 - Sign-out queues the MyPIU access token in encrypted storage until server revocation succeeds or the server confirms it is no longer valid.
 - PIUGAME cookies remain in an in-memory OkHttp cookie jar.
 - Raw PIUGAME HTML is parsed on-device and is never uploaded or persisted.

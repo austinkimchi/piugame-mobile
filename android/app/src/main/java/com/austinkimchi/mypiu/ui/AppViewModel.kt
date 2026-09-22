@@ -67,6 +67,11 @@ class AppViewModel(
                 } else {
                     null
                 },
+                accountPiuGameVersion = if (connection.isMyPiuConnected) {
+                    connection.accountVersion ?: current.accountPiuGameVersion ?: current.account?.piuGameVersion
+                } else {
+                    null
+                },
                 profile = current.profile.takeIf { connection.isPiuConnected },
                 recentPlays = current.recentPlays.takeIf { connection.isPiuConnected }.orEmpty(),
                 piuVersion = current.piuVersion.takeIf { connection.isPiuConnected },
@@ -106,6 +111,7 @@ class AppViewModel(
                         isMyPiuConnected = false,
                         account = null,
                         accountId = null,
+                        accountPiuGameVersion = null,
                         message = "MyPIU signed out.",
                     )
                 }
@@ -138,6 +144,11 @@ class AppViewModel(
                     } else {
                         null
                     },
+                    accountPiuGameVersion = if (connection.isMyPiuConnected) {
+                        connection.accountVersion ?: current.accountPiuGameVersion ?: current.account?.piuGameVersion
+                    } else {
+                        null
+                    },
                     profile = current.profile.takeIf { connection.isPiuConnected },
                     recentPlays = current.recentPlays.takeIf { connection.isPiuConnected }.orEmpty(),
                     piuVersion = current.piuVersion.takeIf { connection.isPiuConnected },
@@ -159,6 +170,11 @@ class AppViewModel(
                 account = if (snapshot.isMyPiuConnected) snapshot.account ?: current.account else null,
                 accountId = if (snapshot.isMyPiuConnected) {
                     snapshot.account?.id ?: current.accountId ?: current.account?.id
+                } else {
+                    null
+                },
+                accountPiuGameVersion = if (snapshot.isMyPiuConnected) {
+                    snapshot.account?.piuGameVersion ?: current.accountPiuGameVersion ?: current.account?.piuGameVersion
                 } else {
                     null
                 },
@@ -197,6 +213,7 @@ data class AppUiState(
     val isMyPiuConnected: Boolean = false,
     val account: MyPiuAccount? = null,
     val accountId: String? = null,
+    val accountPiuGameVersion: PiuGameVersion? = null,
     val profile: PiuProfile? = null,
     val recentPlays: List<RecentPlay> = emptyList(),
     val piuVersion: PiuGameVersion? = null,

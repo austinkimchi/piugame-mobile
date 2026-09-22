@@ -2,6 +2,7 @@ package com.austinkimchi.mypiu.core.security
 
 import com.austinkimchi.mypiu.core.model.MyPiuAccessToken
 import com.austinkimchi.mypiu.core.model.PiuCredentials
+import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -24,12 +25,19 @@ class SessionStore(
         secrets.remove(ACCOUNT_IDENTITY)
     }
 
-    fun accountId(accessToken: String): String? = storedAccountIdentity()
+    fun accountIdentity(accessToken: String): AccountIdentity? = storedAccountIdentity()
         ?.takeIf { it.accessToken == accessToken }
-        ?.accountId
+        ?.let { AccountIdentity(it.accountId, it.preferredVersion) }
 
-    fun saveAccountId(accessToken: String, accountId: String) {
-        secrets.put(ACCOUNT_IDENTITY, json.encodeToString(StoredAccountIdentity(accessToken, accountId)))
+    fun saveAccountIdentity(
+        accessToken: String,
+        accountId: String,
+        preferredVersion: PiuGameVersion,
+    ) {
+        secrets.put(
+            ACCOUNT_IDENTITY,
+            json.encodeToString(StoredAccountIdentity(accessToken, accountId, preferredVersion)),
+        )
     }
 
     fun pendingRevocations(): List<MyPiuAccessToken> =
@@ -62,8 +70,14 @@ class SessionStore(
         val createdAtEpochMillis: Long,
     )
 
+    data class AccountIdentity(val accountId: String, val preferredVersion: PiuGameVersion?)
+
     @Serializable
-    private data class StoredAccountIdentity(val accessToken: String, val accountId: String)
+    private data class StoredAccountIdentity(
+        val accessToken: String,
+        val accountId: String,
+        val preferredVersion: PiuGameVersion? = null,
+    )
 
     private fun storedAccountIdentity(): StoredAccountIdentity? =
         secrets.get(ACCOUNT_IDENTITY)?.let(json::decodeFromString)

@@ -30,10 +30,12 @@ class SyncRepository(
 
     fun connectionState(): RepositoryConnectionState {
         val token = validToken()
+        val accountIdentity = token?.let { sessionStore.accountIdentity(it.value) }
         return RepositoryConnectionState(
             isPiuConnected = sessionStore.credentials() != null,
             isMyPiuConnected = token != null,
-            accountId = token?.let { sessionStore.accountId(it.value) },
+            accountId = accountIdentity?.accountId,
+            accountVersion = accountIdentity?.preferredVersion,
         )
     }
 
@@ -41,7 +43,7 @@ class SyncRepository(
         val token = oauthCoordinator.complete(callbackUrl)
         retryPendingRevocations()
         val account = apiClient.account(token.value)
-        sessionStore.saveAccountId(token.value, account.id)
+        sessionStore.saveAccountIdentity(token.value, account.id, account.piuGameVersion)
         val credentials = sessionStore.credentials()
         val piuSnapshot = credentials?.let { fetch(it) }
         val result = piuSnapshot?.let { upload(it, token.value) }
@@ -55,7 +57,7 @@ class SyncRepository(
         val account = token?.let {
             try {
                 apiClient.account(it.value).also { account ->
-                    sessionStore.saveAccountId(it.value, account.id)
+                    sessionStore.saveAccountIdentity(it.value, account.id, account.piuGameVersion)
                 }
             } catch (error: MyPiuApiException) {
                 if (!error.isUnauthorized && !error.isAccountNotFound) throw error
@@ -83,7 +85,7 @@ class SyncRepository(
         val token = validToken()
         val account = token?.let {
             apiClient.account(it.value).also { account ->
-                sessionStore.saveAccountId(it.value, account.id)
+                sessionStore.saveAccountIdentity(it.value, account.id, account.piuGameVersion)
             }
         }
         val result = token?.let { upload(piuSnapshot, it.value) }
@@ -176,4 +178,5 @@ data class RepositoryConnectionState(
     val isPiuConnected: Boolean,
     val isMyPiuConnected: Boolean,
     val accountId: String?,
+    val accountVersion: PiuGameVersion?,
 )
