@@ -79,6 +79,7 @@ struct SongsView: View {
             let song = catalog.song(slug: routedSong.slug) ?? routedSong
             CatalogSongDetailView(
                 song: song,
+                version: catalogVersion,
                 canUpdateFavorite: canUpdateFavorites,
                 isUpdatingFavorite: isUpdatingFavorite(song.slug)
             ) {

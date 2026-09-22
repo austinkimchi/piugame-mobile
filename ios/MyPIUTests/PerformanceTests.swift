@@ -138,4 +138,63 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(chart.id, "Big Daddy:big-daddy:s:19")
         XCTAssertEqual(chart.displayChartToken, "S19")
     }
+
+    func testDecodesSongChartHistoryNewestFirst() throws {
+        let data = Data(
+            #"""
+            {
+              "latestPlay": {
+                "id": "latest",
+                "score": null,
+                "grade": "x_s",
+                "plate": null,
+                "playedAt": "2026-09-22T08:10:00.000Z",
+                "stageBreak": true,
+                "judgments": {"perfect": 810, "great": 20, "good": 4, "bad": 2, "miss": 31}
+              },
+              "history": [
+                {
+                  "id": "older",
+                  "score": 928767,
+                  "grade": "aa",
+                  "plate": "fg",
+                  "playedAt": "2026-09-21T08:10:00.000Z",
+                  "stageBreak": false,
+                  "judgments": {"perfect": 900, "great": 10, "good": 2, "bad": 0, "miss": 3}
+                },
+                {
+                  "id": "latest",
+                  "score": null,
+                  "grade": "x_s",
+                  "plate": null,
+                  "playedAt": "2026-09-22T08:10:00.000Z",
+                  "stageBreak": true,
+                  "judgments": {"perfect": 810, "great": 20, "good": 4, "bad": 2, "miss": 31}
+                }
+              ],
+              "stats": {
+                "bestScore": 928767,
+                "previousBestScore": 920000,
+                "latestScore": null,
+                "latestStageBreak": true,
+                "latestPlayedAt": "2026-09-22T08:10:00.000Z",
+                "recentPlayCount": 2,
+                "stageBreakCount": 1,
+                "bestGrade": "aa",
+                "bestPlate": "fg",
+                "bestBucketPage": 1,
+                "bestSyncedAt": "2026-09-21T08:10:00.000Z"
+              }
+            }
+            """#.utf8
+        )
+
+        let performance = try JSONDecoder().decode(MyPIUSongChartPerformance.self, from: data)
+
+        XCTAssertEqual(performance.latestPlay?.id, "latest")
+        XCTAssertEqual(performance.latestPlay?.judgments.miss, 31)
+        XCTAssertEqual(performance.stats?.bestScore, 928_767)
+        XCTAssertEqual(performance.stats?.recentPlayCount, 2)
+        XCTAssertEqual(performance.attemptsNewestFirst.map(\.id), ["latest", "older"])
+    }
 }

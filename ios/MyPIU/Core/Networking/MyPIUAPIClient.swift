@@ -18,6 +18,8 @@ enum MyPIUAPIError: LocalizedError, Equatable {
             case "account_not_found": "This MyPIU account no longer exists."
             case "deletion_failed": "MyPIU could not delete the account. Try again."
             case "song_not_found": "This song is not available in the selected PIU version."
+            case "chart_not_found": "This chart is not available in the selected PIU version."
+            case "invalid_chart", "invalid_version": "MyPIU could not identify that chart."
             case "favorite_update_failed": "MyPIU could not update this favorite. Try again."
             default: "MyPIU could not complete the request."
             }
@@ -163,6 +165,35 @@ actor MyPIUAPIClient {
         return response.isFavorite
     }
 
+    func chartPerformance(
+        songSlug: String,
+        chartToken: String,
+        version: PIUGameVersion,
+        accessToken: String
+    ) async throws -> MyPIUSongChartPerformance? {
+        guard let encodedSlug = encodedPathSegment(songSlug) else {
+            throw MyPIUAPIError.invalidResponse
+        }
+        var components = URLComponents(
+            url: url(path: "/api/mobile/v1/songs/\(encodedSlug)/performance"),
+            resolvingAgainstBaseURL: false
+        )!
+        components.queryItems = [
+            URLQueryItem(name: "chart", value: chartToken),
+            URLQueryItem(name: "version", value: version.rawValue)
+        ]
+        guard let requestURL = components.url else {
+            throw MyPIUAPIError.invalidResponse
+        }
+
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let response: ChartPerformanceResponse = try await send(request)
+        return response.performance
+    }
+
     func upload(
         snapshot: PIUSnapshot,
         accessToken: String,
@@ -280,6 +311,10 @@ private struct FavoriteUpdatePayload: Encodable {
 private struct FavoriteUpdateResponse: Decodable {
     let slug: String
     let isFavorite: Bool
+}
+
+private struct ChartPerformanceResponse: Decodable {
+    let performance: MyPIUSongChartPerformance?
 }
 
 private struct ErrorResponse: Decodable {

@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct CatalogSongDetailView: View {
+    @EnvironmentObject private var appModel: AppModel
     let song: CatalogSong
+    let version: PIUGameVersion
     let canUpdateFavorite: Bool
     let isUpdatingFavorite: Bool
     let onToggleFavorite: () -> Void
@@ -93,20 +95,7 @@ struct CatalogSongDetailView: View {
                             .foregroundStyle(.secondary)
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 58, maximum: 82))], spacing: 8) {
                             ForEach(chartTokens, id: \.self) { token in
-                                Text(token)
-                                    .font(.subheadline.bold().monospaced())
-                                    .frame(maxWidth: .infinity, minHeight: 38)
-                                    .background(chartColor(token), in: RoundedRectangle(cornerRadius: 6))
-                                    .overlay {
-                                        if isRecommended(token) {
-                                            RoundedRectangle(cornerRadius: 6)
-                                                .stroke(AppTheme.warning, lineWidth: 3)
-                                        }
-                                    }
-                                    .foregroundStyle(.white)
-                                    .accessibilityLabel(
-                                        chartAccessibilityLabel(token) + (isRecommended(token) ? ", recommended" : "")
-                                    )
+                                chartLink(token)
                             }
                         }
                     }
@@ -143,6 +132,38 @@ struct CatalogSongDetailView: View {
         case "D": .blue
         default: AppTheme.positive
         }
+    }
+
+    @ViewBuilder
+    private func chartLink(_ token: String) -> some View {
+        if appModel.isMyPIUConnected {
+            NavigationLink {
+                SongChartHistoryView(song: song, chartToken: token, version: version)
+            } label: {
+                chartBadge(token)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows your chart history")
+        } else {
+            chartBadge(token)
+        }
+    }
+
+    private func chartBadge(_ token: String) -> some View {
+        Text(token)
+            .font(.subheadline.bold().monospaced())
+            .frame(maxWidth: .infinity, minHeight: 38)
+            .background(chartColor(token), in: RoundedRectangle(cornerRadius: 6))
+            .overlay {
+                if isRecommended(token) {
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(AppTheme.warning, lineWidth: 3)
+                }
+            }
+            .foregroundStyle(.white)
+            .accessibilityLabel(
+                chartAccessibilityLabel(token) + (isRecommended(token) ? ", recommended" : "")
+            )
     }
 
     private func chartAccessibilityLabel(_ token: String) -> String {

@@ -337,6 +337,40 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func chartPerformance(
+        songSlug: String,
+        chartToken: String,
+        version: PIUGameVersion
+    ) async throws -> MyPIUSongChartPerformance? {
+        guard let token = accessToken, let accountID = myPIUAccount?.id else {
+            throw MyPIUAPIError.server(status: 401, code: "invalid_token")
+        }
+        guard !token.isExpired else {
+            clearMyPIUSession()
+            throw MyPIUAPIError.server(status: 401, code: "invalid_token")
+        }
+
+        do {
+            let performance = try await apiClient.chartPerformance(
+                songSlug: songSlug,
+                chartToken: chartToken,
+                version: version,
+                accessToken: token.value
+            )
+            guard accessToken?.value == token.value, myPIUAccount?.id == accountID else {
+                throw CancellationError()
+            }
+            return performance
+        } catch {
+            if let apiError = error as? MyPIUAPIError,
+               apiError.isUnauthorized || apiError.isAccountNotFound,
+               accessToken?.value == token.value {
+                clearMyPIUSession()
+            }
+            throw error
+        }
+    }
+
     func disconnect() {
         do {
             try credentialStore.delete()
