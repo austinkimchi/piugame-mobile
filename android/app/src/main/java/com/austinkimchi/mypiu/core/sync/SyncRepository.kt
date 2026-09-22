@@ -34,8 +34,8 @@ class SyncRepository(
     )
 
     suspend fun completeAuthorization(callbackUrl: String): RepositorySnapshot = syncMutex.withLock {
-        retryPendingRevocations()
         val token = oauthCoordinator.complete(callbackUrl)
+        retryPendingRevocations()
         val account = apiClient.account(token.value)
         val credentials = sessionStore.credentials()
         val piuSnapshot = credentials?.let { fetch(it) }
