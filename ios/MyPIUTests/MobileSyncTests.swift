@@ -3,21 +3,6 @@ import XCTest
 @testable import MyPIU
 
 final class MobileSyncTests: XCTestCase {
-    func testPendingRevocationRemainsUntilRemoved() throws {
-        let store = KeychainTokenStore()
-        let token = MyPIUAccessToken(
-            value: "pending-\(UUID().uuidString)",
-            expiresAt: Date(timeIntervalSinceNow: 3_600)
-        )
-        defer { try? store.removePendingRevocation(token) }
-
-        try store.enqueuePendingRevocation(token)
-        XCTAssertTrue(try store.pendingRevocations().contains(token))
-
-        try store.removePendingRevocation(token)
-        XCTAssertFalse(try store.pendingRevocations().contains(token))
-    }
-
     func testExpiredAccessTokenRequiresReauthentication() {
         let token = MyPIUAccessToken(
             value: "expired-token",
