@@ -84,3 +84,9 @@ Expected response:
 - `GET /api/mobile/v1/me` returns the authenticated MyPIU account and linked PIUGAME identity.
 
 The native callback is `mypiu://oauth/callback`. Access tokens are stored in Keychain using device-only accessibility and are never written to preferences or logs.
+
+## Performance read endpoint
+
+`GET /api/mobile/v1/performance` returns the authenticated user's persisted MyPIU dashboard. It uses the same mobile bearer token and returns `{ "performance": { ... } }` with the profile summary, aggregate totals, recent plays, and top charts.
+
+This endpoint is read-only, private, and uncached. It never contacts PIUGAME. Native clients should keep their latest on-device snapshot available when this endpoint is offline or has not received an import yet.

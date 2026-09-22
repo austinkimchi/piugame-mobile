@@ -22,10 +22,19 @@ final class AppModel: ObservableObject {
         case failed(String)
     }
 
+    enum PerformanceState: Equatable {
+        case idle
+        case loading
+        case ready
+        case failed(String)
+    }
+
     @Published private(set) var state: SyncState = .restoring
     @Published private(set) var snapshot: PIUSnapshot?
     @Published private(set) var myPIUAccount: MyPIUAccount?
     @Published private(set) var myPIUState: MyPIUState = .restoring
+    @Published private(set) var performance: MyPIUPerformanceDashboard?
+    @Published private(set) var performanceState: PerformanceState = .idle
     @Published var selectedVersion: PIUGameVersion = .phoenix2
 
     private let credentialStore: KeychainCredentialStore
@@ -38,6 +47,7 @@ final class AppModel: ObservableObject {
     private var credentials: PIUCredentials?
     private var accessToken: MyPIUAccessToken?
     private var volatilePendingRevocations: [MyPIUAccessToken] = []
+    private var performanceRequestID = UUID()
     private var hasRestored = false
     private var isRetryingPendingRevocations = false
     private var shouldRetryPendingRevocations = false
@@ -172,6 +182,9 @@ final class AppModel: ObservableObject {
 
             accessToken = nil
             myPIUAccount = nil
+            performance = nil
+            performanceState = .idle
+            performanceRequestID = UUID()
             do {
                 try tokenStore.delete()
                 myPIUState = .signedOut
@@ -208,6 +221,9 @@ final class AppModel: ObservableObject {
         async let revocationRetry: Void = retryPendingMyPIURevocations()
         guard let credentials else {
             state = .signedOut
+            if let token = accessToken {
+                await loadPerformance(using: token)
+            }
             await revocationRetry
             return
         }
@@ -283,6 +299,8 @@ final class AppModel: ObservableObject {
             guard accessToken?.value == token.value else { return false }
             myPIUAccount = account
             myPIUState = .ready
+            await loadPerformance(using: token)
+            guard accessToken?.value == token.value else { return false }
             return true
         } catch {
             guard accessToken?.value == token.value else { return false }
@@ -375,12 +393,33 @@ final class AppModel: ObservableObject {
                 imported: result.importedRecentPlays,
                 duplicates: result.duplicateRecentPlays
             )
+            await loadPerformance(using: token)
         } catch {
             guard accessToken?.value == token.value else { return }
             if let apiError = error as? MyPIUAPIError, apiError.isUnauthorized {
                 clearMyPIUSession()
             } else {
                 myPIUState = .failed(error.localizedDescription)
+            }
+        }
+    }
+
+    private func loadPerformance(using token: MyPIUAccessToken) async {
+        let requestID = UUID()
+        performanceRequestID = requestID
+        performanceState = .loading
+        do {
+            let dashboard = try await apiClient.performance(accessToken: token.value)
+            guard accessToken?.value == token.value, performanceRequestID == requestID else { return }
+            performance = dashboard
+            performanceState = .ready
+        } catch {
+            guard accessToken?.value == token.value, performanceRequestID == requestID else { return }
+            if let apiError = error as? MyPIUAPIError, apiError.isUnauthorized {
+                clearMyPIUSession()
+            } else {
+                performance = nil
+                performanceState = .failed(error.localizedDescription)
             }
         }
     }
@@ -395,6 +434,9 @@ final class AppModel: ObservableObject {
         }
         accessToken = nil
         myPIUAccount = nil
+        performance = nil
+        performanceState = .idle
+        performanceRequestID = UUID()
         myPIUState = .signedOut
         return true
     }

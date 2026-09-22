@@ -94,6 +94,13 @@ actor MyPIUAPIClient {
         return response.account
     }
 
+    func performance(accessToken: String) async throws -> MyPIUPerformanceDashboard {
+        var request = authenticatedRequest(path: "/api/mobile/v1/performance", accessToken: accessToken)
+        request.httpMethod = "GET"
+        let response: PerformanceResponse = try await send(request)
+        return response.performance
+    }
+
     func searchCatalog(
         query: String,
         cursor: String? = nil,
@@ -222,6 +229,10 @@ private struct TokenResponse: Decodable {
 
 private struct AccountResponse: Decodable {
     let account: MyPIUAccount
+}
+
+private struct PerformanceResponse: Decodable {
+    let performance: MyPIUPerformanceDashboard
 }
 
 private struct ErrorResponse: Decodable {
