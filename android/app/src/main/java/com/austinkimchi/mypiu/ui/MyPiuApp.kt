@@ -1,5 +1,6 @@
 package com.austinkimchi.mypiu.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,10 +19,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,6 +37,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -39,6 +46,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.austinkimchi.mypiu.R
+import com.austinkimchi.mypiu.core.model.CatalogSong
 import com.austinkimchi.mypiu.core.model.MyPiuAuthProvider
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.PiuProfile
@@ -69,78 +79,231 @@ import java.text.NumberFormat
 @Composable
 fun MyPiuApp(
     viewModel: AppViewModel,
+    catalogViewModel: CatalogViewModel,
     openAuthorization: (String) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val catalogState by catalogViewModel.state.collectAsStateWithLifecycle()
+    var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
+    var selectedSongSlug by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedChartToken by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedSongFallback by remember { mutableStateOf<CatalogSong?>(null) }
+    val listedSong = selectedSongSlug?.let(catalogViewModel::song)
+    val selectedSong = listedSong ?: selectedSongFallback?.takeIf { it.slug == selectedSongSlug }
+
+    fun navigateBack() {
+        if (selectedChartToken != null) {
+            selectedChartToken = null
+        } else {
+            selectedSongSlug = null
+            selectedSongFallback = null
+        }
+    }
+
+    BackHandler(enabled = selectedSongSlug != null, onBack = ::navigateBack)
+
+    LaunchedEffect(destination) {
+        if (destination == AppDestination.SONGS) catalogViewModel.start()
+    }
+    LaunchedEffect(listedSong) {
+        if (listedSong != null) selectedSongFallback = listedSong
+    }
+    LaunchedEffect(state.account?.id, state.isMyPiuConnected, state.account?.piuGameVersion, state.piuVersion) {
+        catalogViewModel.updateSession(
+            accountId = state.account?.id,
+            connected = state.isMyPiuConnected,
+            preferredVersion = state.account?.piuGameVersion ?: state.piuVersion,
+        )
+    }
+    LaunchedEffect(catalogState.sessionInvalidated) {
+        if (catalogState.sessionInvalidated) {
+            viewModel.reconcileConnectionState()
+            catalogViewModel.acknowledgeSessionInvalidation()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MyPIU", fontWeight = FontWeight.Black) },
-                navigationIcon = {
-                    Image(
-                        painter = painterResource(R.drawable.mypiu_icon),
-                        contentDescription = null,
-                        modifier = Modifier.padding(start = 12.dp).size(36.dp).clip(RoundedCornerShape(6.dp)),
+                title = {
+                    Text(
+                        when {
+                            selectedChartToken != null -> selectedChartToken.orEmpty()
+                            selectedSong != null -> selectedSong.title
+                            destination == AppDestination.SONGS -> "Songs"
+                            else -> "MyPIU"
+                        },
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 },
+                navigationIcon = {
+                    if (selectedSongSlug != null) {
+                        IconButton(onClick = ::navigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.mypiu_icon),
+                            contentDescription = null,
+                            modifier = Modifier.padding(start = 12.dp).size(36.dp).clip(RoundedCornerShape(6.dp)),
+                        )
+                    }
+                },
                 actions = {
-                    IconButton(
-                        onClick = viewModel::refresh,
-                        enabled = state.isPiuConnected && !state.isBusy,
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Sync now")
+                    if (selectedSong == null || selectedChartToken != null) {
+                        IconButton(
+                            onClick = {
+                                when {
+                                    selectedChartToken != null && selectedSong != null -> {
+                                        catalogViewModel.loadChartHistory(
+                                            selectedSong,
+                                            selectedChartToken.orEmpty(),
+                                            force = true,
+                                        )
+                                    }
+                                    destination == AppDestination.SONGS -> catalogViewModel.refresh()
+                                    else -> viewModel.refresh()
+                                }
+                            },
+                            enabled = when {
+                                selectedChartToken != null -> !catalogState.chartHistory.orDefaultLoading
+                                destination == AppDestination.SONGS -> !catalogState.isLoading
+                                else -> state.isPiuConnected && !state.isBusy
+                            },
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
                     }
                 },
             )
+        },
+        bottomBar = {
+            NavigationBar {
+                AppDestination.entries.forEach { item ->
+                    NavigationBarItem(
+                        selected = destination == item,
+                        onClick = {
+                            destination = item
+                            selectedSongSlug = null
+                            selectedChartToken = null
+                            selectedSongFallback = null
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = if (item == AppDestination.HOME) Icons.Default.Home else Icons.Default.MusicNote,
+                                contentDescription = null,
+                            )
+                        },
+                        label = { Text(item.label) },
+                    )
+                }
+            }
         },
     ) { contentPadding ->
         Box(
             modifier = Modifier.fillMaxSize().padding(contentPadding),
             contentAlignment = Alignment.TopCenter,
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 760.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-            ) {
-                item {
-                    ConnectionHeader(state)
-                }
-                state.message?.let { message ->
-                    item { StatusMessage(message) }
-                }
-                state.profile?.let { profile ->
-                    item { PlayerSummary(profile) }
-                }
-                item {
-                    MyPiuConnection(
-                        state = state,
-                        onAuthorize = { provider ->
-                            viewModel.authorizationUrl(provider)?.let(openAuthorization)
-                        },
-                        onDisconnect = viewModel::disconnectMyPiu,
-                    )
-                }
-                item {
-                    PiuConnection(
-                        state = state,
-                        onConnect = viewModel::connectPiu,
-                        onDisconnect = viewModel::disconnectPiu,
-                    )
-                }
-                if (state.recentPlays.isNotEmpty()) {
-                    item {
-                        SectionTitle("Recently played", "${state.recentPlays.size} plays")
-                    }
-                    items(state.recentPlays, key = RecentPlay::id) { play -> RecentPlayRow(play) }
-                }
+            when {
+                destination == AppDestination.HOME -> HomeContent(
+                    state = state,
+                    viewModel = viewModel,
+                    openAuthorization = openAuthorization,
+                )
+                selectedSong == null -> CatalogScreen(
+                    state = catalogState,
+                    imageUrl = catalogViewModel::imageUrl,
+                    onQueryChange = catalogViewModel::setQuery,
+                    onFeedChange = catalogViewModel::setFeed,
+                    onVersionChange = catalogViewModel::setVersion,
+                    onRefresh = catalogViewModel::refresh,
+                    onLoadMore = catalogViewModel::loadMore,
+                    onToggleFavorite = catalogViewModel::toggleFavorite,
+                    onSongClick = {
+                        selectedSongFallback = it
+                        selectedSongSlug = it.slug
+                    },
+                )
+                selectedChartToken == null -> SongDetailScreen(
+                    song = selectedSong,
+                    imageUrl = catalogViewModel.imageUrl(selectedSong),
+                    version = catalogState.version,
+                    isMyPiuConnected = catalogState.isMyPiuConnected,
+                    isUpdatingFavorite = selectedSong.slug in catalogState.updatingFavorites,
+                    onToggleFavorite = { catalogViewModel.toggleFavorite(selectedSong) },
+                    onChartClick = { selectedChartToken = it },
+                )
+                else -> ChartHistoryScreen(
+                    song = selectedSong,
+                    chartToken = selectedChartToken.orEmpty(),
+                    state = catalogState.chartHistory,
+                    onLoad = { catalogViewModel.loadChartHistory(selectedSong, selectedChartToken.orEmpty()) },
+                    onRetry = {
+                        catalogViewModel.loadChartHistory(selectedSong, selectedChartToken.orEmpty(), force = true)
+                    },
+                )
             }
             if (state.isBusy) {
                 LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
             }
         }
     }
+    catalogState.favoriteError?.let { message ->
+        AlertDialog(
+            onDismissRequest = catalogViewModel::dismissFavoriteError,
+            title = { Text("Couldn't update favorite") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = catalogViewModel::dismissFavoriteError) { Text("OK") }
+            },
+        )
+    }
 }
+
+@Composable
+private fun HomeContent(
+    state: AppUiState,
+    viewModel: AppViewModel,
+    openAuthorization: (String) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth().widthIn(max = 760.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        item { ConnectionHeader(state) }
+        state.message?.let { message -> item { StatusMessage(message) } }
+        state.profile?.let { profile -> item { PlayerSummary(profile) } }
+        item {
+            MyPiuConnection(
+                state = state,
+                onAuthorize = { provider -> viewModel.authorizationUrl(provider)?.let(openAuthorization) },
+                onDisconnect = viewModel::disconnectMyPiu,
+            )
+        }
+        item {
+            PiuConnection(
+                state = state,
+                onConnect = viewModel::connectPiu,
+                onDisconnect = viewModel::disconnectPiu,
+            )
+        }
+        if (state.recentPlays.isNotEmpty()) {
+            item { SectionTitle("Recently played", "${state.recentPlays.size} plays") }
+            items(state.recentPlays, key = RecentPlay::id) { play -> RecentPlayRow(play) }
+        }
+    }
+}
+
+private enum class AppDestination(val label: String) {
+    HOME("Home"),
+    SONGS("Songs"),
+}
+
+private val ChartHistoryUiState?.orDefaultLoading: Boolean
+    get() = this?.isLoading == true
 
 @Composable
 private fun ConnectionHeader(state: AppUiState) {

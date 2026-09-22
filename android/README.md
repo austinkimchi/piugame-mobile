@@ -22,4 +22,4 @@ The debug APK is written under `app/build/outputs/apk/debug/`.
 - Raw PIUGAME HTML is parsed on-device and is never uploaded or persisted.
 - WorkManager performs best-effort refresh using the same device-owned request path.
 
-The current vertical slice covers MyPIU PKCE authorization, PIUGAME connection, foreground sync, normalized upload, recent-play display, and scheduled background refresh. Catalog, favorites, recommendations, progress, and offline history parity follow in later Stage 4 slices.
+The current slices cover MyPIU PKCE authorization, PIUGAME connection, foreground sync, normalized upload, recent-play display, and scheduled background refresh. The native Songs destination adds searchable PHOENIX and PHOENIX 2 catalogs, paginated recommendation and favorite feeds, song/chart detail, personal chart history, and a bounded account-and-version-scoped offline cache. Progress, Pumbility, and session-dashboard parity follow in later Stage 4 slices.

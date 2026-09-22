@@ -55,6 +55,21 @@ class AppViewModel(
         viewModelScope.launch { runOperation { repository.sync() } }
     }
 
+    fun reconcileConnectionState() {
+        val connection = repository.connectionState()
+        mutableState.update { current ->
+            current.copy(
+                isPiuConnected = connection.isPiuConnected,
+                isMyPiuConnected = connection.isMyPiuConnected,
+                account = current.account.takeIf { connection.isMyPiuConnected },
+                profile = current.profile.takeIf { connection.isPiuConnected },
+                recentPlays = current.recentPlays.takeIf { connection.isPiuConnected }.orEmpty(),
+                piuVersion = current.piuVersion.takeIf { connection.isPiuConnected },
+            )
+        }
+        if (connection.isPiuConnected && connection.isMyPiuConnected) scheduler.schedule() else scheduler.cancel()
+    }
+
     fun disconnectPiu() {
         viewModelScope.launch {
             try {
@@ -64,6 +79,7 @@ class AppViewModel(
                         isPiuConnected = false,
                         profile = null,
                         recentPlays = emptyList(),
+                        piuVersion = null,
                         message = "PIUGAME disconnected.",
                     )
                 }
@@ -109,6 +125,7 @@ class AppViewModel(
                     account = current.account.takeIf { connection.isMyPiuConnected },
                     profile = current.profile.takeIf { connection.isPiuConnected },
                     recentPlays = current.recentPlays.takeIf { connection.isPiuConnected }.orEmpty(),
+                    piuVersion = current.piuVersion.takeIf { connection.isPiuConnected },
                 )
             }
             if (connection.isPiuConnected && connection.isMyPiuConnected) scheduler.schedule() else scheduler.cancel()
@@ -131,6 +148,7 @@ class AppViewModel(
                 } else {
                     emptyList()
                 },
+                piuVersion = if (snapshot.isPiuConnected) snapshot.piuSnapshot?.version ?: current.piuVersion else null,
                 message = snapshot.syncResult?.let { result ->
                     "Synced ${result.importedRecentPlays} new plays; ${result.duplicateRecentPlays} already current."
                 },
@@ -160,5 +178,6 @@ data class AppUiState(
     val account: MyPiuAccount? = null,
     val profile: PiuProfile? = null,
     val recentPlays: List<RecentPlay> = emptyList(),
+    val piuVersion: PiuGameVersion? = null,
     val message: String? = null,
 )

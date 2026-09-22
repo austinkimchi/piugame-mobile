@@ -1,6 +1,6 @@
 # MyPIU Mobile
 
-Native clients for MyPIU. The iOS app is the production baseline, and Android now has a native device-sync foundation built on the same contract.
+Native clients for MyPIU. The iOS app is the production baseline, and Android now has native device sync plus its first catalog and personal-history parity slice on the same contract.
 
 The mobile clients fetch PIUGAME data from the user's device, normalize it locally, and send only normalized performance data to MyPIU. PIUGAME credentials remain in the device keychain and are never uploaded to MyPIU.
 

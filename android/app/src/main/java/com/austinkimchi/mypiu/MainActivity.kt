@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.net.toUri
 import com.austinkimchi.mypiu.ui.AppViewModel
+import com.austinkimchi.mypiu.ui.CatalogViewModel
 import com.austinkimchi.mypiu.ui.MyPiuApp
 import com.austinkimchi.mypiu.ui.theme.MyPiuTheme
 
@@ -19,6 +20,9 @@ class MainActivity : ComponentActivity() {
             restoreOnInit = intent.myPiuOAuthCallback() == null,
         )
     }
+    private val catalogViewModel: CatalogViewModel by viewModels {
+        CatalogViewModel.Factory((application as MyPIUApplication).container)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +31,7 @@ class MainActivity : ComponentActivity() {
             MyPiuTheme {
                 MyPiuApp(
                     viewModel = viewModel,
+                    catalogViewModel = catalogViewModel,
                     openAuthorization = { url ->
                         CustomTabsIntent.Builder().build().launchUrl(this, url.toUri())
                     },
