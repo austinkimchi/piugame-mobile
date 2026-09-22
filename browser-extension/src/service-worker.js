@@ -1,7 +1,9 @@
-const ORIGINS = {
-  phoenix: "https://phoenix.piugame.com",
-  phoenix2: "https://www.piugame.com"
-};
+import {
+  isAuthenticatedProfilePage,
+  normalizePIUGameVersion,
+  PIUGAME_ORIGINS,
+  piuSignInURL
+} from "./piugame-session.js";
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type !== "mypiu:fetch-piugame") return false;
@@ -10,24 +12,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  void fetchPages(message.version === "phoenix" ? "phoenix" : "phoenix2")
+  void fetchPages(normalizePIUGameVersion(message.version))
     .then((pages) => sendResponse({ ok: true, pages }))
-    .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "PIUGAME sync failed." }));
+    .catch((error) => sendResponse(serializeError(error)));
   return true;
 });
 
 async function fetchPages(version) {
-  const origin = ORIGINS[version];
+  const origin = PIUGAME_ORIGINS[version];
   const entries = await Promise.all([
     fetchPage(origin, "/my_page/play_data.php"),
     fetchPage(origin, "/my_page/recently_played.php"),
     fetchPage(origin, "/my_page/pumbility.php")
   ]);
   const [profile, recent, pumbility] = entries;
-  if (!/subProfile_wrap|play_data_wrap|profile_name/i.test(profile)) {
-    throw new Error("Sign in to PIUGAME in this browser, then retry.");
+  if (!isAuthenticatedProfilePage(profile)) {
+    throw new PIUGameSessionRequiredError(version);
   }
-  return { version, profile, recent, pumbility };
+  return {
+    version,
+    profile: profile.html,
+    recent: recent.html,
+    pumbility: pumbility.html
+  };
 }
 
 async function fetchPage(origin, path) {
@@ -38,5 +45,29 @@ async function fetchPage(origin, path) {
     headers: { Accept: "text/html,application/xhtml+xml" }
   });
   if (!response.ok) throw new Error(`PIUGAME returned HTTP ${response.status}.`);
-  return response.text();
+  return { url: response.url, html: await response.text() };
+}
+
+class PIUGameSessionRequiredError extends Error {
+  constructor(version) {
+    super("Sign in to PIUGAME in this browser, then retry.");
+    this.name = "PIUGameSessionRequiredError";
+    this.version = version;
+  }
+}
+
+function serializeError(error) {
+  if (error instanceof PIUGameSessionRequiredError) {
+    return {
+      ok: false,
+      error: error.message,
+      code: "piugame_session_required",
+      recovery: { kind: "piugame", url: piuSignInURL(error.version) }
+    };
+  }
+  return {
+    ok: false,
+    error: error instanceof Error ? error.message : "PIUGAME sync failed.",
+    code: "piugame_fetch_failed"
+  };
 }
