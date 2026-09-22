@@ -9,18 +9,22 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true;
 });
 
-window.addEventListener("mypiu:request-extension-sync", () => {
+window.addEventListener("mypiu:request-extension-sync", (event) => {
+  const requestId = pageRequestId(event);
+  if (!requestId) return;
+
   void sync().then((result) => {
     window.dispatchEvent(new CustomEvent("mypiu:extension-sync-result", {
       detail: result.ok
         ? {
+            requestId,
             ok: true,
             recentPlayCount: result.recentPlayCount,
             importedRecentPlays: result.importedRecentPlays,
             duplicateRecentPlays: result.duplicateRecentPlays,
             duplicateRequest: result.duplicateRequest
           }
-        : { ok: false, error: result.error, code: result.code, recovery: result.recovery }
+        : { requestId, ok: false, error: result.error, code: result.code, recovery: result.recovery }
     }));
   });
 });
@@ -97,4 +101,12 @@ function announceExtension() {
   window.dispatchEvent(new CustomEvent("mypiu:extension-ready", {
     detail: { version: chrome.runtime.getManifest().version }
   }));
+}
+
+function pageRequestId(event) {
+  const requestId = event instanceof CustomEvent ? event.detail?.requestId : null;
+  return typeof requestId === "string"
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)
+    ? requestId
+    : null;
 }

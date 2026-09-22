@@ -16,12 +16,12 @@ npm test
 1. Load this directory as an unpacked extension in a Chromium browser.
 2. Sign in to PIUGAME in the same browser profile.
 3. Sign in to `https://mypiu.austin.kim` and link the matching PIUGAME account.
-4. Refresh the MyPIU tab once after installing the extension.
+4. Refresh the MyPIU tab once after installing or updating the extension.
 5. Use the extension toolbar action and select **Sync now**.
 
 The popup reports new and duplicate plays returned by MyPIU. If either browser session has expired, it offers the appropriate sign-in action and leaves the sync retry under the user's control.
 
-The content script also exposes a readiness handshake and the authenticated sync event bridge used by the MyPIU performance page.
+The content script also exposes a readiness handshake and the authenticated sync event bridge used by the MyPIU performance page. Page requests and results carry the same UUID so a late response cannot complete a newer retry.
 
 ## Current boundary
 
