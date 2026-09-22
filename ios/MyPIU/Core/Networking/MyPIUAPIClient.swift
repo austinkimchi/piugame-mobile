@@ -14,6 +14,9 @@ enum MyPIUAPIError: LocalizedError, Equatable {
             case "piu_account_not_linked": "Link this PIUGAME account on MyPIU before uploading."
             case "piu_username_mismatch": "The PIUGAME username does not match the account linked to MyPIU."
             case "rate_limited": "MyPIU is receiving syncs too quickly. Try again shortly."
+            case "account_busy": "MyPIU is finishing another account update. Try deleting again shortly."
+            case "account_not_found": "This MyPIU account no longer exists."
+            case "deletion_failed": "MyPIU could not delete the account. Try again."
             default: "MyPIU could not complete the request."
             }
         }
@@ -21,6 +24,11 @@ enum MyPIUAPIError: LocalizedError, Equatable {
 
     var isUnauthorized: Bool {
         if case .server(let status, _) = self { return status == 401 }
+        return false
+    }
+
+    var isAccountNotFound: Bool {
+        if case .server(_, let code) = self { return code == "account_not_found" }
         return false
     }
 }
@@ -107,6 +115,12 @@ actor MyPIUAPIClient {
 
     func revoke(accessToken: String) async throws {
         var request = authenticatedRequest(path: "/api/mobile/v1/token", accessToken: accessToken)
+        request.httpMethod = "DELETE"
+        _ = try await sendData(request)
+    }
+
+    func deleteAccount(accessToken: String) async throws {
+        var request = authenticatedRequest(path: "/api/mobile/v1/account", accessToken: accessToken)
         request.httpMethod = "DELETE"
         _ = try await sendData(request)
     }

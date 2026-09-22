@@ -4,6 +4,7 @@ struct AccountView: View {
     @EnvironmentObject private var model: AppModel
     @State private var username = ""
     @State private var password = ""
+    @State private var showingAccountDeletion = false
 
     var body: some View {
         Form {
@@ -17,6 +18,7 @@ struct AccountView: View {
                     Button("Disconnect MyPIU", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
                         Task { await model.disconnectMyPIU() }
                     }
+                    .disabled(model.isMyPIUBusy)
                 } else if model.isMyPIUConnected {
                     myPIUStatus
                     Button("Retry MyPIU", systemImage: "arrow.clockwise") {
@@ -26,6 +28,7 @@ struct AccountView: View {
                     Button("Disconnect MyPIU", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
                         Task { await model.disconnectMyPIU() }
                     }
+                    .disabled(model.isMyPIUBusy)
                 } else {
                     Button("Continue with Google", systemImage: "person.badge.key") {
                         Task { await model.connectMyPIU(provider: .google) }
@@ -36,6 +39,15 @@ struct AccountView: View {
                     }
                     .disabled(model.isMyPIUBusy)
                     myPIUStatus
+                }
+            }
+
+            if model.isMyPIUConnected {
+                Section("ACCOUNT DATA") {
+                    Button("Delete MyPIU Account", systemImage: "trash", role: .destructive) {
+                        showingAccountDeletion = true
+                    }
+                    .disabled(model.isMyPIUBusy)
                 }
             }
 
@@ -96,6 +108,16 @@ struct AccountView: View {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
             }
         }
+        .alert("Delete MyPIU Account?", isPresented: $showingAccountDeletion) {
+            Button("Delete Account", role: .destructive) {
+                Task { await model.deleteMyPIUAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "This permanently deletes your MyPIU profile, synced scores, saved songs, community posts, and linked Discord bot data. Your PIUGAME account and on-device PIUGAME login are not deleted."
+            )
+        }
     }
 
     @ViewBuilder
@@ -109,6 +131,8 @@ struct AccountView: View {
             LabeledContent("Signing in") { ProgressView() }
         case .uploading:
             LabeledContent("Uploading") { ProgressView() }
+        case .deleting:
+            LabeledContent("Deleting account") { ProgressView() }
         case .synced(let imported, let duplicates):
             LabeledContent("Last sync", value: imported > 0 ? "\(imported) new" : "\(duplicates) already saved")
         case .failed(let message):
