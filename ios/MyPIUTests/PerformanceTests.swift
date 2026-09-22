@@ -32,6 +32,7 @@ final class PerformanceTests: XCTestCase {
                 "recentlyPlayed": 9
               },
               "recentPlays": [{
+                "id": "play-1",
                 "songName": "BATTLE NO.1",
                 "chartToken": "battle-no-1:s:19",
                 "score": 954848,
@@ -68,6 +69,7 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(dashboard.profile?.totalCharts, 3_900)
         XCTAssertEqual(dashboard.profile?.progressPercent, 16)
         XCTAssertEqual(dashboard.totals.averageBestScore, 954_848)
+        XCTAssertEqual(dashboard.recentPlays.first?.id, "play-1")
         XCTAssertEqual(dashboard.recentPlays.first?.score, 954_848)
         XCTAssertEqual(dashboard.topCharts.first?.topPlayRank, 3)
     }
@@ -107,8 +109,9 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(clamped.playCount, 0)
     }
 
-    func testPerformanceRowsHaveStableCompositeIdentifiers() throws {
+    func testPerformanceRowsUseServerIdentifiers() throws {
         let play = MyPIUPerformanceDashboard.Play(
+            id: "play-1",
             songName: "BATTLE NO.1",
             chartToken: "battle-no-1:s:19",
             score: 954_848,
@@ -133,7 +136,7 @@ final class PerformanceTests: XCTestCase {
             topPumbilityScore: 550
         )
 
-        XCTAssertEqual(play.id, "BATTLE NO.1:battle-no-1:s:19:2026-09-22T07:20:00.000Z:954848")
+        XCTAssertEqual(play.id, "play-1")
         XCTAssertEqual(play.displayChartToken, "S19")
         XCTAssertEqual(chart.id, "Big Daddy:big-daddy:s:19")
         XCTAssertEqual(chart.displayChartToken, "S19")
@@ -214,17 +217,32 @@ final class PerformanceTests: XCTestCase {
                 "endedAt": "2026-09-22T08:00:00.000Z",
                 "durationMinutes": 60
               },
-              "plays": [{
-                "songName": "Big Daddy",
-                "chartToken": "big-daddy:s:19",
-                "score": null,
-                "grade": "x_s",
-                "plate": null,
-                "mode": "S",
-                "level": "19",
-                "playedAt": "2026-09-22T08:00:00.000Z",
-                "stageBreak": true
-              }]
+              "plays": [
+                {
+                  "id": "play-2",
+                  "songName": "Big Daddy",
+                  "chartToken": "big-daddy:s:19",
+                  "score": null,
+                  "grade": "x_s",
+                  "plate": null,
+                  "mode": "S",
+                  "level": "19",
+                  "playedAt": "2026-09-22T08:00:00.000Z",
+                  "stageBreak": true
+                },
+                {
+                  "id": "play-3",
+                  "songName": "Big Daddy",
+                  "chartToken": "big-daddy:s:19",
+                  "score": null,
+                  "grade": "x_s",
+                  "plate": null,
+                  "mode": "S",
+                  "level": "19",
+                  "playedAt": "2026-09-22T08:00:00.000Z",
+                  "stageBreak": true
+                }
+              ]
             }
             """#.utf8
         )
@@ -237,6 +255,7 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(session.summary.durationMinutes, 60)
         XCTAssertEqual(session.plays.first?.displayChartToken, "S19")
         XCTAssertEqual(session.plays.first?.stageBreak, true)
+        XCTAssertEqual(session.plays.map(\.id), ["play-2", "play-3"])
     }
 
     func testSessionClearRateRequiresPlaysAndClampsBadCounts() {
