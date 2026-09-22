@@ -1,21 +1,28 @@
-# MyPIU browser sync proof
+# MyPIU Sync Chromium beta
 
-This unpacked Manifest V3 extension proves that PIUGAME requests can originate from a user's browser rather than the MyPIU server.
+This unpacked Manifest V3 beta fetches PIUGAME from the user's browser session and uploads only normalized performance data to MyPIU. PIUGAME requests originate from the user's device rather than the MyPIU server.
 
-It is intentionally not store-ready. It targets the versioned ingest and extension-context endpoints described in `../docs/mobile-sync-contract.md`; those endpoints must ship before publishing the extension.
+The beta uses the production versioned ingest and extension-context endpoints described in `../docs/mobile-sync-contract.md`. It does not read passwords, export cookies, or upload raw PIUGAME HTML.
 
 ## Test
 
 ```bash
-npm install
+npm ci
 npm test
 ```
 
-## Manual proof
+## Install the beta
 
 1. Load this directory as an unpacked extension in a Chromium browser.
-2. Sign in to `https://www.piugame.com` in the same browser profile.
-3. Open `https://mypiu.austin.kim`.
-4. Use the extension toolbar action and select **Read PIUGAME now**.
+2. Sign in to PIUGAME in the same browser profile.
+3. Sign in to `https://mypiu.austin.kim` and link the matching PIUGAME account.
+4. Refresh the MyPIU tab once after installing the extension.
+5. Use the extension toolbar action and select **Sync now**.
 
-The popup reports the parsed player and recent-play count. MyPIU can also request an authenticated upload through the page event bridge after the backend endpoint is deployed.
+The popup reports new and duplicate plays returned by MyPIU. If either browser session has expired, it offers the appropriate sign-in action and leaves the sync retry under the user's control.
+
+The content script also exposes a readiness handshake and the authenticated sync event bridge used by the MyPIU performance page.
+
+## Current boundary
+
+This is an unpacked Chromium beta, not a Chrome Web Store package. Background polling is intentionally excluded: Manifest V3 service workers are not a reliable high-frequency scheduler, so sync remains user initiated.
