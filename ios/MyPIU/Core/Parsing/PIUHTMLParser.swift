@@ -111,7 +111,8 @@ struct PIUHTMLParser: Sendable {
         var digits: [String] = []
         for image in images {
             let source = try image.attr("src")
-            let filename = URL(string: source)?.deletingPathExtension().lastPathComponent ?? source
+            let filename = (URL(string: source)?.deletingPathExtension().lastPathComponent ?? source).lowercased()
+            guard filename.range(of: #"^[sdc]_num_[0-9]$"#, options: .regularExpression) != nil else { return nil }
             guard let digit = filename.last, digit.isNumber else { return nil }
             digits.append(String(digit))
         }

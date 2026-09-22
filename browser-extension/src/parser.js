@@ -63,7 +63,11 @@ function parseRecentPlay(item) {
   const modeSource = item.querySelector(".stepBall_in .tw img")?.getAttribute("src")?.toLowerCase() ?? "";
   const mode = modeSource.includes("/s_text") ? "S" : modeSource.includes("/d_text") ? "D" : modeSource.includes("/c_text") ? "C" : null;
   const levelDigits = [...item.querySelectorAll(".stepBall_in .numw img")]
-    .map((image) => image.getAttribute("src")?.match(/(?:num_|_)(\d)\.[a-z]+$/i)?.[1] ?? null);
+    .map((image) => {
+      const source = image.getAttribute("src")?.split(/[?#]/, 1)[0];
+      const filename = source?.split("/").pop();
+      return filename?.match(/^[sdc]_num_(\d)\.[a-z0-9]+$/i)?.[1] ?? null;
+    });
   const level = levelDigits.length > 0 && levelDigits.every((digit) => digit !== null)
     ? levelDigits.join("")
     : null;
