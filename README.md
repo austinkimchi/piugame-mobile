@@ -7,7 +7,7 @@ The mobile clients fetch PIUGAME data from the user's device, normalize it local
 ## Repository layout
 
 - `ios/` - SwiftUI iPhone and iPad app plus native PIUGAME client.
-- `browser-extension/` - unpacked Manifest V3 Chromium beta for user-initiated web sync.
+- `browser-extension/` - unpacked Manifest V3 Chromium beta for toolbar and first-party MyPIU page sync.
 - `docs/` - architecture, security boundaries, contracts, and delivery milestones.
 - `android/` - Android implementation notes until the Compose client begins.
 
