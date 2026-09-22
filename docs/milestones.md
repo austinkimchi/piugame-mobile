@@ -27,7 +27,7 @@
 
 ## Stage 3: companion web extension
 
-Current: the unpacked Chromium beta performs toolbar-initiated, normalized uploads and recovers expired MyPIU or PIUGAME sessions. A first-party MyPIU page control, packaged distribution, and Safari remain before this stage is complete.
+Current: the unpacked Chromium beta performs toolbar- or MyPIU-page-initiated normalized uploads, coordinates concurrent refreshes, and recovers expired MyPIU or PIUGAME sessions. Packaged Chromium distribution and Safari remain before this stage is complete.
 
 - Manifest V3 Chromium beta.
 - MyPIU page integration and normalized-data upload.
