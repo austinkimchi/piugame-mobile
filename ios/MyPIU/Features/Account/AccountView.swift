@@ -113,7 +113,7 @@ struct AccountView: View {
         .navigationTitle("Account")
         .overlay {
             if model.state == .syncing {
-                ProgressView()
+                ProgressView("Syncing")
                     .padding(18)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
             }

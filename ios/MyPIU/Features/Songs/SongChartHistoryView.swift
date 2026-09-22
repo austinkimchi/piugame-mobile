@@ -90,12 +90,15 @@ struct SongChartHistoryView: View {
             }
 
             if let stats = performance.stats {
+                let latestFailed = performance.latestPlay.map {
+                    performancePlayIsFailed(grade: $0.grade, stageBreak: $0.stageBreak)
+                } ?? stats.latestStageBreak
                 Section("Summary") {
                     summaryRow("Best score", value: scoreLabel(stats.bestScore))
                     summaryRow(
                         "Latest score",
-                        value: stats.latestStageBreak ? "FAILED" : scoreLabel(stats.latestScore),
-                        tint: stats.latestStageBreak ? AppTheme.accent : nil
+                        value: latestFailed ? "FAILED" : scoreLabel(stats.latestScore),
+                        tint: latestFailed ? AppTheme.accent : nil
                     )
                     summaryRow("Tracked attempts", value: stats.recentPlayCount.formatted())
                     summaryRow("Stage breaks", value: stats.stageBreakCount.formatted())
@@ -201,9 +204,11 @@ private extension SongChartHistoryView {
 }
 
 private struct ChartAttemptRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let attempt: MyPIUSongChartPerformance.Attempt
 
     var body: some View {
+        let failed = performancePlayIsFailed(grade: attempt.grade, stageBreak: attempt.stageBreak)
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -214,15 +219,20 @@ private struct ChartAttemptRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
-                Text(attempt.stageBreak ? "FAILED" : attempt.score?.formatted() ?? "-")
+                Text(failed ? "FAILED" : attempt.score?.formatted() ?? "-")
                     .font(.body.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(attempt.stageBreak ? AppTheme.accent : .primary)
+                    .foregroundStyle(failed ? AppTheme.accent : .primary)
             }
 
             let judgments = judgmentValues
             if !judgments.isEmpty {
                 LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 48), spacing: 8)],
+                    columns: [
+                        GridItem(
+                            .adaptive(minimum: dynamicTypeSize.isAccessibilitySize ? 88 : 48),
+                            spacing: 8
+                        )
+                    ],
                     alignment: .leading,
                     spacing: 8
                 ) {

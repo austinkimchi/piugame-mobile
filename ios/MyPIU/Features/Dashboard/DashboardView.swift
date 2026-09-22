@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DashboardView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
@@ -48,7 +49,7 @@ struct DashboardView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                LazyVGrid(columns: metricColumns, spacing: 10) {
                     NavigationLink {
                         PumbilityBreakdownView(performance: performance)
                     } label: {
@@ -122,7 +123,7 @@ struct DashboardView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                LazyVGrid(columns: metricColumns, spacing: 10) {
                     MetricTile(title: "Pumbility", value: format(snapshot.profile.pumbilityScore), detail: nil, icon: "chart.line.uptrend.xyaxis", tint: AppTheme.positive)
                     MetricTile(title: "Rating", value: format(snapshot.profile.rating), detail: nil, icon: "gauge.with.dots.needle.50percent", tint: AppTheme.accent)
                     MetricTile(title: "Plays", value: format(snapshot.profile.playCount), detail: nil, icon: "figure.run", tint: .blue)
@@ -155,6 +156,13 @@ struct DashboardView: View {
         guard let value else { return nil }
         return "\(value >= 0 ? "+" : "")\(format(value)) / 24h"
     }
+
+    private var metricColumns: [GridItem] {
+        Array(
+            repeating: GridItem(.flexible(), spacing: 10),
+            count: dynamicTypeSize.isAccessibilitySize ? 1 : 2
+        )
+    }
 }
 
 private struct MetricTile: View {
@@ -182,6 +190,7 @@ private struct MetricTile: View {
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
         .padding(12)
         .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -189,6 +198,7 @@ struct PerformanceRecentPlayRow: View {
     let play: MyPIUPerformanceDashboard.Play
 
     var body: some View {
+        let failed = performancePlayIsFailed(grade: play.grade, stageBreak: play.stageBreak)
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(play.songName)
@@ -196,18 +206,27 @@ struct PerformanceRecentPlayRow: View {
                     .lineLimit(2)
                 Text("\(performanceGradeLabel(play.grade)) / \(performanceDateLabel(play.playedAt))")
                     .font(.caption)
-                    .foregroundStyle(play.stageBreak ? AppTheme.accent : .secondary)
+                    .foregroundStyle(failed ? AppTheme.accent : .secondary)
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 5) {
                 ChartTokenBadge(chartToken: play.displayChartToken)
-                Text(play.stageBreak ? "FAILED" : play.score?.formatted() ?? "-")
+                Text(failed ? "FAILED" : play.score?.formatted() ?? "-")
                     .font(.caption.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(play.stageBreak ? AppTheme.accent : .primary)
+                    .foregroundStyle(failed ? AppTheme.accent : .primary)
             }
         }
         .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(play.songName)
+        .accessibilityValue(
+            [
+                performanceChartTokenAccessibilityLabel(play.displayChartToken),
+                performanceGradeLabel(play.grade),
+                failed ? "Failed" : (play.score?.formatted() ?? "Score unavailable"),
+                performanceDateLabel(play.playedAt)
+            ].joined(separator: ", ")
+        )
     }
 }
 
@@ -244,7 +263,9 @@ struct PerformanceChartRow: View {
             }
         }
         .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(chart.songName)
+        .accessibilityValue(performanceChartAccessibilityValue(chart))
     }
 }
 
@@ -258,6 +279,7 @@ struct ChartTokenBadge: View {
             .padding(.vertical, 4)
             .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 4))
             .foregroundStyle(.white)
+            .accessibilityLabel(performanceChartTokenAccessibilityLabel(chartToken))
     }
 }
 
@@ -268,6 +290,42 @@ func performanceGradeLabel(_ value: String?) -> String {
     let isPlus = grade.hasSuffix("_p")
     if isPlus { grade.removeLast(2) }
     return grade.replacingOccurrences(of: "_", with: " ").uppercased() + (isPlus ? "+" : "")
+}
+
+func performancePlayIsFailed(grade: String?, stageBreak: Bool) -> Bool {
+    stageBreak || grade?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("x_") == true
+}
+
+func performanceChartTokenAccessibilityLabel(_ token: String) -> String {
+    let normalized = token.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    guard let prefix = normalized.first, normalized.count > 1 else { return token }
+    var level = String(normalized.dropFirst())
+    let isPlus = level.hasSuffix("+")
+    if isPlus {
+        level.removeLast()
+    }
+    guard !level.isEmpty, level.allSatisfy({ $0.isNumber }) else { return token }
+    let spokenLevel = level + (isPlus ? " plus" : "")
+    switch prefix {
+    case "S": return "Single level \(spokenLevel)"
+    case "D": return "Double level \(spokenLevel)"
+    case "C": return "Co-op level \(spokenLevel)"
+    default: return token
+    }
+}
+
+func performanceChartAccessibilityValue(_ chart: MyPIUPerformanceDashboard.Chart) -> String {
+    var parts: [String] = []
+    if let rank = chart.topPlayRank {
+        parts.append("Rank \(rank)")
+    }
+    parts.append(performanceChartTokenAccessibilityLabel(chart.displayChartToken))
+    parts.append(performanceGradeLabel(chart.bestGrade))
+    parts.append(chart.bestScore?.formatted() ?? "Score unavailable")
+    if let delta = chart.delta, delta > 0 {
+        parts.append("Improved by \(delta.formatted())")
+    }
+    return parts.joined(separator: ", ")
 }
 
 func performanceDateLabel(_ value: String?) -> String {
