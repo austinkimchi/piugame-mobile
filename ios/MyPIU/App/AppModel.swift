@@ -17,6 +17,7 @@ final class AppModel: ObservableObject {
         case authenticating
         case ready
         case uploading
+        case deleting
         case synced(imported: Int, duplicates: Int)
         case failed(String)
     }
@@ -62,7 +63,10 @@ final class AppModel: ObservableObject {
     var isConnected: Bool { credentials != nil }
     var isMyPIUConnected: Bool { accessToken != nil }
     var isMyPIUBusy: Bool {
-        myPIUState == .restoring || myPIUState == .authenticating || myPIUState == .uploading
+        myPIUState == .restoring
+            || myPIUState == .authenticating
+            || myPIUState == .uploading
+            || myPIUState == .deleting
     }
 
     func restore() async {
@@ -140,6 +144,7 @@ final class AppModel: ObservableObject {
     }
 
     func disconnectMyPIU() async {
+        guard myPIUState != .deleting else { return }
         guard let token = accessToken else {
             clearMyPIUSession()
             return
@@ -152,6 +157,38 @@ final class AppModel: ObservableObject {
         }
         clearMyPIUSession()
         await retryPendingMyPIURevocations()
+    }
+
+    func deleteMyPIUAccount() async {
+        guard let token = accessToken else {
+            myPIUState = .signedOut
+            return
+        }
+
+        myPIUState = .deleting
+        do {
+            try await apiClient.deleteAccount(accessToken: token.value)
+            guard accessToken?.value == token.value else { return }
+
+            accessToken = nil
+            myPIUAccount = nil
+            do {
+                try tokenStore.delete()
+                myPIUState = .signedOut
+            } catch {
+                myPIUState = .failed(
+                    "Your MyPIU account was deleted, but its saved session could not be removed from Keychain."
+                )
+            }
+        } catch {
+            guard accessToken?.value == token.value else { return }
+            if let apiError = error as? MyPIUAPIError,
+               apiError.isUnauthorized || apiError.isAccountNotFound {
+                clearMyPIUSession()
+            } else {
+                myPIUState = .failed(error.localizedDescription)
+            }
+        }
     }
 
     func connect(username: String, password: String) async -> Bool {
