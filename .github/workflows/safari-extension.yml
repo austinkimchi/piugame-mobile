@@ -1,0 +1,88 @@
+name: Safari extension
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: browser-extension/package-lock.json
+      - name: Install extension dependencies
+        working-directory: browser-extension
+        run: npm ci
+      - name: Test shared extension runtime
+        working-directory: browser-extension
+        run: |
+          npm test
+          npm run check:syntax
+          npm run stage:safari
+      - name: Package Safari extension project
+        id: package
+        run: |
+          xcrun --find safari-web-extension-packager
+          xcrun safari-web-extension-packager browser-extension/dist/safari-mv3 \
+            --project-location browser-extension/dist/safari-project \
+            --app-name "MyPIU Sync" \
+            --bundle-identifier com.austinkimchi.mypiu.sync \
+            --swift \
+            --copy-resources \
+            --no-open \
+            --no-prompt \
+            --force 2>&1 | tee "$RUNNER_TEMP/safari-packager.log"
+          if grep -q "not supported by your current version of Safari" "$RUNNER_TEMP/safari-packager.log"; then
+            echo "Safari packager reported unsupported manifest keys." >&2
+            exit 1
+          fi
+
+          PROJECT="$(find browser-extension/dist/safari-project -name '*.xcodeproj' -print -quit)"
+          test -n "$PROJECT"
+          test -f "$PROJECT/project.pbxproj"
+          echo "project=$PROJECT" >> "$GITHUB_OUTPUT"
+
+          RESOURCES="$(find browser-extension/dist/safari-project -type d -path '*/Shared (Extension)/Resources' -print -quit)"
+          test -n "$RESOURCES"
+          diff -qr browser-extension/dist/safari-mv3 "$RESOURCES"
+      - name: Verify generated schemes
+        env:
+          PROJECT: ${{ steps.package.outputs.project }}
+        run: |
+          xcodebuild -project "$PROJECT" -list -json > "$RUNNER_TEMP/safari-project.json"
+          jq -e '.project.schemes | index("MyPIU Sync (iOS)") != null' "$RUNNER_TEMP/safari-project.json"
+          jq -e '.project.schemes | index("MyPIU Sync (macOS)") != null' "$RUNNER_TEMP/safari-project.json"
+      - name: Build iOS Safari wrapper
+        env:
+          PROJECT: ${{ steps.package.outputs.project }}
+        run: >-
+          xcodebuild
+          -project "$PROJECT"
+          -scheme "MyPIU Sync (iOS)"
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build
+      - name: Build macOS Safari wrapper
+        env:
+          PROJECT: ${{ steps.package.outputs.project }}
+        run: >-
+          xcodebuild
+          -project "$PROJECT"
+          -scheme "MyPIU Sync (macOS)"
+          -destination 'generic/platform=macOS'
+          CODE_SIGNING_ALLOWED=NO
+          build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mypiu-safari-project-${{ github.sha }}
+          path: browser-extension/dist/safari-project
+          if-no-files-found: error
+          retention-days: 7
