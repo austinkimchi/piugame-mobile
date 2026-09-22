@@ -1,5 +1,8 @@
 let clientPromise;
 
+window.addEventListener("mypiu:request-extension-status", announceExtension);
+announceExtension();
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "mypiu:sync") return false;
   void sync().then(sendResponse);
@@ -88,4 +91,10 @@ async function installationId() {
   const value = crypto.randomUUID();
   await chrome.storage.local.set({ [key]: value });
   return value;
+}
+
+function announceExtension() {
+  window.dispatchEvent(new CustomEvent("mypiu:extension-ready", {
+    detail: { version: chrome.runtime.getManifest().version }
+  }));
 }

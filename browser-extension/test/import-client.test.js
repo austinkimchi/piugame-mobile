@@ -45,3 +45,46 @@ test("preserves the server retry interval for rate limits", () => {
   assert.match(error.message, /37 seconds/);
   assert.equal(error.code, "rate_limited");
 });
+
+test("rejects an HTML success response instead of reporting a zero-item import", async () => {
+  await assert.rejects(
+    uploadPerformancePayload({ source: "browser-extension", recentPlays: [] }, {
+      fetchImpl: async () => new Response("<html>Sign in</html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html" }
+      })
+    }),
+    (error) => {
+      assert.equal(error.code, "invalid_import_receipt");
+      assert.equal(error.recovery.kind, "mypiu");
+      assert.equal(error.recovery.url, "https://mypiu.austin.kim");
+      return true;
+    }
+  );
+});
+
+test("rejects an incomplete JSON success receipt", async () => {
+  await assert.rejects(
+    uploadPerformancePayload({ source: "browser-extension", recentPlays: [] }, {
+      fetchImpl: async () => new Response(JSON.stringify({ importedRecentPlays: 2 }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" }
+      })
+    }),
+    { code: "invalid_import_receipt" }
+  );
+});
+
+test("keeps unreadable error responses on the HTTP error path", async () => {
+  await assert.rejects(
+    uploadPerformancePayload({ source: "browser-extension", recentPlays: [] }, {
+      fetchImpl: async () => new Response("upstream unavailable", { status: 503 })
+    }),
+    (error) => {
+      assert.equal(error.status, 503);
+      assert.equal(error.code, null);
+      assert.match(error.message, /HTTP 503/);
+      return true;
+    }
+  );
+});

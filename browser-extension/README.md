@@ -21,6 +21,8 @@ npm test
 
 The popup reports new and duplicate plays returned by MyPIU. If either browser session has expired, it offers the appropriate sign-in action and leaves the sync retry under the user's control.
 
+The content script also exposes a readiness handshake and the authenticated sync event bridge used by the MyPIU performance page.
+
 ## Current boundary
 
 This is an unpacked Chromium beta, not a Chrome Web Store package. Background polling is intentionally excluded: Manifest V3 service workers are not a reliable high-frequency scheduler, so sync remains user initiated.

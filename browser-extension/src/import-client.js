@@ -17,13 +17,20 @@ export async function uploadPerformancePayload(payload, { fetchImpl = fetch } = 
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload)
   });
-  const body = await response.json().catch(() => ({}));
+  let body;
+  try {
+    body = await response.json();
+  } catch {
+    if (response.ok) throw invalidImportReceipt(response.status);
+    body = {};
+  }
   if (!response.ok) throw importError(response, body);
+  if (!isImportReceipt(body)) throw invalidImportReceipt(response.status);
 
   return {
-    importedRecentPlays: nonnegativeInteger(body.importedRecentPlays),
-    duplicateRecentPlays: nonnegativeInteger(body.duplicateRecentPlays),
-    duplicateRequest: body.duplicateRequest === true
+    importedRecentPlays: body.importedRecentPlays,
+    duplicateRecentPlays: body.duplicateRecentPlays,
+    duplicateRequest: body.duplicateRequest
   };
 }
 
@@ -63,6 +70,22 @@ export function importError(response, body = {}) {
   });
 }
 
-function nonnegativeInteger(value) {
-  return Number.isInteger(value) && value >= 0 ? value : 0;
+function invalidImportReceipt(status) {
+  return new PerformanceImportError("MyPIU returned an invalid sync response. Sign in again, then retry.", {
+    code: "invalid_import_receipt",
+    status,
+    recovery: { kind: "mypiu", url: MYPIU_ORIGIN }
+  });
+}
+
+function isImportReceipt(value) {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    Number.isInteger(value.importedRecentPlays) &&
+    value.importedRecentPlays >= 0 &&
+    Number.isInteger(value.duplicateRecentPlays) &&
+    value.duplicateRecentPlays >= 0 &&
+    typeof value.duplicateRequest === "boolean"
+  );
 }
