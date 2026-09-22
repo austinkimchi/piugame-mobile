@@ -62,9 +62,11 @@ function parseRecentPlay(item) {
   const stageBreak = /stage break/i.test(scoreText ?? "");
   const modeSource = item.querySelector(".stepBall_in .tw img")?.getAttribute("src")?.toLowerCase() ?? "";
   const mode = modeSource.includes("/s_text") ? "S" : modeSource.includes("/d_text") ? "D" : modeSource.includes("/c_text") ? "C" : null;
-  const level = [...item.querySelectorAll(".stepBall_in .numw img")]
-    .map((image) => image.getAttribute("src")?.match(/(?:num_|_)(\d)\.[a-z]+$/i)?.[1] ?? "")
-    .join("") || null;
+  const levelDigits = [...item.querySelectorAll(".stepBall_in .numw img")]
+    .map((image) => image.getAttribute("src")?.match(/(?:num_|_)(\d)\.[a-z]+$/i)?.[1] ?? null);
+  const level = levelDigits.length > 0 && levelDigits.every((digit) => digit !== null)
+    ? levelDigits.join("")
+    : null;
   const playedAt = clean(item.querySelector(".recently_date_tt")?.textContent);
   if (!mode || !level || !playedAt) return [];
   const assetCode = (path) => {

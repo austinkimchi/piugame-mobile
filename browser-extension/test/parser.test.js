@@ -84,6 +84,11 @@ test("skips recent plays without a complete chart token", () => {
           <div class="stepBall_in"><div class="tw"><img src="/l_img/stepball/full/s_text.png"></div><div class="numw"><img src="/l_img/stepball/full/s_num_1.png"><img src="/l_img/stepball/full/s_num_5.png"></div></div>
         </li>
         <li>
+          <div class="song_name"><p>PARTIAL LEVEL</p></div>
+          <div class="stepBall_in"><div class="tw"><img src="/l_img/stepball/full/s_text.png"></div><div class="numw"><img src="/l_img/stepball/full/s_num_1.png"><img src="/l_img/stepball/full/renamed.png"></div></div>
+          <div class="recently_date_tt">2026-09-21 12:29:00 (GMT+9)</div>
+        </li>
+        <li>
           <div class="song_name"><p>COMPLETE</p></div>
           <div class="stepBall_in"><div class="tw"><img src="/l_img/stepball/full/s_text.png"></div><div class="numw"><img src="/l_img/stepball/full/s_num_1.png"><img src="/l_img/stepball/full/s_num_6.png"></div></div>
           <div class="recently_date_tt">2026-09-21 12:30:00 (GMT+9)</div>

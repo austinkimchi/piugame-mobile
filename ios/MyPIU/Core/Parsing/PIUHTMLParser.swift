@@ -105,13 +105,17 @@ struct PIUHTMLParser: Sendable {
     }
 
     private func chartLevel(_ root: Element) throws -> String? {
-        let digits = try root.select(".stepBall_in .numw img").array().compactMap { image -> String? in
+        let images = try root.select(".stepBall_in .numw img").array()
+        guard !images.isEmpty else { return nil }
+
+        var digits: [String] = []
+        for image in images {
             let source = try image.attr("src")
             let filename = URL(string: source)?.deletingPathExtension().lastPathComponent ?? source
             guard let digit = filename.last, digit.isNumber else { return nil }
-            return String(digit)
+            digits.append(String(digit))
         }
-        return digits.isEmpty ? nil : digits.joined()
+        return digits.joined()
     }
 
     private func assetCode(_ root: Element, containing path: String) throws -> String? {
