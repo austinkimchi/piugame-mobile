@@ -35,14 +35,20 @@ jobs:
           test -n "$APPEX"
           test -f "$APPEX/manifest.json"
           test -f "$APPEX/src/service-worker.js"
-          python3 - "$APPEX/manifest.json" <<'PY'
+          python3 - "$APPEX/manifest.json" "$APPEX/Info.plist" <<'PY'
           import json
           import pathlib
+          import plistlib
           import sys
 
           manifest = json.loads(pathlib.Path(sys.argv[1]).read_text())
           assert manifest["manifest_version"] == 3
           assert manifest["background"] == {"service_worker": "src/service-worker.js"}
+
+          with pathlib.Path(sys.argv[2]).open("rb") as plist_file:
+              extension_info = plistlib.load(plist_file)["NSExtension"]
+          assert extension_info["NSExtensionPointIdentifier"] == "com.apple.Safari.web-extension"
+          assert extension_info["NSExtensionPrincipalClass"].endswith(".SafariWebExtensionHandler")
           PY
           ! grep -Eq '^[[:space:]]*import[[:space:]]' "$APPEX/src/service-worker.js"
       - name: Run tests

@@ -19,7 +19,7 @@ Use Xcode 26 or newer on a Mac signed in to the Apple Developer account:
 open ios/MyPIU.xcodeproj
 ```
 
-In Xcode, select the MyPIU target, choose the correct development team, and confirm automatic signing succeeds. Select a generic iOS device, then use **Product > Archive**. In Organizer, validate the archive and choose **Distribute App > TestFlight & App Store**.
+In Xcode, select the MyPIU and MyPIUSafariExtension targets, choose the same development team for both, and confirm automatic signing succeeds. Select a generic iOS device, then use **Product > Archive**. In Organizer, validate the archive and choose **Distribute App > TestFlight & App Store**.
 
 For each upload, increment `CURRENT_PROJECT_VERSION` in `project.yml`. Keep `MARKETING_VERSION` unchanged for replacement beta builds of the same release.
 
