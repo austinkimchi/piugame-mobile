@@ -1,35 +1,158 @@
 import SwiftUI
 
 struct SongsView: View {
-    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var appModel: AppModel
+    @StateObject private var catalog = SongCatalogModel()
     @State private var query = ""
-
-    private var songs: [RecentPlay] {
-        let unique = Dictionary(grouping: model.snapshot?.recentPlays ?? [], by: \.songName)
-            .compactMap { $0.value.first }
-            .sorted { $0.songName.localizedCaseInsensitiveCompare($1.songName) == .orderedAscending }
-        guard !query.isEmpty else { return unique }
-        return unique.filter { $0.songName.localizedCaseInsensitiveContains(query) }
-    }
 
     var body: some View {
         Group {
-            if songs.isEmpty {
-                ContentUnavailableView.search(text: query)
-            } else {
-                List(songs) { play in
-                    HStack {
-                        Text(play.songName)
-                        Spacer()
-                        Text(play.chartToken)
-                            .font(.caption.bold().monospaced())
-                            .foregroundStyle(.secondary)
+            switch catalog.state {
+            case .idle, .loading where catalog.listing.songs.isEmpty:
+                ProgressView("Loading songs")
+            case .failed(let message) where catalog.listing.songs.isEmpty:
+                ContentUnavailableView {
+                    Label("Catalog unavailable", systemImage: "wifi.exclamationmark")
+                } description: {
+                    Text(message)
+                } actions: {
+                    Button("Try Again", systemImage: "arrow.clockwise") {
+                        Task { await catalog.retry() }
                     }
                 }
-                .listStyle(.plain)
+            case .loaded where catalog.listing.songs.isEmpty:
+                ContentUnavailableView.search(text: query)
+            default:
+                songList
             }
         }
         .navigationTitle("Songs")
-        .searchable(text: $query, prompt: "Search recent songs")
+        .navigationDestination(for: CatalogSong.self) { song in
+            CatalogSongDetailView(song: song)
+        }
+        .searchable(text: $query, prompt: "Search the catalog")
+        .task(id: CatalogRequest(query: query, version: appModel.selectedVersion)) {
+            await catalog.reload(
+                query: query,
+                version: appModel.selectedVersion,
+                debounce: !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            )
+        }
+    }
+
+    private var songList: some View {
+        List {
+            Section {
+                ForEach(catalog.listing.songs) { song in
+                    NavigationLink(value: song) {
+                        CatalogSongRow(song: song)
+                    }
+                    .task {
+                        await catalog.loadMoreIfNeeded(after: song)
+                    }
+                }
+            } header: {
+                Text("\(catalog.listing.total.formatted()) songs")
+            }
+
+            if catalog.isLoadingMore {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+                .listRowSeparator(.hidden)
+            } else if catalog.paginationError != nil {
+                Button("Retry loading more", systemImage: "arrow.clockwise") {
+                    Task { await catalog.retryPagination() }
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .listStyle(.plain)
+        .refreshable {
+            await catalog.reload(query: query, version: appModel.selectedVersion, debounce: false)
+        }
+    }
+}
+
+private struct CatalogRequest: Hashable {
+    let query: String
+    let version: PIUGameVersion
+}
+
+private struct CatalogSongRow: View {
+    let song: CatalogSong
+
+    var body: some View {
+        HStack(spacing: 12) {
+            CatalogArtwork(url: song.imageURL, size: 68)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(song.title)
+                        .font(.body.weight(.semibold))
+                        .lineLimit(2)
+                    if song.isPremium {
+                        Image(systemName: "crown.fill")
+                            .foregroundStyle(AppTheme.warning)
+                            .accessibilityLabel("Premium")
+                    }
+                }
+                Text(song.artist)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Text(song.chartSummary.prefix(6).joined(separator: "  "))
+                    .font(.caption.weight(.semibold).monospaced())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                if let folder = song.folder ?? song.series {
+                    Text(folder)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct CatalogArtwork: View {
+    let url: URL?
+    let size: CGFloat
+
+    var body: some View {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .scaledToFill()
+            case .failure:
+                artworkPlaceholder(systemImage: "music.note")
+            case .empty:
+                ZStack {
+                    Color(uiColor: .secondarySystemBackground)
+                    ProgressView()
+                }
+            @unknown default:
+                artworkPlaceholder(systemImage: "music.note")
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .accessibilityHidden(true)
+    }
+
+    private func artworkPlaceholder(systemImage: String) -> some View {
+        ZStack {
+            Color(uiColor: .secondarySystemBackground)
+            Image(systemName: systemImage)
+                .foregroundStyle(.secondary)
+        }
     }
 }
