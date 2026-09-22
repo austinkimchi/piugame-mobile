@@ -1,0 +1,9 @@
+.DS_Store
+.build/
+DerivedData/
+ios/MyPIU.xcodeproj/
+ios/build/
+**/xcuserdata/
+*.xcuserstate
+browser-extension/node_modules/
+browser-extension/coverage/

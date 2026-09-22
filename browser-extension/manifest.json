@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "MyPIU Sync",
+  "description": "Refresh MyPIU from the PIUGAME session on this device.",
+  "version": "0.1.0",
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Sync MyPIU"
+  },
+  "background": {
+    "service_worker": "src/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mypiu.austin.kim/*"],
+      "js": ["src/content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "https://www.piugame.com/*",
+    "https://phoenix.piugame.com/*",
+    "https://mypiu.austin.kim/*"
+  ],
+  "permissions": ["activeTab", "storage"],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/parser.js"],
+      "matches": ["https://mypiu.austin.kim/*"]
+    }
+  ]
+}

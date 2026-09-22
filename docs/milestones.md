@@ -1,0 +1,39 @@
+# Delivery milestones
+
+## Stage 0: foundation
+
+- Separate private repository and native iOS project.
+- Device-owned PIUGAME authentication and recent-play parsing.
+- Keychain-only PIUGAME credentials.
+- Native signed-out, loading, error, and dashboard states.
+- Parser fixtures and CI build.
+- Browser-extension feasibility proof and explicit permission boundary.
+
+## Stage 1: iOS vertical slice
+
+- MyPIU mobile OAuth and revocable access tokens.
+- Versioned mobile ingest endpoint in `piugame-web`.
+- Foreground profile and recent-play sync end to end.
+- Server reconciliation, idempotency, and sync diagnostics.
+- TestFlight build with privacy copy and account deletion/disconnect behavior.
+
+## Stage 2: PumpStats-plus product surface
+
+- Searchable song catalog and chart detail.
+- Personal best history, recent attempts, Pumbility breakdown, and session summaries.
+- Recommendations, favorites, and progress views.
+- Offline catalog cache and responsive iPad navigation.
+- Accessibility, Dynamic Type, VoiceOver, and reduced-motion audit.
+
+## Stage 3: companion web extension
+
+- Manifest V3 Chromium beta.
+- MyPIU page integration and normalized-data upload.
+- PIUGAME session-expiry recovery.
+- Safari Web Extension packaged with MyPIU for iOS and macOS.
+
+## Stage 4: Android
+
+- Kotlin/Compose app using the stable ingest contract.
+- Android Keystore credentials and WorkManager best-effort refresh.
+- Feature parity with the iOS production baseline.
