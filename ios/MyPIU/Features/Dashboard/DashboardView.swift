@@ -56,13 +56,19 @@ struct DashboardView: View {
                         icon: "chart.line.uptrend.xyaxis",
                         tint: AppTheme.positive
                     )
-                    MetricTile(
-                        title: "Average best",
-                        value: format(performance.totals.averageBestScore),
-                        detail: changeLabel(performance.totals.averageBestScoreChange24Hours),
-                        icon: "chart.bar.xaxis",
-                        tint: AppTheme.accent
-                    )
+                    NavigationLink {
+                        RecommendationSongsView()
+                    } label: {
+                        MetricTile(
+                            title: "Average best",
+                            value: format(performance.totals.averageBestScore),
+                            detail: changeLabel(performance.totals.averageBestScoreChange24Hours),
+                            icon: "chart.bar.xaxis",
+                            tint: AppTheme.accent
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Shows recommended charts")
                     MetricTile(
                         title: "Upscores",
                         value: format(performance.totals.upscoresThisWeek),

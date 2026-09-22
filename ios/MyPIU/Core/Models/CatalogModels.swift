@@ -36,6 +36,7 @@ struct CatalogSong: Codable, Equatable, Hashable, Identifiable, Sendable {
     let series: String?
     let tags: [String]
     let isPremium: Bool
+    let isFavorite: Bool
     let recommendedChartToken: String?
 
     var id: String { slug }
@@ -64,6 +65,7 @@ struct CatalogSong: Codable, Equatable, Hashable, Identifiable, Sendable {
         case series
         case tags
         case isPremium
+        case isFavorite
         case recommendedChartToken
     }
 }
