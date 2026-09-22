@@ -90,6 +90,7 @@ fun MyPiuApp(
     var selectedSongFallback by remember { mutableStateOf<CatalogSong?>(null) }
     val listedSong = selectedSongSlug?.let(catalogViewModel::song)
     val selectedSong = listedSong ?: selectedSongFallback?.takeIf { it.slug == selectedSongSlug }
+    val preferredCatalogVersion = state.account?.piuGameVersion ?: state.piuVersion
 
     fun navigateBack() {
         if (selectedChartToken != null) {
@@ -108,13 +109,12 @@ fun MyPiuApp(
     LaunchedEffect(
         state.account?.id,
         state.isMyPiuConnected,
-        state.account?.piuGameVersion,
-        state.piuVersion,
+        preferredCatalogVersion,
     ) {
         catalogViewModel.updateSession(
             accountId = state.account?.id,
             connected = state.isMyPiuConnected,
-            preferredVersion = state.account?.piuGameVersion ?: state.piuVersion,
+            preferredVersion = preferredCatalogVersion,
         )
     }
     LaunchedEffect(destination, state.isBusy) {
