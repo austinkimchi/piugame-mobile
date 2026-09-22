@@ -599,7 +599,7 @@ private fun SongArtwork(url: String?, modifier: Modifier) {
 }
 
 @Composable
-private fun CenteredProgress(label: String) {
+internal fun CenteredProgress(label: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CircularProgressIndicator()

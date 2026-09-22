@@ -62,6 +62,11 @@ class AppViewModel(
                 isPiuConnected = connection.isPiuConnected,
                 isMyPiuConnected = connection.isMyPiuConnected,
                 account = current.account.takeIf { connection.isMyPiuConnected },
+                accountId = if (connection.isMyPiuConnected) {
+                    connection.accountId ?: current.accountId ?: current.account?.id
+                } else {
+                    null
+                },
                 profile = current.profile.takeIf { connection.isPiuConnected },
                 recentPlays = current.recentPlays.takeIf { connection.isPiuConnected }.orEmpty(),
                 piuVersion = current.piuVersion.takeIf { connection.isPiuConnected },
@@ -97,7 +102,12 @@ class AppViewModel(
             try {
                 repository.disconnectMyPiu()
                 mutableState.update {
-                    it.copy(isMyPiuConnected = false, account = null, message = "MyPIU signed out.")
+                    it.copy(
+                        isMyPiuConnected = false,
+                        account = null,
+                        accountId = null,
+                        message = "MyPIU signed out.",
+                    )
                 }
                 scheduler.cancel()
             } catch (error: CancellationException) {
@@ -123,6 +133,11 @@ class AppViewModel(
                     isPiuConnected = connection.isPiuConnected,
                     isMyPiuConnected = connection.isMyPiuConnected,
                     account = current.account.takeIf { connection.isMyPiuConnected },
+                    accountId = if (connection.isMyPiuConnected) {
+                        connection.accountId ?: current.accountId ?: current.account?.id
+                    } else {
+                        null
+                    },
                     profile = current.profile.takeIf { connection.isPiuConnected },
                     recentPlays = current.recentPlays.takeIf { connection.isPiuConnected }.orEmpty(),
                     piuVersion = current.piuVersion.takeIf { connection.isPiuConnected },
@@ -142,6 +157,11 @@ class AppViewModel(
                 isPiuConnected = snapshot.isPiuConnected,
                 isMyPiuConnected = snapshot.isMyPiuConnected,
                 account = if (snapshot.isMyPiuConnected) snapshot.account ?: current.account else null,
+                accountId = if (snapshot.isMyPiuConnected) {
+                    snapshot.account?.id ?: current.accountId ?: current.account?.id
+                } else {
+                    null
+                },
                 profile = if (snapshot.isPiuConnected) snapshot.piuSnapshot?.profile ?: current.profile else null,
                 recentPlays = if (snapshot.isPiuConnected) {
                     snapshot.piuSnapshot?.recentPlays ?: current.recentPlays
@@ -176,6 +196,7 @@ data class AppUiState(
     val isPiuConnected: Boolean = false,
     val isMyPiuConnected: Boolean = false,
     val account: MyPiuAccount? = null,
+    val accountId: String? = null,
     val profile: PiuProfile? = null,
     val recentPlays: List<RecentPlay> = emptyList(),
     val piuVersion: PiuGameVersion? = null,

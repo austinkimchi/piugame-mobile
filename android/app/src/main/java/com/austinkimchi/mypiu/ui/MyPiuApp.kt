@@ -90,12 +90,22 @@ fun MyPiuApp(
     var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
     var selectedSongSlug by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedChartToken by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedSongVersionName by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSongFallbackJson by rememberSaveable { mutableStateOf<String?>(null) }
     val selectedSongFallback = remember(selectedSongFallbackJson) {
         selectedSongFallbackJson?.let { runCatching { catalogSongJson.decodeFromString<CatalogSong>(it) }.getOrNull() }
     }
     val listedSong = selectedSongSlug?.let(catalogViewModel::song)
     val selectedSong = listedSong ?: selectedSongFallback?.takeIf { it.slug == selectedSongSlug }
+    val selectedSongVersion = selectedSongVersionName?.let { savedName ->
+        PiuGameVersion.entries.firstOrNull { it.serialName == savedName }
+    }
+    var selectedVersionReady by remember(selectedSongSlug, selectedSongVersion) {
+        mutableStateOf(selectedSongSlug == null)
+    }
+    val isRestoringSelectedVersion = selectedSong != null &&
+        (!selectedVersionReady || (selectedSongVersion != null && catalogState.version != selectedSongVersion))
+    val catalogAccountId = state.account?.id ?: state.accountId
     val preferredCatalogVersion = state.account?.piuGameVersion ?: state.piuVersion
 
     fun navigateBack() {
@@ -103,6 +113,7 @@ fun MyPiuApp(
             selectedChartToken = null
         } else {
             selectedSongSlug = null
+            selectedSongVersionName = null
             selectedSongFallbackJson = null
         }
     }
@@ -113,15 +124,23 @@ fun MyPiuApp(
         if (listedSong != null) selectedSongFallbackJson = catalogSongJson.encodeToString(listedSong)
     }
     LaunchedEffect(
-        state.account?.id,
+        catalogAccountId,
         state.isMyPiuConnected,
         preferredCatalogVersion,
     ) {
         catalogViewModel.updateSession(
-            accountId = state.account?.id,
+            accountId = catalogAccountId,
             connected = state.isMyPiuConnected,
             preferredVersion = preferredCatalogVersion,
         )
+    }
+    LaunchedEffect(selectedSongSlug, selectedSongVersion, catalogState.version) {
+        if (selectedSongSlug != null && selectedSongVersion != null && catalogState.version != selectedSongVersion) {
+            selectedVersionReady = false
+            catalogViewModel.setVersion(selectedSongVersion)
+        } else {
+            selectedVersionReady = true
+        }
     }
     LaunchedEffect(destination, state.isBusy) {
         if (destination == AppDestination.SONGS && !state.isBusy) catalogViewModel.start()
@@ -179,7 +198,9 @@ fun MyPiuApp(
                                 }
                             },
                             enabled = when {
-                                selectedChartToken != null -> !catalogState.chartHistory.orDefaultLoading
+                                selectedChartToken != null -> {
+                                    !isRestoringSelectedVersion && !catalogState.chartHistory.orDefaultLoading
+                                }
                                 destination == AppDestination.SONGS -> !catalogState.isLoading
                                 else -> state.isPiuConnected && !state.isBusy
                             },
@@ -199,6 +220,7 @@ fun MyPiuApp(
                             destination = item
                             selectedSongSlug = null
                             selectedChartToken = null
+                            selectedSongVersionName = null
                             selectedSongFallbackJson = null
                         },
                         icon = {
@@ -234,9 +256,11 @@ fun MyPiuApp(
                     onToggleFavorite = catalogViewModel::toggleFavorite,
                     onSongClick = {
                         selectedSongFallbackJson = catalogSongJson.encodeToString(it)
+                        selectedSongVersionName = catalogState.version.serialName
                         selectedSongSlug = it.slug
                     },
                 )
+                isRestoringSelectedVersion -> CenteredProgress("Loading song")
                 selectedChartToken == null -> SongDetailScreen(
                     song = selectedSong,
                     imageUrl = catalogViewModel.imageUrl(selectedSong),

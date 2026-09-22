@@ -18,13 +18,32 @@ class SessionStoreTest {
 
         store.saveCredentials(credentials)
         store.saveAccessToken(token)
+        store.saveAccountId(token.value, "account-one")
         assertEquals(credentials, store.credentials())
         assertEquals(token, store.accessToken())
+        assertEquals("account-one", store.accountId(token.value))
 
         store.clearCredentials()
         store.clearAccessToken()
         assertNull(store.credentials())
         assertNull(store.accessToken())
+        assertNull(store.accountId(token.value))
+    }
+
+    @Test
+    fun accountIdentityIsBoundToCurrentAccessToken() {
+        val store = SessionStore(MemorySecretStore())
+        val first = MyPiuAccessToken("first", 1_900_000_000_000, "installation")
+        val replacement = MyPiuAccessToken("replacement", 1_900_000_000_000, "installation")
+        store.saveAccessToken(first)
+        store.saveAccountId(first.value, "account-one")
+
+        store.saveAccessToken(replacement)
+
+        assertNull(store.accountId(first.value))
+        assertNull(store.accountId(replacement.value))
+        store.saveAccountId(replacement.value, "account-two")
+        assertEquals("account-two", store.accountId(replacement.value))
     }
 
     @Test

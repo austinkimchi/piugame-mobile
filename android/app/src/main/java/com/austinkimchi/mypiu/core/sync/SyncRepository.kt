@@ -28,15 +28,20 @@ class SyncRepository(
 
     fun beginAuthorization(provider: MyPiuAuthProvider): String = oauthCoordinator.begin(provider)
 
-    fun connectionState(): RepositoryConnectionState = RepositoryConnectionState(
-        isPiuConnected = sessionStore.credentials() != null,
-        isMyPiuConnected = validToken() != null,
-    )
+    fun connectionState(): RepositoryConnectionState {
+        val token = validToken()
+        return RepositoryConnectionState(
+            isPiuConnected = sessionStore.credentials() != null,
+            isMyPiuConnected = token != null,
+            accountId = token?.let { sessionStore.accountId(it.value) },
+        )
+    }
 
     suspend fun completeAuthorization(callbackUrl: String): RepositorySnapshot = syncMutex.withLock {
         val token = oauthCoordinator.complete(callbackUrl)
         retryPendingRevocations()
         val account = apiClient.account(token.value)
+        sessionStore.saveAccountId(token.value, account.id)
         val credentials = sessionStore.credentials()
         val piuSnapshot = credentials?.let { fetch(it) }
         val result = piuSnapshot?.let { upload(it, token.value) }
@@ -49,9 +54,11 @@ class SyncRepository(
         var token = validToken()
         val account = token?.let {
             try {
-                apiClient.account(it.value)
+                apiClient.account(it.value).also { account ->
+                    sessionStore.saveAccountId(it.value, account.id)
+                }
             } catch (error: MyPiuApiException) {
-                if (!error.isUnauthorized) throw error
+                if (!error.isUnauthorized && !error.isAccountNotFound) throw error
                 sessionStore.clearAccessToken()
                 token = null
                 null
@@ -74,7 +81,11 @@ class SyncRepository(
         }
         val piuSnapshot = fetch(credentials)
         val token = validToken()
-        val account = token?.let { apiClient.account(it.value) }
+        val account = token?.let {
+            apiClient.account(it.value).also { account ->
+                sessionStore.saveAccountId(it.value, account.id)
+            }
+        }
         val result = token?.let { upload(piuSnapshot, it.value) }
         sessionStore.saveCredentials(credentials)
         RepositorySnapshot(account, piuSnapshot, result, true, token != null)
@@ -128,7 +139,7 @@ class SyncRepository(
     }
 
     suspend fun clearUnauthorizedSession(error: Throwable): Boolean {
-        if (error is MyPiuApiException && error.isUnauthorized) {
+        if (error is MyPiuApiException && (error.isUnauthorized || error.isAccountNotFound)) {
             syncMutex.withLock { sessionStore.clearAccessToken() }
             return true
         }
@@ -164,4 +175,5 @@ data class RepositorySnapshot(
 data class RepositoryConnectionState(
     val isPiuConnected: Boolean,
     val isMyPiuConnected: Boolean,
+    val accountId: String?,
 )
