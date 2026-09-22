@@ -2,8 +2,13 @@ import SwiftUI
 
 struct SongsView: View {
     @EnvironmentObject private var appModel: AppModel
-    @StateObject private var catalog = SongCatalogModel()
-    @State private var query = ""
+    @ObservedObject private var catalog: SongCatalogModel
+    @Binding private var query: String
+
+    init(catalog: SongCatalogModel, query: Binding<String>) {
+        self.catalog = catalog
+        _query = query
+    }
 
     var body: some View {
         Group {

@@ -2,13 +2,17 @@ import SwiftUI
 
 struct ActivityView: View {
     @EnvironmentObject private var model: AppModel
-    @State private var section: Section = .recent
+    @Binding private var section: Section
 
-    private enum Section: String, CaseIterable, Identifiable {
+    enum Section: String, CaseIterable, Identifiable {
         case recent = "Recent"
         case best = "Best"
 
         var id: String { rawValue }
+    }
+
+    init(section: Binding<Section>) {
+        _section = section
     }
 
     var body: some View {
