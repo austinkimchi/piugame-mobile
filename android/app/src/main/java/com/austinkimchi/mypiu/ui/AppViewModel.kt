@@ -116,8 +116,12 @@ class AppViewModel(
                 isPiuConnected = snapshot.isPiuConnected,
                 isMyPiuConnected = snapshot.isMyPiuConnected,
                 account = if (snapshot.isMyPiuConnected) snapshot.account ?: current.account else null,
-                profile = snapshot.piuSnapshot?.profile ?: current.profile,
-                recentPlays = snapshot.piuSnapshot?.recentPlays ?: current.recentPlays,
+                profile = if (snapshot.isPiuConnected) snapshot.piuSnapshot?.profile ?: current.profile else null,
+                recentPlays = if (snapshot.isPiuConnected) {
+                    snapshot.piuSnapshot?.recentPlays ?: current.recentPlays
+                } else {
+                    emptyList()
+                },
                 message = snapshot.syncResult?.let { result ->
                     "Synced ${result.importedRecentPlays} new plays; ${result.duplicateRecentPlays} already current."
                 },
