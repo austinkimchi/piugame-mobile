@@ -35,6 +35,7 @@ struct MyPIUPerformanceDashboard: Decodable, Equatable, Sendable {
     }
 
     struct Play: Decodable, Equatable, Identifiable, Sendable {
+        let id: String
         let songName: String
         let chartToken: String
         let score: Int?
@@ -44,10 +45,6 @@ struct MyPIUPerformanceDashboard: Decodable, Equatable, Sendable {
         let level: String?
         let playedAt: String?
         let stageBreak: Bool
-
-        var id: String {
-            [songName, chartToken, playedAt ?? "", String(score ?? -1)].joined(separator: ":")
-        }
 
         var displayChartToken: String {
             guard let mode, let level else { return chartToken }
