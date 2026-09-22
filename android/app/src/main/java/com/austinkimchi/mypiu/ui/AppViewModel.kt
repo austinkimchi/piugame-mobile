@@ -38,7 +38,13 @@ class AppViewModel(
     }.onFailure(::showError).getOrNull()
 
     fun handleOAuthCallback(callbackUrl: String) {
-        viewModelScope.launch { runOperation { repository.completeAuthorization(callbackUrl) } }
+        viewModelScope.launch {
+            val callbackError = runOperation { repository.completeAuthorization(callbackUrl) }
+            if (callbackError != null) {
+                runOperation { repository.restoreAndSync() }
+                showError(callbackError)
+            }
+        }
     }
 
     fun connectPiu(username: String, password: String, version: PiuGameVersion) {
@@ -86,10 +92,11 @@ class AppViewModel(
         }
     }
 
-    private suspend fun runOperation(operation: suspend () -> RepositorySnapshot) {
+    private suspend fun runOperation(operation: suspend () -> RepositorySnapshot): Throwable? {
         mutableState.update { it.copy(isBusy = true, message = null) }
-        try {
+        return try {
             apply(operation())
+            null
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -106,8 +113,10 @@ class AppViewModel(
             }
             if (connection.isPiuConnected && connection.isMyPiuConnected) scheduler.schedule() else scheduler.cancel()
             showError(error)
+            error
+        } finally {
+            mutableState.update { it.copy(isBusy = false) }
         }
-        mutableState.update { it.copy(isBusy = false) }
     }
 
     private fun apply(snapshot: RepositorySnapshot) {

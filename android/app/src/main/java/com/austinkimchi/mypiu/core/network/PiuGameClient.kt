@@ -15,6 +15,7 @@ import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.java.net.cookiejar.JavaNetCookieJar
+import org.jsoup.Jsoup
 
 sealed class PiuGameException(message: String) : Exception(message) {
     class AuthenticationFailed : PiuGameException("PIUGAME could not verify those credentials.")
@@ -46,10 +47,7 @@ class PiuGameClient(
             .build()
         send(request)
 
-        val probe = fetchHtml("/my_page/play_data.php")
-        if (!Regex("subProfile_wrap|play_data_wrap|profile_name").containsMatchIn(probe)) {
-            throw PiuGameException.AuthenticationFailed()
-        }
+        validateAuthenticatedProfile(fetchHtml("/my_page/play_data.php"))
     }
 
     suspend fun fetchSnapshot(username: String): PiuSnapshot = coroutineScope {
@@ -103,4 +101,15 @@ class PiuGameClient(
                 .build()
         }
     }
+}
+
+internal fun validateAuthenticatedProfile(html: String) {
+    if (Regex("subProfile_wrap|play_data_wrap|profile_name").containsMatchIn(html)) return
+
+    val document = Jsoup.parse(html)
+    val hasUsernameField = document.selectFirst("input[name=mb_id]") != null
+    val hasPasswordField = document.selectFirst("input[name=mb_password]") != null
+    if (hasUsernameField && hasPasswordField) throw PiuGameException.AuthenticationFailed()
+
+    throw PiuGameException.InvalidResponse()
 }
