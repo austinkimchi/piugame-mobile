@@ -279,7 +279,7 @@ class CatalogViewModelTest {
     }
 
     @Test
-    fun supersededFavoriteResponseCannotOverwriteNewerCacheValue() = runTest {
+    fun versionChangesKeepFavoriteWritesSerialized() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         try {
@@ -287,8 +287,10 @@ class CatalogViewModelTest {
             val firstResult = CompletableDeferred<Boolean>()
             val secondStarted = CompletableDeferred<Unit>()
             val secondResult = CompletableDeferred<Boolean>()
+            val requestedWrites = mutableListOf<Boolean>()
             var requestCount = 0
-            val source = FakeCatalogDataSource(favoriteHandler = { _, _, _ ->
+            val source = FakeCatalogDataSource(favoriteHandler = { _, saved, _ ->
+                requestedWrites += saved
                 if (requestCount++ == 0) {
                     firstStarted.complete(Unit)
                     firstResult.await()
@@ -312,13 +314,20 @@ class CatalogViewModelTest {
             advanceUntilIdle()
             viewModel.toggleFavorite(viewModel.state.value.listing.songs.single().copy(isFavorite = true))
             runCurrent()
-            assertTrue(secondStarted.isCompleted)
-
-            secondResult.complete(false)
-            runCurrent()
-            assertEquals(listOf(false), source.cachedFavoriteWrites.map(CachedFavoriteWrite::saved))
+            assertFalse(secondStarted.isCompleted)
+            assertEquals(listOf(true), requestedWrites)
+            assertEquals(setOf("song"), viewModel.state.value.updatingFavorites)
 
             firstResult.complete(true)
+            advanceUntilIdle()
+            assertTrue(viewModel.state.value.updatingFavorites.isEmpty())
+
+            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single().copy(isFavorite = true))
+            runCurrent()
+            assertTrue(secondStarted.isCompleted)
+            assertEquals(listOf(true, false), requestedWrites)
+
+            secondResult.complete(false)
             advanceUntilIdle()
 
             assertEquals(listOf(false), source.cachedFavoriteWrites.map(CachedFavoriteWrite::saved))
