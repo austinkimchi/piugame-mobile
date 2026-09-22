@@ -1,6 +1,6 @@
 # MyPIU Mobile
 
-Native clients for MyPIU. The iOS app is the first supported platform; Android follows after the device-sync contract is stable.
+Native clients for MyPIU. The iOS app is the production baseline, and Android now has a native device-sync foundation built on the same contract.
 
 The mobile clients fetch PIUGAME data from the user's device, normalize it locally, and send only normalized performance data to MyPIU. PIUGAME credentials remain in the device keychain and are never uploaded to MyPIU.
 
@@ -9,7 +9,7 @@ The mobile clients fetch PIUGAME data from the user's device, normalize it local
 - `ios/` - SwiftUI iPhone and iPad app plus native PIUGAME client.
 - `browser-extension/` - tested and reproducibly packaged Manifest V3 Chromium extension for toolbar and first-party MyPIU page sync.
 - `docs/` - architecture, security boundaries, contracts, and delivery milestones.
-- `android/` - Android implementation notes until the Compose client begins.
+- `android/` - Kotlin/Compose client, native PIUGAME parser, Android Keystore storage, and WorkManager refresh.
 
 ## iOS development
 
@@ -32,4 +32,4 @@ For signing, privacy, and beta-distribution steps, see [the TestFlight checklist
 
 ## Status
 
-This repository is pre-release and private. See [the delivery milestones](docs/milestones.md) for the path to TestFlight and Android.
+This repository is pre-release and private. See [the delivery milestones](docs/milestones.md) for remaining distribution work and Android parity slices.
