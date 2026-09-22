@@ -11,7 +11,7 @@ export function parseSyncPayload(pages, {
   const normalizedUsername = clean(username);
   const normalizedExpectedDisplayName = identityKey(expectedDisplayName);
   const normalizedInstallationId = clean(installationId);
-  const displayName = clean(profileDocument.querySelector(".profile_name .name_w .t2")?.textContent);
+  const displayName = canonicalDisplayName(profileDocument.querySelector(".profile_name .name_w .t2")?.textContent);
   if (!normalizedUsername || !normalizedExpectedDisplayName || !normalizedInstallationId || !displayName) {
     throw new Error("MyPIU could not identify the linked PIUGAME account.");
   }
@@ -116,7 +116,11 @@ function clean(value) {
 }
 
 function identityKey(value) {
-  return clean(value)?.toLocaleLowerCase("en-US") ?? null;
+  return canonicalDisplayName(value)?.toLocaleLowerCase("en-US") ?? null;
+}
+
+function canonicalDisplayName(value) {
+  return clean(value)?.replace(/\s*#\s*/g, "#") ?? null;
 }
 
 function integer(value) {

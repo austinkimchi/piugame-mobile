@@ -37,6 +37,7 @@ final class AppModel: ObservableObject {
     private var credentials: PIUCredentials?
     private var accessToken: MyPIUAccessToken?
     private var hasRestored = false
+    private var isRetryingPendingRevocations = false
 
     init(
         credentialStore: KeychainCredentialStore = KeychainCredentialStore(),
@@ -159,11 +160,16 @@ final class AppModel: ObservableObject {
     }
 
     func refresh() async {
+        Task { await retryPendingMyPIURevocations() }
         guard let credentials else {
             state = .signedOut
             return
         }
         _ = await sync(using: credentials, saveAfterSuccess: false)
+    }
+
+    func handleAppActivation() async {
+        await retryPendingMyPIURevocations()
     }
 
     func disconnect() {
@@ -242,6 +248,9 @@ final class AppModel: ObservableObject {
     }
 
     private func retryPendingMyPIURevocations() async {
+        guard !isRetryingPendingRevocations else { return }
+        isRetryingPendingRevocations = true
+        defer { isRetryingPendingRevocations = false }
         guard let tokens = try? tokenStore.pendingRevocations() else { return }
         for token in tokens {
             do {

@@ -11,7 +11,7 @@ test("normalizes profile and recent plays without exporting raw HTML", () => {
     version: "phoenix2",
     profile: `
       <div class="subProfile_wrap">
-        <div class="profile_name"><div class="name_w"><span class="t1">CONRAD FOLLOWER</span><span class="t2">PKIMCHI#7501</span></div></div>
+        <div class="profile_name"><div class="name_w"><span class="t1">CONRAD FOLLOWER</span><span class="t2">PKIMCHI # 7501</span></div></div>
         <div class="profile_img"><div class="re" style="background-image:url('https://www.piugame.com/avatar.png')"></div></div>
         <div class="profile_etc"><span class="tt">1,034</span></div>
         <ul class="time_w"><li><span class="tt">last access date : 2026-09-21 12:37:31</span></li><li><span class="tt">recently access games : ROUND1</span></li></ul>
