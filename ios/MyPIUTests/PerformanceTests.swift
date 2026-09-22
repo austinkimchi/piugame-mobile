@@ -149,6 +149,11 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(performanceChartTokenAccessibilityLabel("S19"), "Single level 19")
         XCTAssertEqual(performanceChartTokenAccessibilityLabel("d24"), "Double level 24")
         XCTAssertEqual(performanceChartTokenAccessibilityLabel("C2"), "Co-op level 2")
+        XCTAssertEqual(performanceChartTokenAccessibilityLabel("S17+"), "Single level 17 plus")
+        XCTAssertEqual(
+            performanceChartTokenAccessibilityLabel("single-lady:s:19"),
+            "single-lady:s:19"
+        )
         XCTAssertTrue(performancePlayIsFailed(grade: "x_aa", stageBreak: false))
         XCTAssertTrue(performancePlayIsFailed(grade: "s", stageBreak: true))
         XCTAssertFalse(performancePlayIsFailed(grade: "s", stageBreak: false))

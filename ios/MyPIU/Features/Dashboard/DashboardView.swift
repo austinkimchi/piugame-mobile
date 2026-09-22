@@ -299,11 +299,17 @@ func performancePlayIsFailed(grade: String?, stageBreak: Bool) -> Bool {
 func performanceChartTokenAccessibilityLabel(_ token: String) -> String {
     let normalized = token.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
     guard let prefix = normalized.first, normalized.count > 1 else { return token }
-    let level = normalized.dropFirst()
+    var level = String(normalized.dropFirst())
+    let isPlus = level.hasSuffix("+")
+    if isPlus {
+        level.removeLast()
+    }
+    guard !level.isEmpty, level.allSatisfy({ $0.isNumber }) else { return token }
+    let spokenLevel = level + (isPlus ? " plus" : "")
     switch prefix {
-    case "S": return "Single level \(level)"
-    case "D": return "Double level \(level)"
-    case "C": return "Co-op level \(level)"
+    case "S": return "Single level \(spokenLevel)"
+    case "D": return "Double level \(spokenLevel)"
+    case "C": return "Co-op level \(spokenLevel)"
     default: return token
     }
 }
