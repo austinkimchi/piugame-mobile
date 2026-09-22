@@ -295,10 +295,17 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func clearMyPIUSession() {
-        try? tokenStore.delete()
+    @discardableResult
+    private func clearMyPIUSession() -> Bool {
+        do {
+            try tokenStore.delete()
+        } catch {
+            myPIUState = .failed("MyPIU could not securely remove the saved session. Try disconnecting again.")
+            return false
+        }
         accessToken = nil
         myPIUAccount = nil
         myPIUState = .signedOut
+        return true
     }
 }
