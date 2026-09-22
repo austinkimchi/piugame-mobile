@@ -17,12 +17,14 @@ Requirements:
 
 - Xcode 26 or newer
 - XcodeGen 2.46 or newer
+- Node.js 22 or newer
 
 ```bash
-cd ios
-xcodegen generate
-open MyPIU.xcodeproj
+./scripts/generate-ios-project.sh
+open ios/MyPIU.xcodeproj
 ```
+
+The generation script installs the pinned extension build dependencies, creates the Safari-compatible runtime from the shared browser-extension sources, and embeds the Safari Web Extension target in MyPIU.
 
 The first vertical slice connects directly to PIUGAME PHOENIX 2, stores credentials in Keychain, parses the profile and recent-play pages on-device, and renders a native SwiftUI dashboard.
 

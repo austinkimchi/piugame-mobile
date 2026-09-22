@@ -3,6 +3,7 @@
 DerivedData/
 ios/MyPIU.xcodeproj/
 ios/build/
+ios/MyPIUSafariExtension/Resources/
 **/xcuserdata/
 *.xcuserstate
 browser-extension/node_modules/

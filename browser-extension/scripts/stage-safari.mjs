@@ -11,11 +11,12 @@ import {
   validateExtensionMetadata
 } from "./runtime-files.mjs";
 
-export async function stageSafariExtension() {
+export async function stageSafariExtension(
+  stagingDirectory = join(extensionDirectory, "dist", "safari-mv3")
+) {
   const { manifest, packageMetadata } = readExtensionMetadata();
   validateExtensionMetadata(manifest, packageMetadata);
 
-  const stagingDirectory = join(extensionDirectory, "dist", "safari-mv3");
   stageExtensionRuntime(stagingDirectory);
   const stagedManifestPath = join(stagingDirectory, "manifest.json");
   const stagedManifest = JSON.parse(readFileSync(stagedManifestPath, "utf8"));
@@ -39,5 +40,9 @@ export async function stageSafariExtension() {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  await stageSafariExtension();
+  const args = process.argv.slice(2);
+  if (args.length !== 0 && (args.length !== 2 || args[0] !== "--output" || !args[1])) {
+    throw new Error("Usage: node scripts/stage-safari.mjs [--output <directory>]");
+  }
+  await stageSafariExtension(args[1] ? resolve(args[1]) : undefined);
 }

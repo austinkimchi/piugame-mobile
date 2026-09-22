@@ -15,12 +15,11 @@ MyPIU is configured for automatic signing with bundle ID `com.austinkimchi.mypiu
 Use Xcode 26 or newer on a Mac signed in to the Apple Developer account:
 
 ```bash
-cd ios
-xcodegen generate
-open MyPIU.xcodeproj
+./scripts/generate-ios-project.sh
+open ios/MyPIU.xcodeproj
 ```
 
-In Xcode, select the MyPIU target, choose the correct development team, and confirm automatic signing succeeds. Select a generic iOS device, then use **Product > Archive**. In Organizer, validate the archive and choose **Distribute App > TestFlight & App Store**.
+In Xcode, select the MyPIU and MyPIUSafariExtension targets, choose the same development team for both, and confirm automatic signing succeeds. Select a generic iOS device, then use **Product > Archive**. In Organizer, validate the archive and choose **Distribute App > TestFlight & App Store**.
 
 For each upload, increment `CURRENT_PROJECT_VERSION` in `project.yml`. Keep `MARKETING_VERSION` unchanged for replacement beta builds of the same release.
 
@@ -30,4 +29,5 @@ For each upload, increment `CURRENT_PROJECT_VERSION` in `project.yml`. Keep `MAR
 - Exercise Google and Discord sign-in on a physical device.
 - Connect PIUGAME, foreground sync, background refresh, sign-out, and account deletion.
 - Confirm the archive contains `PrivacyInfo.xcprivacy` and the 1024-point App Store icon.
+- Confirm the archive contains `MyPIU Sync Extension.appex`, then enable it in Safari and grant access to MyPIU and the selected PIUGAME version on a physical device.
 - Confirm App Store Connect reports no missing export-compliance or privacy information.
