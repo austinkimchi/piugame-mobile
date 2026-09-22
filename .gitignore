@@ -7,3 +7,4 @@ ios/build/
 *.xcuserstate
 browser-extension/node_modules/
 browser-extension/coverage/
+browser-extension/dist/

@@ -29,7 +29,7 @@ Complete: native catalog, recommendations, favorites, offline cache, adaptive iP
 
 ## Stage 3: companion web extension
 
-Current: the unpacked Chromium beta performs toolbar- or MyPIU-page-initiated normalized uploads, coordinates concurrent refreshes, and recovers expired MyPIU or PIUGAME sessions. Packaged Chromium distribution and Safari remain before this stage is complete.
+Current: the Chromium extension performs toolbar- or MyPIU-page-initiated normalized uploads, coordinates concurrent refreshes, recovers expired sessions, and produces a verified store-upload ZIP with a tag-driven release. Chrome Web Store publication and Safari remain before this stage is complete.
 
 - Manifest V3 Chromium beta.
 - MyPIU page integration and normalized-data upload.
