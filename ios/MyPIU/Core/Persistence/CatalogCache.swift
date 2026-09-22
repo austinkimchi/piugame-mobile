@@ -17,7 +17,7 @@ actor CatalogCache {
         let version: PIUGameVersion
         var songs: [CatalogSong]
         let nextCursor: String?
-        let total: Int
+        var total: Int
         let cachedAt: Date
     }
 
@@ -86,13 +86,28 @@ actor CatalogCache {
         var store = readStore()
         var didChange = false
 
+        if isFavorite {
+            let previousCount = store.entries.count
+            store.entries.removeAll {
+                $0.scope == scope
+                    && $0.version == version
+                    && $0.query == "favorites"
+            }
+            didChange = store.entries.count != previousCount
+        }
+
         for entryIndex in store.entries.indices
         where store.entries[entryIndex].scope == scope
             && store.entries[entryIndex].version == version {
             guard let songIndex = store.entries[entryIndex].songs.firstIndex(where: { $0.slug == slug }) else {
                 continue
             }
-            store.entries[entryIndex].songs[songIndex].isFavorite = isFavorite
+            if !isFavorite, store.entries[entryIndex].query == "favorites" {
+                store.entries[entryIndex].songs.remove(at: songIndex)
+                store.entries[entryIndex].total = max(0, store.entries[entryIndex].total - 1)
+            } else {
+                store.entries[entryIndex].songs[songIndex].isFavorite = isFavorite
+            }
             didChange = true
         }
 

@@ -277,6 +277,7 @@ final class SongCatalogModel: ObservableObject {
         version: PIUGameVersion,
         cacheScope: String
     ) async {
+        var removedFromFavoriteFeed = false
         if currentVersion == version, currentCacheScope == cacheScope {
             if confirmedFavorites[slug]?.value != isFavorite {
                 favoriteRevision += 1
@@ -285,7 +286,11 @@ final class SongCatalogModel: ObservableObject {
                     revision: favoriteRevision
                 )
             }
-            listing.setFavorite(isFavorite, forSlug: slug)
+            if isFavoriteFeed, !isFavorite {
+                removedFromFavoriteFeed = listing.removeSong(slug: slug)
+            } else {
+                listing.setFavorite(isFavorite, forSlug: slug)
+            }
         }
         try? await cache.setFavorite(
             isFavorite,
@@ -293,6 +298,18 @@ final class SongCatalogModel: ObservableObject {
             version: version,
             scope: cacheScope
         )
+        if removedFromFavoriteFeed {
+            try? await cache.save(
+                listingForCache(),
+                query: currentQuery,
+                version: version,
+                scope: cacheScope
+            )
+        }
+    }
+
+    private var isFavoriteFeed: Bool {
+        currentQuery.lowercased() == "favorites"
     }
 
     private func loadMore() async {

@@ -50,6 +50,18 @@ final class CatalogTests: XCTestCase {
         XCTAssertFalse(listing.setFavorite(false, forSlug: "missing-song"))
     }
 
+    func testCatalogListingRemovesFavoriteFeedSongAndUpdatesTotal() throws {
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        var listing = CatalogListing()
+        listing.replace(with: page)
+
+        XCTAssertTrue(listing.removeSong(slug: "battle-no-1"))
+        XCTAssertTrue(listing.songs.isEmpty)
+        XCTAssertEqual(listing.total, 653)
+        XCTAssertFalse(listing.removeSong(slug: "battle-no-1"))
+        XCTAssertEqual(listing.total, 653)
+    }
+
     func testCatalogCacheSeparatesVersionsAndNormalizesQueries() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -109,6 +121,7 @@ final class CatalogTests: XCTestCase {
         listing.replace(with: page)
         try await cache.save(listing, query: "one", version: .phoenix2, scope: "account:one")
         try await cache.save(listing, query: "two", version: .phoenix2, scope: "account:one")
+        try await cache.save(listing, query: "favorites", version: .phoenix2, scope: "account:one")
         try await cache.save(listing, query: "one", version: .phoenix, scope: "account:one")
         try await cache.save(listing, query: "one", version: .phoenix2, scope: "account:two")
 
@@ -121,12 +134,39 @@ final class CatalogTests: XCTestCase {
 
         let firstQuery = await cache.load(query: "one", version: .phoenix2, scope: "account:one")
         let secondQuery = await cache.load(query: "two", version: .phoenix2, scope: "account:one")
+        let favoritesQuery = await cache.load(query: "favorites", version: .phoenix2, scope: "account:one")
         let otherVersion = await cache.load(query: "one", version: .phoenix, scope: "account:one")
         let otherAccount = await cache.load(query: "one", version: .phoenix2, scope: "account:two")
         XCTAssertEqual(firstQuery?.listing.songs.first?.isFavorite, false)
         XCTAssertEqual(secondQuery?.listing.songs.first?.isFavorite, false)
+        XCTAssertTrue(favoritesQuery?.listing.songs.isEmpty == true)
+        XCTAssertEqual(favoritesQuery?.listing.total, 653)
         XCTAssertEqual(otherVersion?.listing.songs.first?.isFavorite, true)
         XCTAssertEqual(otherAccount?.listing.songs.first?.isFavorite, true)
+    }
+
+    func testCatalogCacheInvalidatesFavoriteFeedWhenAddingSong() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        var listing = CatalogListing()
+        listing.replace(with: page)
+        try await cache.save(listing, query: "favorites", version: .phoenix2, scope: "account:one")
+        listing.setFavorite(false, forSlug: "battle-no-1")
+        try await cache.save(listing, query: "songs", version: .phoenix2, scope: "account:one")
+
+        try await cache.setFavorite(
+            true,
+            forSlug: "battle-no-1",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+
+        let favoritesQuery = await cache.load(query: "favorites", version: .phoenix2, scope: "account:one")
+        let songsQuery = await cache.load(query: "songs", version: .phoenix2, scope: "account:one")
+        XCTAssertNil(favoritesQuery)
+        XCTAssertEqual(songsQuery?.listing.songs.first?.isFavorite, true)
     }
 
     @MainActor
@@ -372,6 +412,39 @@ final class CatalogTests: XCTestCase {
 
         XCTAssertEqual(firstCatalog.listing.songs.first?.isFavorite, false)
         XCTAssertEqual(secondCatalog.listing.songs.first?.isFavorite, false)
+    }
+
+    @MainActor
+    func testConfirmedUnfavoriteRemovesSongFromFavoriteFeedAndCache() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let catalog = SongCatalogModel(cache: cache)
+        await catalog.loadIfNeeded(
+            query: "favorites",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: { _, _, _ in page }
+        )
+
+        await catalog.applyConfirmedFavorite(
+            false,
+            slug: "battle-no-1",
+            version: .phoenix2,
+            cacheScope: "account:one"
+        )
+
+        XCTAssertTrue(catalog.listing.songs.isEmpty)
+        XCTAssertEqual(catalog.listing.total, 653)
+        let cached = await cache.load(
+            query: "favorites",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+        XCTAssertTrue(cached?.listing.songs.isEmpty == true)
+        XCTAssertEqual(cached?.listing.total, 653)
     }
 
     @MainActor
