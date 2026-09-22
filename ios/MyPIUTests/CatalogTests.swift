@@ -285,7 +285,7 @@ final class CatalogTests: XCTestCase {
     }
 
     @MainActor
-    func testFailedFavoriteUpdateRollsBackWithoutChangingCache() async throws {
+    func testStaleReloadCannotOverwriteConfirmedFavorite() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = CatalogCache(directory: directory)
@@ -299,8 +299,100 @@ final class CatalogTests: XCTestCase {
             using: { _, _, _ in page }
         )
         let song = try XCTUnwrap(catalog.listing.songs.first)
+        let favoriteGate = TestGate<Bool>()
+        let reloadGate = TestGate<CatalogSearchPage>()
+
+        let favoriteTask = Task { @MainActor in
+            await catalog.setFavorite(false, for: song) { _, _, _ in
+                await favoriteGate.wait()
+            }
+        }
+        await favoriteGate.waitUntilOccupied()
+        let reloadTask = Task { @MainActor in
+            await catalog.reload(
+                query: "refreshed",
+                version: .phoenix2,
+                cacheScope: "account:one",
+                debounce: false,
+                using: { _, _, _ in await reloadGate.wait() }
+            )
+        }
+        await reloadGate.waitUntilOccupied()
+
+        await favoriteGate.open(false)
+        await favoriteTask.value
+        await reloadGate.open(page)
+        await reloadTask.value
+
+        XCTAssertEqual(catalog.listing.songs.first?.isFavorite, false)
+        let cached = await cache.load(
+            query: "refreshed",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+        XCTAssertEqual(cached?.listing.songs.first?.isFavorite, false)
+    }
+
+    @MainActor
+    func testConfirmedFavoriteCanSynchronizeSeparateCatalogModels() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let firstCatalog = SongCatalogModel(cache: cache)
+        let secondCatalog = SongCatalogModel(cache: cache)
+        let search: SongCatalogModel.CatalogSearch = { _, _, _ in page }
+        await firstCatalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: search
+        )
+        await secondCatalog.loadIfNeeded(
+            query: "recommendation",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: search
+        )
+
+        await firstCatalog.applyConfirmedFavorite(
+            false,
+            slug: "battle-no-1",
+            version: .phoenix2,
+            cacheScope: "account:one"
+        )
+        await secondCatalog.applyConfirmedFavorite(
+            false,
+            slug: "battle-no-1",
+            version: .phoenix2,
+            cacheScope: "account:one"
+        )
+
+        XCTAssertEqual(firstCatalog.listing.songs.first?.isFavorite, false)
+        XCTAssertEqual(secondCatalog.listing.songs.first?.isFavorite, false)
+    }
+
+    @MainActor
+    func testFailedFavoriteUpdateRollsBackWithoutChangingCache() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let catalog = SongCatalogModel(cache: cache)
+        let search: SongCatalogModel.CatalogSearch = { _, _, _ in page }
+        await catalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: search
+        )
+        let song = try XCTUnwrap(catalog.listing.songs.first)
 
         await catalog.setFavorite(false, for: song) { _, _, _ in
+            await catalog.loadMoreIfNeeded(after: song)
             throw FavoriteTestError.failed
         }
 
@@ -344,4 +436,38 @@ private enum FavoriteTestError: LocalizedError {
     case failed
 
     var errorDescription: String? { "The favorite update failed." }
+}
+
+private actor TestGate<Value: Sendable> {
+    private var continuation: CheckedContinuation<Value, Never>?
+    private var bufferedValue: Value?
+    private var occupancyWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async -> Value {
+        if let bufferedValue {
+            self.bufferedValue = nil
+            return bufferedValue
+        }
+        return await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            occupancyWaiters.forEach { $0.resume() }
+            occupancyWaiters.removeAll()
+        }
+    }
+
+    func waitUntilOccupied() async {
+        guard continuation == nil else { return }
+        await withCheckedContinuation { continuation in
+            occupancyWaiters.append(continuation)
+        }
+    }
+
+    func open(_ value: Value) {
+        guard let continuation else {
+            bufferedValue = value
+            return
+        }
+        self.continuation = nil
+        continuation.resume(returning: value)
+    }
 }

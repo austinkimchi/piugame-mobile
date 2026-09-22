@@ -55,7 +55,7 @@ struct SongsView: View {
             CatalogSongDetailView(
                 song: song,
                 canUpdateFavorite: canUpdateFavorites,
-                isUpdatingFavorite: catalog.isUpdatingFavorite(slug: song.slug)
+                isUpdatingFavorite: isUpdatingFavorite(song.slug)
             ) {
                 updateFavorite(for: song)
             }
@@ -104,7 +104,7 @@ struct SongsView: View {
                         if canUpdateFavorites {
                             FavoriteButton(
                                 isFavorite: song.isFavorite,
-                                isUpdating: catalog.isUpdatingFavorite(slug: song.slug)
+                                isUpdating: isUpdatingFavorite(song.slug)
                             ) {
                                 updateFavorite(for: song)
                             }
@@ -149,6 +149,23 @@ struct SongsView: View {
                 using: appModel.searchCatalog
             )
         }
+        .onReceive(appModel.$favoriteStates) { states in
+            guard let accountID = appModel.myPIUAccount?.id else { return }
+            let matchingStates = states.filter { key, _ in
+                key.accountID == accountID && key.version == catalogVersion
+            }
+            guard !matchingStates.isEmpty else { return }
+            Task {
+                for (key, isFavorite) in matchingStates {
+                    await catalog.applyConfirmedFavorite(
+                        isFavorite,
+                        slug: key.songSlug,
+                        version: key.version,
+                        cacheScope: "account:\(key.accountID)"
+                    )
+                }
+            }
+        }
     }
 
     private var isRecommendationFeed: Bool {
@@ -172,6 +189,11 @@ struct SongsView: View {
                 using: appModel.setFavorite
             )
         }
+    }
+
+    private func isUpdatingFavorite(_ slug: String) -> Bool {
+        catalog.isUpdatingFavorite(slug: slug)
+            || appModel.isUpdatingFavorite(songSlug: slug)
     }
 }
 

@@ -3,6 +3,12 @@ import Combine
 
 @MainActor
 final class AppModel: ObservableObject {
+    struct FavoriteKey: Equatable, Hashable, Sendable {
+        let accountID: String
+        let songSlug: String
+        let version: PIUGameVersion
+    }
+
     enum SyncState: Equatable {
         case signedOut
         case restoring
@@ -35,6 +41,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var myPIUState: MyPIUState = .restoring
     @Published private(set) var performance: MyPIUPerformanceDashboard?
     @Published private(set) var performanceState: PerformanceState = .idle
+    @Published private(set) var favoriteStates: [FavoriteKey: Bool] = [:]
+    @Published private var favoriteUpdateAccounts: [String: String] = [:]
     @Published var selectedVersion: PIUGameVersion = .phoenix2
 
     private let credentialStore: KeychainCredentialStore
@@ -72,6 +80,10 @@ final class AppModel: ObservableObject {
 
     var isConnected: Bool { credentials != nil }
     var isMyPIUConnected: Bool { accessToken != nil }
+    func isUpdatingFavorite(songSlug: String) -> Bool {
+        guard let accountID = myPIUAccount?.id else { return false }
+        return favoriteUpdateAccounts[songSlug] == accountID
+    }
     var catalogCacheScope: String? {
         guard accessToken != nil else { return "public" }
         return myPIUAccount.map { "account:\($0.id)" }
@@ -189,6 +201,7 @@ final class AppModel: ObservableObject {
             performance = nil
             performanceState = .idle
             performanceRequestID = UUID()
+            favoriteStates.removeAll()
             do {
                 try tokenStore.delete()
                 myPIUState = .signedOut
@@ -278,12 +291,21 @@ final class AppModel: ObservableObject {
         saved: Bool,
         version: PIUGameVersion
     ) async throws -> Bool {
-        guard let token = accessToken else {
+        guard let token = accessToken, let accountID = myPIUAccount?.id else {
             throw MyPIUAPIError.server(status: 401, code: "invalid_token")
         }
         guard !token.isExpired else {
             clearMyPIUSession()
             throw MyPIUAPIError.server(status: 401, code: "invalid_token")
+        }
+        guard favoriteUpdateAccounts[songSlug] != accountID else {
+            throw CancellationError()
+        }
+        favoriteUpdateAccounts[songSlug] = accountID
+        defer {
+            if favoriteUpdateAccounts[songSlug] == accountID {
+                favoriteUpdateAccounts[songSlug] = nil
+            }
         }
 
         do {
@@ -293,9 +315,14 @@ final class AppModel: ObservableObject {
                 version: version,
                 accessToken: token.value
             )
-            guard accessToken?.value == token.value else {
+            guard accessToken?.value == token.value, myPIUAccount?.id == accountID else {
                 throw CancellationError()
             }
+            favoriteStates[FavoriteKey(
+                accountID: accountID,
+                songSlug: songSlug,
+                version: version
+            )] = isFavorite
             return isFavorite
         } catch {
             if let apiError = error as? MyPIUAPIError,
@@ -509,6 +536,7 @@ final class AppModel: ObservableObject {
         performance = nil
         performanceState = .idle
         performanceRequestID = UUID()
+        favoriteStates.removeAll()
         myPIUState = .signedOut
         return true
     }
