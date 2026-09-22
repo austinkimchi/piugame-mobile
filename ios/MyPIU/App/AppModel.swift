@@ -253,12 +253,16 @@ final class AppModel: ObservableObject {
         }
 
         do {
-            return try await apiClient.searchCatalog(
+            let page = try await apiClient.searchCatalog(
                 query: query,
                 cursor: cursor,
                 version: version,
                 accessToken: token.value
             )
+            guard accessToken?.value == token.value else {
+                throw CancellationError()
+            }
+            return page
         } catch {
             if let apiError = error as? MyPIUAPIError,
                apiError.isUnauthorized,
