@@ -72,11 +72,11 @@ final class MyPIUOAuthCoordinator: NSObject, ASWebAuthenticationPresentationCont
                         return
                     }
                     do {
-                        let token = try await apiClient.exchangeAuthorizationCode(
+                        let token = try await self.apiClient.exchangeAuthorizationCode(
                             code: code,
                             verifier: verifier,
-                            installationID: installationID,
-                            appVersion: appVersion
+                            installationID: self.installationID,
+                            appVersion: self.appVersion
                         )
                         continuation.resume(returning: token)
                     } catch {
