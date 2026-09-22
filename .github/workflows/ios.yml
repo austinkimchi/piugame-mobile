@@ -10,11 +10,15 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: browser-extension/package-lock.json
       - name: Install XcodeGen
         run: brew install xcodegen
-      - name: Generate project
-        working-directory: ios
-        run: xcodegen generate
+      - name: Generate project and Safari resources
+        run: ./scripts/generate-ios-project.sh
       - name: Build for simulator
         working-directory: ios
         run: >-
@@ -22,8 +26,25 @@ jobs:
           -project MyPIU.xcodeproj
           -scheme MyPIU
           -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath "$RUNNER_TEMP/MyPIUDerivedData"
           CODE_SIGNING_ALLOWED=NO
           build
+      - name: Verify embedded Safari extension
+        run: |
+          APPEX="$(find "$RUNNER_TEMP/MyPIUDerivedData/Build/Products" -path '*/MyPIU.app/PlugIns/*.appex' -print -quit)"
+          test -n "$APPEX"
+          test -f "$APPEX/manifest.json"
+          test -f "$APPEX/src/service-worker.js"
+          python3 - "$APPEX/manifest.json" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          manifest = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert manifest["manifest_version"] == 3
+          assert manifest["background"] == {"service_worker": "src/service-worker.js"}
+          PY
+          ! grep -Eq '^[[:space:]]*import[[:space:]]' "$APPEX/src/service-worker.js"
       - name: Run tests
         working-directory: ios
         run: |

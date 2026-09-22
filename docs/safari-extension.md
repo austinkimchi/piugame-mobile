@@ -26,4 +26,6 @@ CI checks that the generated iOS and macOS schemes build without signing and tha
 
 ## Integration boundary
 
-The generated wrapper is a feasibility and compatibility artifact. The production iOS extension target must be embedded in the existing MyPIU app, and the macOS wrapper must use the same resources and release identity. Distribution also requires Apple Developer signing, App Store Connect records, privacy metadata, and device verification of Safari's per-site permission prompts for PIUGAME and MyPIU.
+The generated wrapper is a feasibility and compatibility artifact. `scripts/generate-ios-project.sh` stages the same Safari runtime into `ios/MyPIUSafariExtension/Resources`, then XcodeGen embeds `MyPIUSafariExtension.appex` in the existing MyPIU app. Generated resources and Xcode projects remain ignored so there is one authored JavaScript source.
+
+The macOS wrapper still needs its release identity and signing path. Distribution also requires Apple Developer signing, App Store Connect records, privacy metadata, and physical-device verification of Safari's per-site permission prompts for PIUGAME and MyPIU.

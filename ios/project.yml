@@ -35,6 +35,8 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
     dependencies:
       - package: SwiftSoup
+      - target: MyPIUSafariExtension
+        embed: true
     scheme:
       testTargets:
         - MyPIUTests
@@ -50,3 +52,25 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.austinkimchi.mypiu.tests
         GENERATE_INFOPLIST_FILE: YES
+
+  MyPIUSafariExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: MyPIUSafariExtension/SafariWebExtensionHandler.swift
+      - path: MyPIUSafariExtension/Resources/manifest.json
+        buildPhase: resources
+      - path: MyPIUSafariExtension/Resources/assets
+        type: folder
+        buildPhase: resources
+      - path: MyPIUSafariExtension/Resources/src
+        type: folder
+        buildPhase: resources
+    info:
+      path: MyPIUSafariExtension/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.austinkimchi.mypiu.safari
+        PRODUCT_NAME: MyPIU Sync Extension
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
