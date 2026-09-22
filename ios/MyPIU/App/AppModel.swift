@@ -188,6 +188,7 @@ final class AppModel: ObservableObject {
         self.client = client
         do {
             let snapshot = try await client.loginAndFetch(username: credentials.username, password: credentials.password)
+            guard saveAfterSuccess || self.credentials == credentials else { return false }
             if saveAfterSuccess { try credentialStore.save(credentials) }
             self.credentials = credentials
             self.snapshot = snapshot
@@ -198,6 +199,7 @@ final class AppModel: ObservableObject {
             }
             return true
         } catch {
+            guard saveAfterSuccess || self.credentials == credentials else { return false }
             state = .failed(error.localizedDescription)
             return false
         }
@@ -267,11 +269,13 @@ final class AppModel: ObservableObject {
                 installationID: installationID,
                 appVersion: appVersion
             )
+            guard accessToken?.value == token.value else { return }
             myPIUState = .synced(
                 imported: result.importedRecentPlays,
                 duplicates: result.duplicateRecentPlays
             )
         } catch {
+            guard accessToken?.value == token.value else { return }
             if let apiError = error as? MyPIUAPIError, apiError.isUnauthorized {
                 clearMyPIUSession()
             } else {
