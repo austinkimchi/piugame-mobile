@@ -6,6 +6,8 @@ import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { isValidChromiumVersion } from "../scripts/package.mjs";
+
 const extensionDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(extensionDirectory, "manifest.json"), "utf8"));
 const archiveName = `mypiu-sync-chromium-v${manifest.version}.zip`;
@@ -25,6 +27,16 @@ const expectedFiles = [
   "src/service-worker.js",
   "src/sync-client.js"
 ];
+
+test("accepts only Chromium-compatible extension versions", () => {
+  assert.equal(isValidChromiumVersion("0.2.1"), true);
+  assert.equal(isValidChromiumVersion("65535.0.1.9"), true);
+  assert.equal(isValidChromiumVersion("0.0.0"), false);
+  assert.equal(isValidChromiumVersion("1.65536"), false);
+  assert.equal(isValidChromiumVersion("1.032"), false);
+  assert.equal(isValidChromiumVersion("1.2.3.4.5"), false);
+  assert.equal(isValidChromiumVersion("1.2-beta"), false);
+});
 
 test("builds an allowlisted Chromium package with a valid checksum", () => {
   execFileSync(process.execPath, ["scripts/package.mjs"], { cwd: extensionDirectory });

@@ -29,46 +29,59 @@ export const packageFiles = Object.freeze([
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const extensionDirectory = resolve(scriptDirectory, "..");
-const manifest = JSON.parse(readFileSync(join(extensionDirectory, "manifest.json"), "utf8"));
-const packageMetadata = JSON.parse(readFileSync(join(extensionDirectory, "package.json"), "utf8"));
-
-validateMetadata(manifest, packageMetadata);
-
-const distDirectory = join(extensionDirectory, "dist");
-const stagingDirectory = join(distDirectory, ".chromium-stage");
-const archiveName = `mypiu-sync-chromium-v${manifest.version}.zip`;
-const archivePath = join(distDirectory, archiveName);
-const checksumPath = `${archivePath}.sha256`;
 const fixedTimestamp = new Date("2000-01-01T00:00:00.000Z");
 
-rmSync(distDirectory, { recursive: true, force: true });
-mkdirSync(stagingDirectory, { recursive: true });
+export function packageChromiumExtension() {
+  const manifest = JSON.parse(readFileSync(join(extensionDirectory, "manifest.json"), "utf8"));
+  const packageMetadata = JSON.parse(readFileSync(join(extensionDirectory, "package.json"), "utf8"));
+  validateMetadata(manifest, packageMetadata);
 
-try {
-  for (const relativePath of packageFiles) {
-    const source = join(extensionDirectory, relativePath);
-    const destination = join(stagingDirectory, relativePath);
-    mkdirSync(dirname(destination), { recursive: true });
-    copyFileSync(source, destination);
-    utimesSync(destination, fixedTimestamp, fixedTimestamp);
+  const distDirectory = join(extensionDirectory, "dist");
+  const stagingDirectory = join(distDirectory, ".chromium-stage");
+  const archiveName = `mypiu-sync-chromium-v${manifest.version}.zip`;
+  const archivePath = join(distDirectory, archiveName);
+  const checksumPath = `${archivePath}.sha256`;
+
+  rmSync(distDirectory, { recursive: true, force: true });
+  mkdirSync(stagingDirectory, { recursive: true });
+
+  try {
+    for (const relativePath of packageFiles) {
+      const source = join(extensionDirectory, relativePath);
+      const destination = join(stagingDirectory, relativePath);
+      mkdirSync(dirname(destination), { recursive: true });
+      copyFileSync(source, destination);
+      utimesSync(destination, fixedTimestamp, fixedTimestamp);
+    }
+
+    const zip = spawnSync("zip", ["-X", "-q", archivePath, "-@"], {
+      cwd: stagingDirectory,
+      encoding: "utf8",
+      env: { ...process.env, TZ: "UTC" },
+      input: `${packageFiles.join("\n")}\n`
+    });
+    if (zip.error) throw zip.error;
+    if (zip.status !== 0) {
+      throw new Error(zip.stderr.trim() || `zip exited with status ${zip.status}`);
+    }
+
+    const digest = createHash("sha256").update(readFileSync(archivePath)).digest("hex");
+    writeFileSync(checksumPath, `${digest}  ${archiveName}\n`);
+    process.stdout.write(`${archivePath}\n${checksumPath}\n`);
+  } finally {
+    rmSync(stagingDirectory, { recursive: true, force: true });
   }
+}
 
-  const zip = spawnSync("zip", ["-X", "-q", archivePath, "-@"], {
-    cwd: stagingDirectory,
-    encoding: "utf8",
-    env: { ...process.env, TZ: "UTC" },
-    input: `${packageFiles.join("\n")}\n`
-  });
-  if (zip.error) throw zip.error;
-  if (zip.status !== 0) {
-    throw new Error(zip.stderr.trim() || `zip exited with status ${zip.status}`);
+export function isValidChromiumVersion(value) {
+  if (typeof value !== "string" || !/^\d+(?:\.\d+){0,3}$/.test(value)) return false;
+  const rawComponents = value.split(".");
+  if (rawComponents.some((component) => component.length > 1 && component.startsWith("0"))) {
+    return false;
   }
-
-  const digest = createHash("sha256").update(readFileSync(archivePath)).digest("hex");
-  writeFileSync(checksumPath, `${digest}  ${archiveName}\n`);
-  process.stdout.write(`${archivePath}\n${checksumPath}\n`);
-} finally {
-  rmSync(stagingDirectory, { recursive: true, force: true });
+  const components = rawComponents.map(Number);
+  return components.some((component) => component !== 0)
+    && components.every((component) => Number.isInteger(component) && component <= 65_535);
 }
 
 function validateMetadata(extensionManifest, npmPackage) {
@@ -80,7 +93,7 @@ function validateMetadata(extensionManifest, npmPackage) {
       `manifest version ${extensionManifest.version} does not match package version ${npmPackage.version}.`
     );
   }
-  if (!/^\d+(?:\.\d+){0,3}$/.test(extensionManifest.version)) {
+  if (!isValidChromiumVersion(extensionManifest.version)) {
     throw new Error(`Invalid Chromium extension version: ${extensionManifest.version}`);
   }
 
@@ -96,4 +109,8 @@ function validateMetadata(extensionManifest, npmPackage) {
   if (omittedFiles.length > 0) {
     throw new Error(`Manifest files are missing from the package allowlist: ${omittedFiles.join(", ")}`);
   }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  packageChromiumExtension();
 }
