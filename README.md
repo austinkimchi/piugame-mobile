@@ -15,7 +15,7 @@ The mobile clients fetch PIUGAME data from the user's device, normalize it local
 
 Requirements:
 
-- Xcode 16 or newer
+- Xcode 26 or newer
 - XcodeGen 2.46 or newer
 
 ```bash
@@ -25,6 +25,8 @@ open MyPIU.xcodeproj
 ```
 
 The first vertical slice connects directly to PIUGAME PHOENIX 2, stores credentials in Keychain, parses the profile and recent-play pages on-device, and renders a native SwiftUI dashboard.
+
+For signing, privacy, and beta-distribution steps, see [the TestFlight checklist](docs/testflight.md).
 
 ## Status
 
