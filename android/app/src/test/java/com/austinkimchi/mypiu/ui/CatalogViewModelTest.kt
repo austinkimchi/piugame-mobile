@@ -321,8 +321,10 @@ class CatalogViewModelTest {
             firstResult.complete(true)
             advanceUntilIdle()
             assertTrue(viewModel.state.value.updatingFavorites.isEmpty())
+            assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+            assertEquals(listOf(true), source.cachedFavoriteWrites.map(CachedFavoriteWrite::saved))
 
-            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single().copy(isFavorite = true))
+            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single())
             runCurrent()
             assertTrue(secondStarted.isCompleted)
             assertEquals(listOf(true, false), requestedWrites)
@@ -330,7 +332,7 @@ class CatalogViewModelTest {
             secondResult.complete(false)
             advanceUntilIdle()
 
-            assertEquals(listOf(false), source.cachedFavoriteWrites.map(CachedFavoriteWrite::saved))
+            assertEquals(listOf(true, false), source.cachedFavoriteWrites.map(CachedFavoriteWrite::saved))
         } finally {
             Dispatchers.resetMain()
         }

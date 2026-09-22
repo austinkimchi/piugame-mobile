@@ -28,7 +28,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
     private val mutableState = MutableStateFlow(CatalogUiState())
     val state: StateFlow<CatalogUiState> = mutableState.asStateFlow()
 
-    private val pendingFavorites = mutableMapOf<String, PendingFavorite>()
+    private val pendingFavorites = mutableMapOf<FavoriteWriteKey, PendingFavorite>()
     private val confirmedFavorites = mutableMapOf<String, ConfirmedFavorite>()
     private val activeFavoriteWrites = mutableSetOf<FavoriteWriteKey>()
     private var latestSearchRequestId = 0L
@@ -55,7 +55,6 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         val preferredVersionChanged = preferredVersion != null && current.version != preferredVersion
         if (current.cacheScope == scope && current.isMyPiuConnected == accountConnected && !preferredVersionChanged) return
 
-        pendingFavorites.clear()
         confirmedFavorites.clear()
         historyJob?.cancel()
         mutableState.update { state ->
@@ -92,7 +91,6 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
 
     fun setVersion(version: PiuGameVersion) {
         if (mutableState.value.version == version) return
-        pendingFavorites.clear()
         confirmedFavorites.clear()
         historyJob?.cancel()
         mutableState.update {
@@ -134,10 +132,11 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 val listing = applyFavoriteOverrides(
                     mutableState.value.listing.append(page, cursor),
                     requestId,
+                    scope,
                 )
                 retireFavoriteOverrides(requestId)
                 mutableState.update { it.copy(listing = listing, isLoadingMore = false) }
-                scope?.let { runCatching { repository.cache(listingForCache(listing), query, version, it) } }
+                scope?.let { runCatching { repository.cache(listingForCache(listing, it), query, version, it) } }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -155,14 +154,14 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
 
     fun toggleFavorite(song: CatalogSong) {
         val snapshot = mutableState.value
-        if (!snapshot.isMyPiuConnected || pendingFavorites.containsKey(song.slug)) return
+        if (!snapshot.isMyPiuConnected) return
         val version = snapshot.version
         val scope = snapshot.cacheScope ?: return
         val writeKey = FavoriteWriteKey(scope, song.slug)
         if (!activeFavoriteWrites.add(writeKey)) return
         val requested = !song.isFavorite
         val mutation = PendingFavorite(UUID.randomUUID(), song.isFavorite, requested)
-        pendingFavorites[song.slug] = mutation
+        pendingFavorites[writeKey] = mutation
         mutableState.update {
             it.copy(
                 listing = it.listing.setFavorite(song.slug, requested),
@@ -175,7 +174,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         viewModelScope.launch {
             try {
                 val authoritative = repository.setFavorite(song.slug, requested, version)
-                val isCurrentMutation = finishFavoriteMutation(song.slug, mutation)
+                val isCurrentMutation = finishFavoriteMutation(writeKey, mutation)
                 val current = mutableState.value
                 if (isCurrentMutation && current.version == version && current.cacheScope == scope) {
                     confirmedFavorites[song.slug] = ConfirmedFavorite(authoritative, latestSearchRequestId)
@@ -206,12 +205,12 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                     }
                 }
             } catch (error: CancellationException) {
-                if (finishFavoriteMutation(song.slug, mutation)) {
+                if (finishFavoriteMutation(writeKey, mutation)) {
                     rollbackFavorite(song.slug, mutation, version, scope)
                 }
                 throw error
             } catch (error: Exception) {
-                val isCurrentMutation = finishFavoriteMutation(song.slug, mutation)
+                val isCurrentMutation = finishFavoriteMutation(writeKey, mutation)
                 if (isCurrentMutation) rollbackFavorite(song.slug, mutation, version, scope)
                 if (
                     isCurrentMutation &&
@@ -330,7 +329,10 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             if (generation != requestGeneration) return@launch
             if (cached != null) {
                 mutableState.update {
-                    it.copy(listing = applyFavoriteOverrides(cached.listing), isShowingCachedData = true)
+                    it.copy(
+                        listing = applyFavoriteOverrides(cached.listing, scope = scope),
+                        isShowingCachedData = true,
+                    )
                 }
             }
             val requestId = ++latestSearchRequestId
@@ -340,6 +342,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 val listing = applyFavoriteOverrides(
                     CatalogListing(page.songs, page.nextCursor, page.total),
                     requestId,
+                    scope,
                 )
                 retireFavoriteOverrides(requestId)
                 mutableState.update {
@@ -350,7 +353,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                         error = null,
                     )
                 }
-                scope?.let { runCatching { repository.cache(listingForCache(listing), query, version, it) } }
+                scope?.let { runCatching { repository.cache(listingForCache(listing, it), query, version, it) } }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -369,12 +372,14 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
     private fun applyFavoriteOverrides(
         listing: CatalogListing,
         requestId: Long? = null,
+        scope: String? = mutableState.value.cacheScope,
     ): CatalogListing = listing.copy(
         songs = listing.songs.map { song ->
             val confirmed = confirmedFavorites[song.slug]
                 ?.takeIf { requestId == null || requestId <= it.protectThroughRequestId }
                 ?.saved
-            val saved = pendingFavorites[song.slug]?.requested ?: confirmed
+            val pending = scope?.let { pendingFavorites[FavoriteWriteKey(it, song.slug)] }
+            val saved = pending?.requested ?: confirmed
             if (saved == null) song else song.copy(isFavorite = saved)
         },
     )
@@ -383,9 +388,9 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         confirmedFavorites.entries.removeAll { it.value.protectThroughRequestId <= requestId }
     }
 
-    private fun listingForCache(listing: CatalogListing): CatalogListing = listing.copy(
+    private fun listingForCache(listing: CatalogListing, scope: String): CatalogListing = listing.copy(
         songs = listing.songs.map { song ->
-            val pending = pendingFavorites[song.slug]
+            val pending = pendingFavorites[FavoriteWriteKey(scope, song.slug)]
             if (pending == null) song else song.copy(isFavorite = pending.previous)
         },
     )
@@ -406,9 +411,9 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         }
     }
 
-    private fun finishFavoriteMutation(slug: String, mutation: PendingFavorite): Boolean {
-        if (pendingFavorites[slug]?.id != mutation.id) return false
-        pendingFavorites.remove(slug)
+    private fun finishFavoriteMutation(key: FavoriteWriteKey, mutation: PendingFavorite): Boolean {
+        if (pendingFavorites[key]?.id != mutation.id) return false
+        pendingFavorites.remove(key)
         return true
     }
 

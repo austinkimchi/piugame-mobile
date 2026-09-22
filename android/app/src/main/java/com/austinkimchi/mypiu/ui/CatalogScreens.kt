@@ -203,7 +203,9 @@ fun CatalogScreen(
                     )
                     HorizontalDivider(Modifier.padding(start = 104.dp))
                     if (index >= state.listing.songs.lastIndex - 4 && state.listing.nextCursor != null) {
-                        LaunchedEffect(state.listing.nextCursor) { onLoadMore() }
+                        LaunchedEffect(state.listing.nextCursor, state.isLoading) {
+                            if (!state.isLoading) onLoadMore()
+                        }
                     }
                 }
                 if (state.isLoadingMore) {
