@@ -1,19 +1,44 @@
 import SwiftUI
 
 struct SongsView: View {
+    enum Feed: Equatable {
+        case catalog
+        case recommendations
+        case favorites
+
+        var title: String {
+            switch self {
+            case .catalog: "Songs"
+            case .recommendations: "Recommendations"
+            case .favorites: "Favorites"
+            }
+        }
+
+        var resultLabel: String {
+            switch self {
+            case .catalog: "songs"
+            case .recommendations: "recommendations"
+            case .favorites: "favorites"
+            }
+        }
+    }
+
     @EnvironmentObject private var appModel: AppModel
     @ObservedObject private var catalog: SongCatalogModel
     @Binding private var query: String
     private let versionOverride: PIUGameVersion?
+    private let feed: Feed
 
     init(
         catalog: SongCatalogModel,
         query: Binding<String>,
-        versionOverride: PIUGameVersion? = nil
+        versionOverride: PIUGameVersion? = nil,
+        feed: Feed = .catalog
     ) {
         self.catalog = catalog
         _query = query
         self.versionOverride = versionOverride
+        self.feed = feed
     }
 
     var body: some View {
@@ -43,13 +68,13 @@ struct SongsView: View {
                         }
                     }
                 } else {
-                    ContentUnavailableView.search(text: query)
+                    emptyFeedView
                 }
             default:
                 songList
             }
         }
-        .navigationTitle(isRecommendationFeed ? "Recommendations" : "Songs")
+        .navigationTitle(feed.title)
         .navigationDestination(for: CatalogSong.self) { routedSong in
             let song = catalog.song(slug: routedSong.slug) ?? routedSong
             CatalogSongDetailView(
@@ -60,7 +85,19 @@ struct SongsView: View {
                 updateFavorite(for: song)
             }
         }
-        .searchable(text: $query, prompt: "Search the catalog")
+        .modifier(CatalogSearchModifier(query: $query, enabled: feed == .catalog))
+        .toolbar {
+            if feed == .catalog, appModel.isMyPIUConnected {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        FavoriteSongsView()
+                    } label: {
+                        Image(systemName: "star.fill")
+                    }
+                    .accessibilityLabel("Favorite songs")
+                }
+            }
+        }
         .alert(
             "Couldn't Update Favorite",
             isPresented: Binding(
@@ -85,7 +122,7 @@ struct SongsView: View {
                 query: query,
                 version: catalogVersion,
                 cacheScope: appModel.catalogCacheScope,
-                debounce: !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                debounce: feed == .catalog && !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 using: appModel.searchCatalog
             )
         }
@@ -129,7 +166,7 @@ struct SongsView: View {
                 }
             } header: {
                 HStack {
-                    Text("\(catalog.listing.total.formatted()) \(isRecommendationFeed ? "recommendations" : "songs")")
+                    Text("\(catalog.listing.total.formatted()) \(feed.resultLabel)")
                     if catalog.isShowingCachedData {
                         Spacer()
                         Label("Offline", systemImage: "arrow.down.circle")
@@ -163,8 +200,24 @@ struct SongsView: View {
         }
     }
 
-    private var isRecommendationFeed: Bool {
-        query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "recommendation"
+    @ViewBuilder
+    private var emptyFeedView: some View {
+        switch feed {
+        case .catalog:
+            ContentUnavailableView.search(text: query)
+        case .recommendations:
+            ContentUnavailableView(
+                "No Recommendations",
+                systemImage: "sparkles",
+                description: Text("Sync more plays to build your recommendations.")
+            )
+        case .favorites:
+            ContentUnavailableView(
+                "No Favorite Songs",
+                systemImage: "star",
+                description: Text("Songs you favorite will appear here.")
+            )
+        }
     }
 
     private var catalogVersion: PIUGameVersion {
@@ -201,8 +254,38 @@ struct RecommendationSongsView: View {
         SongsView(
             catalog: catalog,
             query: $query,
-            versionOverride: appModel.myPIUAccount?.piuGameVersion ?? appModel.selectedVersion
+            versionOverride: appModel.myPIUAccount?.piuGameVersion ?? appModel.selectedVersion,
+            feed: .recommendations
         )
+    }
+}
+
+struct FavoriteSongsView: View {
+    @EnvironmentObject private var appModel: AppModel
+    @StateObject private var catalog = SongCatalogModel()
+    @State private var query = "favorites"
+
+    var body: some View {
+        SongsView(
+            catalog: catalog,
+            query: $query,
+            versionOverride: appModel.myPIUAccount?.piuGameVersion ?? appModel.selectedVersion,
+            feed: .favorites
+        )
+    }
+}
+
+private struct CatalogSearchModifier: ViewModifier {
+    @Binding var query: String
+    let enabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            content.searchable(text: $query, prompt: "Search the catalog")
+        } else {
+            content
+        }
     }
 }
 

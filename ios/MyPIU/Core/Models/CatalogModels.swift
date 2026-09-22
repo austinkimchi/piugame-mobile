@@ -108,6 +108,14 @@ struct CatalogListing: Equatable, Sendable {
         songs[index].isFavorite = isFavorite
         return true
     }
+
+    @discardableResult
+    mutating func removeSong(slug: String) -> Bool {
+        guard let index = songs.firstIndex(where: { $0.slug == slug }) else { return false }
+        songs.remove(at: index)
+        total = max(0, total - 1)
+        return true
+    }
 }
 
 private func resolvedMyPIUURL(_ value: String?) -> URL? {
