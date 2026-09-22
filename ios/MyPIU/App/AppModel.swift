@@ -265,7 +265,41 @@ final class AppModel: ObservableObject {
             return page
         } catch {
             if let apiError = error as? MyPIUAPIError,
-               apiError.isUnauthorized,
+               apiError.isUnauthorized || apiError.isAccountNotFound,
+               accessToken?.value == token.value {
+                clearMyPIUSession()
+            }
+            throw error
+        }
+    }
+
+    func setFavorite(
+        songSlug: String,
+        saved: Bool,
+        version: PIUGameVersion
+    ) async throws -> Bool {
+        guard let token = accessToken else {
+            throw MyPIUAPIError.server(status: 401, code: "invalid_token")
+        }
+        guard !token.isExpired else {
+            clearMyPIUSession()
+            throw MyPIUAPIError.server(status: 401, code: "invalid_token")
+        }
+
+        do {
+            let isFavorite = try await apiClient.setFavorite(
+                songSlug: songSlug,
+                saved: saved,
+                version: version,
+                accessToken: token.value
+            )
+            guard accessToken?.value == token.value else {
+                throw CancellationError()
+            }
+            return isFavorite
+        } catch {
+            if let apiError = error as? MyPIUAPIError,
+               apiError.isUnauthorized || apiError.isAccountNotFound,
                accessToken?.value == token.value {
                 clearMyPIUSession()
             }

@@ -50,10 +50,32 @@ struct SongsView: View {
             }
         }
         .navigationTitle(isRecommendationFeed ? "Recommendations" : "Songs")
-        .navigationDestination(for: CatalogSong.self) { song in
-            CatalogSongDetailView(song: song)
+        .navigationDestination(for: CatalogSong.self) { routedSong in
+            let song = catalog.song(slug: routedSong.slug) ?? routedSong
+            CatalogSongDetailView(
+                song: song,
+                canUpdateFavorite: canUpdateFavorites,
+                isUpdatingFavorite: catalog.isUpdatingFavorite(slug: song.slug)
+            ) {
+                updateFavorite(for: song)
+            }
         }
         .searchable(text: $query, prompt: "Search the catalog")
+        .alert(
+            "Couldn't Update Favorite",
+            isPresented: Binding(
+                get: { catalog.favoriteError != nil },
+                set: { isPresented in
+                    if !isPresented { catalog.clearFavoriteError() }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                catalog.clearFavoriteError()
+            }
+        } message: {
+            Text(catalog.favoriteError ?? "Try again.")
+        }
         .task(id: CatalogRequest(
             query: query,
             version: catalogVersion,
@@ -73,8 +95,21 @@ struct SongsView: View {
         List {
             Section {
                 ForEach(catalog.listing.songs) { song in
-                    NavigationLink(value: song) {
-                        CatalogSongRow(song: song)
+                    HStack(spacing: 8) {
+                        NavigationLink(value: song) {
+                            CatalogSongRow(song: song)
+                        }
+                        .buttonStyle(.plain)
+
+                        if canUpdateFavorites {
+                            FavoriteButton(
+                                isFavorite: song.isFavorite,
+                                isUpdating: catalog.isUpdatingFavorite(slug: song.slug)
+                            ) {
+                                updateFavorite(for: song)
+                            }
+                            .buttonStyle(.borderless)
+                        }
                     }
                     .task(id: catalog.paginationGeneration) {
                         await catalog.loadMoreIfNeeded(after: song)
@@ -123,6 +158,21 @@ struct SongsView: View {
     private var catalogVersion: PIUGameVersion {
         versionOverride ?? appModel.selectedVersion
     }
+
+    private var canUpdateFavorites: Bool {
+        appModel.isMyPIUConnected
+            && appModel.catalogCacheScope?.hasPrefix("account:") == true
+    }
+
+    private func updateFavorite(for song: CatalogSong) {
+        Task {
+            await catalog.setFavorite(
+                !song.isFavorite,
+                for: song,
+                using: appModel.setFavorite
+            )
+        }
+    }
 }
 
 struct RecommendationSongsView: View {
@@ -162,11 +212,6 @@ private struct CatalogSongRow: View {
                             .foregroundStyle(AppTheme.warning)
                             .accessibilityLabel("Premium")
                     }
-                    if song.isFavorite {
-                        Image(systemName: "star.fill")
-                            .foregroundStyle(AppTheme.warning)
-                            .accessibilityLabel("Favorite")
-                    }
                 }
                 Text(song.artist)
                     .font(.subheadline)
@@ -193,6 +238,31 @@ private struct CatalogSongRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+struct FavoriteButton: View {
+    let isFavorite: Bool
+    let isUpdating: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if isUpdating {
+                    ProgressView()
+                } else {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .foregroundStyle(isFavorite ? AppTheme.warning : .secondary)
+                }
+            }
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+        }
+        .disabled(isUpdating)
+        .accessibilityLabel(
+            isUpdating ? "Updating favorite" : (isFavorite ? "Remove from favorites" : "Add to favorites")
+        )
     }
 }
 

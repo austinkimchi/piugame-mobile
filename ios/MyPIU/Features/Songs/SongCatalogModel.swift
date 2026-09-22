@@ -8,6 +8,11 @@ final class SongCatalogModel: ObservableObject {
         _ cursor: String?,
         _ version: PIUGameVersion
     ) async throws -> CatalogSearchPage
+    typealias FavoriteUpdate = @MainActor (
+        _ songSlug: String,
+        _ saved: Bool,
+        _ version: PIUGameVersion
+    ) async throws -> Bool
 
     enum LoadState: Equatable {
         case idle
@@ -22,6 +27,7 @@ final class SongCatalogModel: ObservableObject {
     @Published private(set) var paginationError: String?
     @Published private(set) var isShowingCachedData = false
     @Published private(set) var paginationGeneration = 0
+    @Published private(set) var favoriteError: String?
 
     private let cache: CatalogCache
     private var searchCatalog: CatalogSearch
@@ -30,6 +36,7 @@ final class SongCatalogModel: ObservableObject {
     private var currentQuery = ""
     private var currentVersion: PIUGameVersion = .phoenix2
     private var currentCacheScope: String?
+    private var favoriteRequestIDs: [String: UUID] = [:]
 
     init(apiClient: MyPIUAPIClient = MyPIUAPIClient(), cache: CatalogCache = CatalogCache()) {
         self.cache = cache
@@ -77,6 +84,10 @@ final class SongCatalogModel: ObservableObject {
         self.requestID = requestID
         if let searchCatalog {
             self.searchCatalog = searchCatalog
+        }
+        if cacheScope != currentCacheScope {
+            favoriteRequestIDs.removeAll()
+            favoriteError = nil
         }
         listingRequestID = nil
         currentQuery = normalizedQuery
@@ -148,6 +159,79 @@ final class SongCatalogModel: ObservableObject {
         await loadMore()
     }
 
+    func song(slug: String) -> CatalogSong? {
+        listing.songs.first(where: { $0.slug == slug })
+    }
+
+    func isUpdatingFavorite(slug: String) -> Bool {
+        favoriteRequestIDs[slug] != nil
+    }
+
+    func clearFavoriteError() {
+        favoriteError = nil
+    }
+
+    func setFavorite(
+        _ saved: Bool,
+        for song: CatalogSong,
+        using update: FavoriteUpdate
+    ) async {
+        guard favoriteRequestIDs[song.slug] == nil else { return }
+        guard let cacheScope = currentCacheScope, cacheScope.hasPrefix("account:") else { return }
+
+        let mutationID = UUID()
+        let catalogRequestID = requestID
+        let query = currentQuery
+        let version = currentVersion
+        let previousValue = song.isFavorite
+        guard listing.setFavorite(saved, forSlug: song.slug) else { return }
+
+        favoriteError = nil
+        favoriteRequestIDs[song.slug] = mutationID
+        defer {
+            if favoriteRequestIDs[song.slug] == mutationID {
+                favoriteRequestIDs[song.slug] = nil
+            }
+        }
+
+        do {
+            let authoritativeValue = try await update(song.slug, saved, version)
+            guard favoriteRequestIDs[song.slug] == mutationID else { return }
+            guard requestID == catalogRequestID,
+                  currentVersion == version,
+                  currentCacheScope == cacheScope else { return }
+
+            listing.setFavorite(authoritativeValue, forSlug: song.slug)
+            try? await cache.save(
+                listing,
+                query: query,
+                version: version,
+                scope: cacheScope
+            )
+        } catch is CancellationError {
+            rollbackFavorite(
+                previousValue,
+                slug: song.slug,
+                mutationID: mutationID,
+                catalogRequestID: catalogRequestID,
+                version: version,
+                cacheScope: cacheScope
+            )
+        } catch {
+            rollbackFavorite(
+                previousValue,
+                slug: song.slug,
+                mutationID: mutationID,
+                catalogRequestID: catalogRequestID,
+                version: version,
+                cacheScope: cacheScope
+            )
+            if requestID == catalogRequestID, currentCacheScope == cacheScope {
+                favoriteError = error.localizedDescription
+            }
+        }
+    }
+
     private func loadMore() async {
         guard listingRequestID == requestID, !isLoadingMore, let cursor = listing.nextCursor else { return }
         let requestID = self.requestID
@@ -177,5 +261,20 @@ final class SongCatalogModel: ObservableObject {
             guard self.requestID == requestID else { return }
             paginationError = error.localizedDescription
         }
+    }
+
+    private func rollbackFavorite(
+        _ previousValue: Bool,
+        slug: String,
+        mutationID: UUID,
+        catalogRequestID: UUID,
+        version: PIUGameVersion,
+        cacheScope: String
+    ) {
+        guard favoriteRequestIDs[slug] == mutationID,
+              requestID == catalogRequestID,
+              currentVersion == version,
+              currentCacheScope == cacheScope else { return }
+        listing.setFavorite(previousValue, forSlug: slug)
     }
 }

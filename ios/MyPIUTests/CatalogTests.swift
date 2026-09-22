@@ -40,6 +40,16 @@ final class CatalogTests: XCTestCase {
         XCTAssertFalse(listing.hasMore)
     }
 
+    func testCatalogListingUpdatesFavoriteBySlug() throws {
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        var listing = CatalogListing()
+        listing.replace(with: page)
+
+        XCTAssertTrue(listing.setFavorite(false, forSlug: "battle-no-1"))
+        XCTAssertFalse(listing.songs.first?.isFavorite == true)
+        XCTAssertFalse(listing.setFavorite(false, forSlug: "missing-song"))
+    }
+
     func testCatalogCacheSeparatesVersionsAndNormalizesQueries() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -167,6 +177,71 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(requestedQueries, ["old", "new"])
     }
 
+    @MainActor
+    func testFavoriteUpdateUsesServerStateAndPersistsOnlyAfterSuccess() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let catalog = SongCatalogModel(cache: cache)
+        await catalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: { _, _, _ in page }
+        )
+        let song = try XCTUnwrap(catalog.listing.songs.first)
+        var request: (slug: String, saved: Bool, version: PIUGameVersion)?
+
+        await catalog.setFavorite(false, for: song) { slug, saved, version in
+            request = (slug, saved, version)
+            return false
+        }
+
+        XCTAssertEqual(request?.slug, "battle-no-1")
+        XCTAssertEqual(request?.saved, false)
+        XCTAssertEqual(request?.version, .phoenix2)
+        XCTAssertEqual(catalog.listing.songs.first?.isFavorite, false)
+        XCTAssertNil(catalog.favoriteError)
+        let cached = await cache.load(
+            query: "battle",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+        XCTAssertEqual(cached?.listing.songs.first?.isFavorite, false)
+    }
+
+    @MainActor
+    func testFailedFavoriteUpdateRollsBackWithoutChangingCache() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let catalog = SongCatalogModel(cache: cache)
+        await catalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: { _, _, _ in page }
+        )
+        let song = try XCTUnwrap(catalog.listing.songs.first)
+
+        await catalog.setFavorite(false, for: song) { _, _, _ in
+            throw FavoriteTestError.failed
+        }
+
+        XCTAssertEqual(catalog.listing.songs.first?.isFavorite, true)
+        XCTAssertEqual(catalog.favoriteError, "The favorite update failed.")
+        let cached = await cache.load(
+            query: "battle",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+        XCTAssertEqual(cached?.listing.songs.first?.isFavorite, true)
+    }
+
     private static let fixture = """
     {
       "songs": [
@@ -191,4 +266,10 @@ final class CatalogTests: XCTestCase {
       "filterOptions": {"folders": [], "series": [], "levels": [], "charts": []}
     }
     """
+}
+
+private enum FavoriteTestError: LocalizedError {
+    case failed
+
+    var errorDescription: String? { "The favorite update failed." }
 }

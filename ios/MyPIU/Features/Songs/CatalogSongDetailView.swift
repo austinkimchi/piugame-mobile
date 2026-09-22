@@ -2,6 +2,9 @@ import SwiftUI
 
 struct CatalogSongDetailView: View {
     let song: CatalogSong
+    let canUpdateFavorite: Bool
+    let isUpdatingFavorite: Bool
+    let onToggleFavorite: () -> Void
 
     var body: some View {
         ScrollView {
@@ -26,6 +29,17 @@ struct CatalogSongDetailView: View {
         }
         .navigationTitle(song.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if canUpdateFavorite {
+                ToolbarItem(placement: .topBarTrailing) {
+                    FavoriteButton(
+                        isFavorite: song.isFavorite,
+                        isUpdating: isUpdatingFavorite,
+                        action: onToggleFavorite
+                    )
+                }
+            }
+        }
     }
 
     private var header: some View {
@@ -40,11 +54,6 @@ struct CatalogSongDetailView: View {
                     Image(systemName: "crown.fill")
                         .foregroundStyle(AppTheme.warning)
                         .accessibilityLabel("Premium")
-                }
-                if song.isFavorite {
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(AppTheme.warning)
-                        .accessibilityLabel("Favorite")
                 }
             }
             Text(song.artist)

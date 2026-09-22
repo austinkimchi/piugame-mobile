@@ -14,9 +14,11 @@ enum MyPIUAPIError: LocalizedError, Equatable {
             case "piu_account_not_linked": "Link this PIUGAME account on MyPIU before uploading."
             case "piu_username_mismatch": "The PIUGAME username does not match the account linked to MyPIU."
             case "rate_limited": "MyPIU is receiving syncs too quickly. Try again shortly."
-            case "account_busy": "MyPIU is finishing another account update. Try deleting again shortly."
+            case "account_busy": "MyPIU is finishing another account update. Try again shortly."
             case "account_not_found": "This MyPIU account no longer exists."
             case "deletion_failed": "MyPIU could not delete the account. Try again."
+            case "song_not_found": "This song is not available in the selected PIU version."
+            case "favorite_update_failed": "MyPIU could not update this favorite. Try again."
             default: "MyPIU could not complete the request."
             }
         }
@@ -136,6 +138,31 @@ actor MyPIUAPIClient {
         return try await send(request)
     }
 
+    func setFavorite(
+        songSlug: String,
+        saved: Bool,
+        version: PIUGameVersion,
+        accessToken: String
+    ) async throws -> Bool {
+        guard let encodedSlug = encodedPathSegment(songSlug) else {
+            throw MyPIUAPIError.invalidResponse
+        }
+        var request = authenticatedRequest(
+            path: "/api/mobile/v1/songs/\(encodedSlug)/favorite",
+            accessToken: accessToken
+        )
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try encoder.encode(
+            FavoriteUpdatePayload(saved: saved, version: version)
+        )
+        let response: FavoriteUpdateResponse = try await send(request)
+        guard response.slug == songSlug else {
+            throw MyPIUAPIError.invalidResponse
+        }
+        return response.isFavorite
+    }
+
     func upload(
         snapshot: PIUSnapshot,
         accessToken: String,
@@ -217,6 +244,12 @@ actor MyPIUAPIClient {
     private func url(path: String) -> URL {
         URL(string: path, relativeTo: baseURL)!.absoluteURL
     }
+
+    private func encodedPathSegment(_ value: String) -> String? {
+        var allowed = CharacterSet.alphanumerics
+        allowed.formUnion(CharacterSet(charactersIn: "-._~"))
+        return value.addingPercentEncoding(withAllowedCharacters: allowed)
+    }
 }
 
 private struct TokenResponse: Decodable {
@@ -237,6 +270,16 @@ private struct AccountResponse: Decodable {
 
 private struct PerformanceResponse: Decodable {
     let performance: MyPIUPerformanceDashboard
+}
+
+private struct FavoriteUpdatePayload: Encodable {
+    let saved: Bool
+    let version: PIUGameVersion
+}
+
+private struct FavoriteUpdateResponse: Decodable {
+    let slug: String
+    let isFavorite: Bool
 }
 
 private struct ErrorResponse: Decodable {
