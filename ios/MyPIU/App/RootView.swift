@@ -40,7 +40,15 @@ struct RootView: View {
             .navigationTitle("MyPIU")
             .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 280)
         } detail: {
-            navigationStack(for: selectedDestination)
+            ZStack {
+                ForEach(Destination.allCases) { destination in
+                    navigationStack(for: destination)
+                        .opacity(selectedDestination == destination ? 1 : 0)
+                        .allowsHitTesting(selectedDestination == destination)
+                        .accessibilityHidden(selectedDestination != destination)
+                        .zIndex(selectedDestination == destination ? 1 : 0)
+                }
+            }
         }
         .navigationSplitViewStyle(.balanced)
     }
