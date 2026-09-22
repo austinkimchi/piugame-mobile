@@ -2,9 +2,19 @@ import SwiftUI
 
 struct AccountView: View {
     @EnvironmentObject private var model: AppModel
-    @State private var username = ""
-    @State private var password = ""
-    @State private var showingAccountDeletion = false
+    @Binding private var username: String
+    @Binding private var password: String
+    @Binding private var showingAccountDeletion: Bool
+
+    init(
+        username: Binding<String>,
+        password: Binding<String>,
+        showingAccountDeletion: Binding<Bool>
+    ) {
+        _username = username
+        _password = password
+        _showingAccountDeletion = showingAccountDeletion
+    }
 
     var body: some View {
         Form {

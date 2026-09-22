@@ -1,12 +1,19 @@
 import SwiftUI
+import UIKit
 
 struct RootView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @StateObject private var songCatalog = SongCatalogModel()
     @State private var selectedDestination: Destination = .home
     @State private var homePath = NavigationPath()
     @State private var songsPath = NavigationPath()
     @State private var activityPath = NavigationPath()
     @State private var accountPath = NavigationPath()
+    @State private var songQuery = ""
+    @State private var activitySection: ActivityView.Section = .recent
+    @State private var accountUsername = ""
+    @State private var accountPassword = ""
+    @State private var showingAccountDeletion = false
 
     var body: some View {
         Group {
@@ -17,6 +24,12 @@ struct RootView: View {
             }
         }
         .tint(AppTheme.accent)
+        .onChange(of: selectedDestination) { _, _ in
+            resignFocus()
+        }
+        .onChange(of: horizontalSizeClass) { _, _ in
+            resignFocus()
+        }
     }
 
     private var compactLayout: some View {
@@ -86,12 +99,26 @@ struct RootView: View {
         case .home:
             DashboardView()
         case .songs:
-            SongsView()
+            SongsView(catalog: songCatalog, query: $songQuery)
         case .activity:
-            ActivityView()
+            ActivityView(section: $activitySection)
         case .account:
-            AccountView()
+            AccountView(
+                username: $accountUsername,
+                password: $accountPassword,
+                showingAccountDeletion: $showingAccountDeletion
+            )
         }
+    }
+
+    @MainActor
+    private func resignFocus() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 }
 
