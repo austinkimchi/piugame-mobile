@@ -96,7 +96,13 @@ fun MyPiuApp(
         selectedSongFallbackJson?.let { runCatching { catalogSongJson.decodeFromString<CatalogSong>(it) }.getOrNull() }
     }
     val listedSong = selectedSongSlug?.let(catalogViewModel::song)
-    val selectedSong = listedSong ?: selectedSongFallback?.takeIf { it.slug == selectedSongSlug }
+    val selectedSong = listedSong ?: selectedSongFallback
+        ?.takeIf { it.slug == selectedSongSlug }
+        ?.let { fallback ->
+            catalogState.detailFavoriteStates[fallback.slug]
+                ?.let { fallback.copy(isFavorite = it) }
+                ?: fallback
+        }
     val selectedSongVersion = selectedSongVersionName?.let { savedName ->
         PiuGameVersion.entries.firstOrNull { it.serialName == savedName }
     }
@@ -120,8 +126,8 @@ fun MyPiuApp(
 
     BackHandler(enabled = selectedSongSlug != null, onBack = ::navigateBack)
 
-    LaunchedEffect(listedSong) {
-        if (listedSong != null) selectedSongFallbackJson = catalogSongJson.encodeToString(listedSong)
+    LaunchedEffect(selectedSong) {
+        if (selectedSong != null) selectedSongFallbackJson = catalogSongJson.encodeToString(selectedSong)
     }
     LaunchedEffect(
         catalogAccountId,

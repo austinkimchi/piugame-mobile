@@ -73,6 +73,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 version = preferredVersion ?: state.version,
                 listing = CatalogListing(),
                 updatingFavorites = emptySet(),
+                detailFavoriteStates = emptyMap(),
                 favoriteError = null,
                 chartHistory = disconnectedHistory,
             )
@@ -97,6 +98,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 version = version,
                 listing = CatalogListing(),
                 updatingFavorites = emptySet(),
+                detailFavoriteStates = emptyMap(),
                 favoriteError = null,
                 chartHistory = null,
             )
@@ -161,6 +163,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             it.copy(
                 listing = it.listing.setFavorite(song.slug, requested),
                 updatingFavorites = pendingFavorites.keys.toSet(),
+                detailFavoriteStates = it.detailFavoriteStates + (song.slug to requested),
                 favoriteError = null,
             )
         }
@@ -183,7 +186,11 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                         else -> current.listing.setFavorite(song.slug, authoritative)
                     }
                     mutableState.update {
-                        it.copy(listing = listing, updatingFavorites = pendingFavorites.keys.toSet())
+                        it.copy(
+                            listing = listing,
+                            updatingFavorites = pendingFavorites.keys.toSet(),
+                            detailFavoriteStates = it.detailFavoriteStates + (song.slug to authoritative),
+                        )
                     }
                 }
             } catch (error: CancellationException) {
@@ -377,6 +384,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             it.copy(
                 listing = it.listing.setFavorite(slug, mutation.previous),
                 updatingFavorites = pendingFavorites.keys.toSet(),
+                detailFavoriteStates = it.detailFavoriteStates + (slug to mutation.previous),
             )
         }
     }
@@ -427,6 +435,7 @@ data class CatalogUiState(
     val error: String? = null,
     val paginationError: String? = null,
     val updatingFavorites: Set<String> = emptySet(),
+    val detailFavoriteStates: Map<String, Boolean> = emptyMap(),
     val favoriteError: String? = null,
     val chartHistory: ChartHistoryUiState? = null,
     val sessionInvalidated: Boolean = false,

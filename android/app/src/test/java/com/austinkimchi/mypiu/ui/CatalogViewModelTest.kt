@@ -258,6 +258,32 @@ class CatalogViewModelTest {
     }
 
     @Test
+    fun favoriteMutationUpdatesDetailStateWhenSongIsNotListed() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakeCatalogDataSource()
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+            val selectedSong = viewModel.state.value.listing.songs.single()
+            source.searchHandler = { _, _, _, _ -> CatalogSearchPage(emptyList(), null, 0) }
+            viewModel.refresh()
+            advanceUntilIdle()
+            assertTrue(viewModel.state.value.listing.songs.isEmpty())
+
+            viewModel.toggleFavorite(selectedSong)
+            advanceUntilIdle()
+
+            assertEquals(true, viewModel.state.value.detailFavoriteStates[selectedSong.slug])
+            assertTrue(viewModel.state.value.listing.songs.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun sessionInvalidationKeepsChartHistoryInTerminalState() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
