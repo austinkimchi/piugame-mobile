@@ -197,4 +197,71 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(performance.stats?.recentPlayCount, 2)
         XCTAssertEqual(performance.attemptsNewestFirst.map(\.id), ["latest", "older"])
     }
+
+    func testDecodesCompletePerformanceSession() throws {
+        let data = Data(
+            #"""
+            {
+              "summary": {
+                "playCount": 3,
+                "clearCount": 2,
+                "stageBreakCount": 1,
+                "averageScore": 925000,
+                "bestScore": 950000,
+                "distinctCharts": 2,
+                "startedAt": "2026-09-22T07:00:00.000Z",
+                "endedAt": "2026-09-22T08:00:00.000Z",
+                "durationMinutes": 60
+              },
+              "plays": [{
+                "songName": "Big Daddy",
+                "chartToken": "big-daddy:s:19",
+                "score": null,
+                "grade": "x_s",
+                "plate": null,
+                "mode": "S",
+                "level": "19",
+                "playedAt": "2026-09-22T08:00:00.000Z",
+                "stageBreak": true
+              }]
+            }
+            """#.utf8
+        )
+
+        let session = try JSONDecoder().decode(MyPIUPerformanceSession.self, from: data)
+
+        XCTAssertEqual(session.summary.playCount, 3)
+        XCTAssertEqual(try XCTUnwrap(session.summary.clearRate), 200.0 / 3.0, accuracy: 0.0001)
+        XCTAssertEqual(session.summary.durationMinutes, 60)
+        XCTAssertEqual(session.plays.first?.displayChartToken, "S19")
+        XCTAssertEqual(session.plays.first?.stageBreak, true)
+    }
+
+    func testSessionClearRateRequiresPlaysAndClampsBadCounts() {
+        let empty = MyPIUPerformanceSession.Summary(
+            playCount: 0,
+            clearCount: 0,
+            stageBreakCount: 0,
+            averageScore: nil,
+            bestScore: nil,
+            distinctCharts: 0,
+            startedAt: "2026-09-22T07:00:00.000Z",
+            endedAt: "2026-09-22T07:00:00.000Z",
+            durationMinutes: 0
+        )
+        let corrupt = MyPIUPerformanceSession.Summary(
+            playCount: 1,
+            clearCount: 2,
+            stageBreakCount: 0,
+            averageScore: nil,
+            bestScore: nil,
+            distinctCharts: 1,
+            startedAt: "2026-09-22T07:00:00.000Z",
+            endedAt: "2026-09-22T07:00:00.000Z",
+            durationMinutes: 0
+        )
+
+        XCTAssertNil(empty.clearRate)
+        XCTAssertEqual(corrupt.clearRate, 100)
+    }
 }
