@@ -46,6 +46,11 @@ test("builds an allowlisted Chromium package with a valid checksum", () => {
     .split("\n");
   assert.deepEqual(archiveEntries, expectedFiles);
   assert.equal(archiveEntries.some((entry) => /(?:node_modules|test|package\.json)/.test(entry)), false);
+  const archiveMetadata = execFileSync("zipinfo", ["-v", archivePath], { encoding: "utf8" });
+  const archivedModes = [...archiveMetadata.matchAll(/Unix file attributes \((\d+) octal\)/g)]
+    .map((match) => match[1]);
+  assert.equal(archivedModes.length, expectedFiles.length);
+  assert.deepEqual(new Set(archivedModes), new Set(["100644"]));
 
   const expectedDigest = readFileSync(`${archivePath}.sha256`, "utf8").split(/\s+/, 1)[0];
   const actualDigest = createHash("sha256").update(readFileSync(archivePath)).digest("hex");
