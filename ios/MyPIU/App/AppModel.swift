@@ -58,11 +58,14 @@ final class AppModel: ObservableObject {
 
     var isConnected: Bool { credentials != nil }
     var isMyPIUConnected: Bool { accessToken != nil }
-    var isMyPIUBusy: Bool { myPIUState == .authenticating || myPIUState == .uploading }
+    var isMyPIUBusy: Bool {
+        myPIUState == .restoring || myPIUState == .authenticating || myPIUState == .uploading
+    }
 
     func restore() async {
         guard !hasRestored else { return }
         hasRestored = true
+        Task { await retryPendingMyPIURevocations() }
 
         let savedCredentials: PIUCredentials?
         do {
@@ -101,8 +104,7 @@ final class AppModel: ObservableObject {
             let token = try await oauthCoordinator.authorize(provider: provider)
             try tokenStore.save(token)
             accessToken = token
-            myPIUAccount = try await apiClient.account(accessToken: token.value)
-            myPIUState = .ready
+            guard await loadMyPIUAccount(using: token) else { return false }
             if let snapshot {
                 await uploadToMyPIU(snapshot)
             }
@@ -117,12 +119,30 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func disconnectMyPIU() async {
-        let token = accessToken?.value
-        clearMyPIUSession()
-        if let token {
-            try? await apiClient.revoke(accessToken: token)
+    func retryMyPIU() async {
+        guard let token = accessToken else {
+            myPIUState = .signedOut
+            return
         }
+        guard await loadMyPIUAccount(using: token) else { return }
+        if let snapshot {
+            await uploadToMyPIU(snapshot)
+        }
+    }
+
+    func disconnectMyPIU() async {
+        guard let token = accessToken else {
+            clearMyPIUSession()
+            return
+        }
+        do {
+            try tokenStore.enqueuePendingRevocation(token)
+        } catch {
+            myPIUState = .failed("MyPIU could not securely queue this sign-out. Try again.")
+            return
+        }
+        clearMyPIUSession()
+        await retryPendingMyPIURevocations()
     }
 
     func connect(username: String, password: String) async -> Bool {
@@ -194,14 +214,38 @@ final class AppModel: ObservableObject {
                 return
             }
             accessToken = token
-            myPIUState = .restoring
+            _ = await loadMyPIUAccount(using: token)
+        } catch {
+            myPIUState = .failed(error.localizedDescription)
+        }
+    }
+
+    private func loadMyPIUAccount(using token: MyPIUAccessToken) async -> Bool {
+        myPIUState = .restoring
+        do {
             myPIUAccount = try await apiClient.account(accessToken: token.value)
             myPIUState = .ready
+            return true
         } catch {
             if let apiError = error as? MyPIUAPIError, apiError.isUnauthorized {
                 clearMyPIUSession()
             } else {
                 myPIUState = .failed(error.localizedDescription)
+            }
+            return false
+        }
+    }
+
+    private func retryPendingMyPIURevocations() async {
+        guard let tokens = try? tokenStore.pendingRevocations() else { return }
+        for token in tokens {
+            do {
+                try await apiClient.revoke(accessToken: token.value)
+                try tokenStore.removePendingRevocation(token)
+            } catch let error as MyPIUAPIError where error.isUnauthorized {
+                try? tokenStore.removePendingRevocation(token)
+            } catch {
+                continue
             }
         }
     }

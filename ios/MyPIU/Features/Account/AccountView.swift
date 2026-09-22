@@ -19,6 +19,10 @@ struct AccountView: View {
                     }
                 } else if model.isMyPIUConnected {
                     myPIUStatus
+                    Button("Retry MyPIU", systemImage: "arrow.clockwise") {
+                        Task { await model.retryMyPIU() }
+                    }
+                    .disabled(model.isMyPIUBusy)
                     Button("Disconnect MyPIU", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
                         Task { await model.disconnectMyPIU() }
                     }
