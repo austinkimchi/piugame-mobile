@@ -63,18 +63,35 @@ final class AppModel: ObservableObject {
     func restore() async {
         guard !hasRestored else { return }
         hasRestored = true
-        await restoreMyPIU()
+
+        let savedCredentials: PIUCredentials?
         do {
-            guard let credentials = try credentialStore.load() else {
-                state = .signedOut
-                return
-            }
-            self.credentials = credentials
-            selectedVersion = credentials.version
-            state = .restoring
-            _ = await sync(using: credentials, saveAfterSuccess: false)
+            savedCredentials = try credentialStore.load()
         } catch {
             state = .failed(error.localizedDescription)
+            await restoreMyPIU()
+            return
+        }
+
+        guard let savedCredentials else {
+            state = .signedOut
+            await restoreMyPIU()
+            return
+        }
+
+        credentials = savedCredentials
+        selectedVersion = savedCredentials.version
+        state = .restoring
+
+        async let myPIURestore: Void = restoreMyPIU()
+        let didSync = await sync(
+            using: savedCredentials,
+            saveAfterSuccess: false,
+            uploadAfterSuccess: false
+        )
+        await myPIURestore
+        if didSync, let snapshot {
+            await uploadToMyPIU(snapshot)
         }
     }
 
@@ -141,7 +158,11 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func sync(using credentials: PIUCredentials, saveAfterSuccess: Bool) async -> Bool {
+    private func sync(
+        using credentials: PIUCredentials,
+        saveAfterSuccess: Bool,
+        uploadAfterSuccess: Bool = true
+    ) async -> Bool {
         state = .syncing
         let client = PIUGameClient(version: credentials.version)
         self.client = client
@@ -152,7 +173,9 @@ final class AppModel: ObservableObject {
             self.snapshot = snapshot
             state = .ready
             BackgroundRefreshScheduler.schedule()
-            await uploadToMyPIU(snapshot)
+            if uploadAfterSuccess {
+                await uploadToMyPIU(snapshot)
+            }
             return true
         } catch {
             state = .failed(error.localizedDescription)
