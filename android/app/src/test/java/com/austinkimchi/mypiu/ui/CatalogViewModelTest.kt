@@ -279,6 +279,55 @@ class CatalogViewModelTest {
     }
 
     @Test
+    fun supersededFavoriteResponseCannotOverwriteNewerCacheValue() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val firstStarted = CompletableDeferred<Unit>()
+            val firstResult = CompletableDeferred<Boolean>()
+            val secondStarted = CompletableDeferred<Unit>()
+            val secondResult = CompletableDeferred<Boolean>()
+            var requestCount = 0
+            val source = FakeCatalogDataSource(favoriteHandler = { _, _, _ ->
+                if (requestCount++ == 0) {
+                    firstStarted.complete(Unit)
+                    firstResult.await()
+                } else {
+                    secondStarted.complete(Unit)
+                    secondResult.await()
+                }
+            })
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+
+            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single())
+            runCurrent()
+            assertTrue(firstStarted.isCompleted)
+
+            viewModel.setVersion(PiuGameVersion.PHOENIX)
+            advanceUntilIdle()
+            viewModel.setVersion(PiuGameVersion.PHOENIX_2)
+            advanceUntilIdle()
+            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single().copy(isFavorite = true))
+            runCurrent()
+            assertTrue(secondStarted.isCompleted)
+
+            secondResult.complete(false)
+            runCurrent()
+            assertEquals(listOf(false), source.cachedFavoriteWrites.map(CachedFavoriteWrite::saved))
+
+            firstResult.complete(true)
+            advanceUntilIdle()
+
+            assertEquals(listOf(false), source.cachedFavoriteWrites.map(CachedFavoriteWrite::saved))
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun refreshAcceptsFavoriteChangedOnAnotherDevice() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
@@ -362,6 +411,13 @@ private data class Search(
     val authenticated: Boolean,
 )
 
+private data class CachedFavoriteWrite(
+    val saved: Boolean,
+    val slug: String,
+    val version: PiuGameVersion,
+    val scope: String,
+)
+
 private class FakeCatalogDataSource(
     private val favoriteFailure: Exception? = null,
     private val song: CatalogSong = favoriteSong().copy(isFavorite = false),
@@ -373,6 +429,7 @@ private class FakeCatalogDataSource(
     val cacheReads = mutableListOf<String>()
     val cacheWrites = mutableListOf<String>()
     val cachedSongFavorites = mutableListOf<List<Boolean>>()
+    val cachedFavoriteWrites = mutableListOf<CachedFavoriteWrite>()
     var searchHandler: (suspend (String, String?, PiuGameVersion, Boolean) -> CatalogSearchPage)? = null
 
     override suspend fun search(
@@ -426,6 +483,7 @@ private class FakeCatalogDataSource(
         version: PiuGameVersion,
         scope: String,
     ) {
+        cachedFavoriteWrites += CachedFavoriteWrite(saved, slug, version, scope)
         cacheFavoriteHandler?.invoke(saved, slug, version, scope)
     }
 

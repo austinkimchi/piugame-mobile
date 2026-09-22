@@ -192,7 +192,9 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                         )
                     }
                 }
-                runCatching { repository.cacheFavorite(authoritative, song.slug, version, scope) }
+                if (isCurrentMutation) {
+                    runCatching { repository.cacheFavorite(authoritative, song.slug, version, scope) }
+                }
             } catch (error: CancellationException) {
                 if (finishFavoriteMutation(song.slug, mutation)) {
                     rollbackFavorite(song.slug, mutation, version, scope)
