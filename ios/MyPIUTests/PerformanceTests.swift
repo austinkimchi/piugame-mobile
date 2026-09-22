@@ -142,6 +142,15 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(chart.displayChartToken, "S19")
     }
 
+    func testPerformanceAccessibilityLabelsDescribeChartsAndFailedGrades() {
+        XCTAssertEqual(performanceChartTokenAccessibilityLabel("S19"), "Single level 19")
+        XCTAssertEqual(performanceChartTokenAccessibilityLabel("d24"), "Double level 24")
+        XCTAssertEqual(performanceChartTokenAccessibilityLabel("C2"), "Co-op level 2")
+        XCTAssertTrue(performancePlayIsFailed(grade: "x_aa", stageBreak: false))
+        XCTAssertTrue(performancePlayIsFailed(grade: "s", stageBreak: true))
+        XCTAssertFalse(performancePlayIsFailed(grade: "s", stageBreak: false))
+    }
+
     func testDecodesSongChartHistoryNewestFirst() throws {
         let data = Data(
             #"""

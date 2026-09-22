@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CatalogSongDetailView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var appModel: AppModel
     let song: CatalogSong
     let version: PIUGameVersion
@@ -93,7 +94,7 @@ struct CatalogSongDetailView: View {
                         Text(mode.title)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 58, maximum: 82))], spacing: 8) {
+                        LazyVGrid(columns: chartColumns, spacing: 8) {
                             ForEach(chartTokens, id: \.self) { token in
                                 chartLink(token)
                             }
@@ -134,6 +135,12 @@ struct CatalogSongDetailView: View {
         }
     }
 
+    private var chartColumns: [GridItem] {
+        let minimum: CGFloat = dynamicTypeSize.isAccessibilitySize ? 96 : 58
+        let maximum: CGFloat = dynamicTypeSize.isAccessibilitySize ? 140 : 82
+        return [GridItem(.adaptive(minimum: minimum, maximum: maximum))]
+    }
+
     @ViewBuilder
     private func chartLink(_ token: String) -> some View {
         if appModel.isMyPIUConnected {
@@ -152,7 +159,7 @@ struct CatalogSongDetailView: View {
     private func chartBadge(_ token: String) -> some View {
         Text(token)
             .font(.subheadline.bold().monospaced())
-            .frame(maxWidth: .infinity, minHeight: 38)
+            .frame(maxWidth: .infinity, minHeight: 44)
             .background(chartColor(token), in: RoundedRectangle(cornerRadius: 6))
             .overlay {
                 if isRecommended(token) {

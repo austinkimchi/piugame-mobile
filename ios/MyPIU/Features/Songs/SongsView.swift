@@ -297,17 +297,18 @@ private struct CatalogRequest: Hashable {
 }
 
 private struct CatalogSongRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let song: CatalogSong
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: dynamicTypeSize.isAccessibilitySize ? .top : .center, spacing: 12) {
             CatalogArtwork(url: song.imageURL, size: 68)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(song.title)
                         .font(.body.weight(.semibold))
-                        .lineLimit(2)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     if song.isPremium {
                         Image(systemName: "crown.fill")
                             .foregroundStyle(AppTheme.warning)
@@ -317,26 +318,28 @@ private struct CatalogSongRow: View {
                 Text(song.artist)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
                 if let recommendedChartToken = song.recommendedChartToken {
                     Label(recommendedChartToken, systemImage: "sparkles")
                         .font(.caption.bold().monospaced())
                         .foregroundStyle(AppTheme.accent)
+                        .lineLimit(2)
                         .accessibilityLabel("Recommended chart \(recommendedChartToken)")
                 }
                 Text(song.chartSummary.prefix(6).joined(separator: "  "))
                     .font(.caption.weight(.semibold).monospaced())
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
 
                 if let folder = song.folder ?? song.series {
                     Text(folder)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
-                        .lineLimit(1)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                 }
             }
+            .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 4)
     }

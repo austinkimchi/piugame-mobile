@@ -202,6 +202,7 @@ struct PlayerProgressView: View {
 }
 
 struct PumbilityBreakdownView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let performance: MyPIUPerformanceDashboard
 
     private var charts: [MyPIUPerformanceDashboard.Chart] {
@@ -217,7 +218,7 @@ struct PumbilityBreakdownView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 10) {
+                metricLayout {
                     pumbilityMetric("Pumbility", value: format(performance.profile?.pumbilityScore))
                     pumbilityMetric("Chart total", value: format(chartContribution))
                 }
@@ -238,6 +239,13 @@ struct PumbilityBreakdownView: View {
             .padding()
         }
         .navigationTitle("Pumbility")
+    }
+
+    private func metricLayout<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 10))
+        return layout { content() }
     }
 
     private func pumbilityMetric(_ title: String, value: String) -> some View {
