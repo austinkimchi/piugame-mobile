@@ -173,6 +173,43 @@ class CatalogViewModelTest {
     }
 
     @Test
+    fun oldFavoriteAuthorizationFailureCannotInvalidateReplacementSession() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val requestStarted = CompletableDeferred<Unit>()
+            val requestResult = CompletableDeferred<Boolean>()
+            val source = FakeCatalogDataSource(favoriteHandler = { _, _, _ ->
+                requestStarted.complete(Unit)
+                requestResult.await()
+            })
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+
+            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single())
+            runCurrent()
+            assertTrue(requestStarted.isCompleted)
+
+            viewModel.updateSession(null, connected = false, preferredVersion = null)
+            advanceUntilIdle()
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            advanceUntilIdle()
+            assertFalse(viewModel.state.value.listing.songs.single().isFavorite)
+
+            requestResult.completeExceptionally(MyPiuApiException(401, "invalid_token"))
+            advanceUntilIdle()
+
+            assertTrue(viewModel.state.value.isMyPiuConnected)
+            assertFalse(viewModel.state.value.sessionInvalidated)
+            assertTrue(viewModel.state.value.updatingFavorites.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun refavoritingFromRemovedFavoritesDetailReinsertsSong() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
@@ -310,8 +347,11 @@ class CatalogViewModelTest {
 
             viewModel.setVersion(PiuGameVersion.PHOENIX)
             advanceUntilIdle()
+            assertFalse(viewModel.state.value.listing.songs.single().isFavorite)
+            assertEquals(setOf("song"), viewModel.state.value.updatingFavorites)
             viewModel.setVersion(PiuGameVersion.PHOENIX_2)
             advanceUntilIdle()
+            assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
             viewModel.toggleFavorite(viewModel.state.value.listing.songs.single().copy(isFavorite = true))
             runCurrent()
             assertFalse(secondStarted.isCompleted)
