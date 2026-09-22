@@ -82,13 +82,19 @@ struct DashboardView: View {
                         icon: "bolt.fill",
                         tint: AppTheme.warning
                     )
-                    MetricTile(
-                        title: "Recent session",
-                        value: format(performance.totals.recentlyPlayed),
-                        detail: "Plays",
-                        icon: "clock.arrow.circlepath",
-                        tint: .blue
-                    )
+                    NavigationLink {
+                        PerformanceSessionView()
+                    } label: {
+                        MetricTile(
+                            title: "Recent session",
+                            value: format(performance.totals.recentlyPlayed),
+                            detail: "Plays",
+                            icon: "clock.arrow.circlepath",
+                            tint: .blue
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Shows the latest play session summary")
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
