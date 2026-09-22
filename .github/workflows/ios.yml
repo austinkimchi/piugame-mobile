@@ -24,12 +24,25 @@ jobs:
           -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO
           build
-      - name: Build tests
+      - name: Run tests
         working-directory: ios
-        run: >-
-          xcodebuild
-          -project MyPIU.xcodeproj
-          -scheme MyPIU
-          -destination 'generic/platform=iOS Simulator'
-          CODE_SIGNING_ALLOWED=NO
-          build-for-testing
+        run: |
+          DEVICE_ID="$(python3 - <<'PY'
+          import json
+          import subprocess
+
+          devices = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"]))["devices"]
+          print(next(
+              device["udid"]
+              for runtime in devices.values()
+              for device in runtime
+              if device["isAvailable"] and device["name"].startswith("iPhone")
+          ))
+          PY
+          )"
+          xcodebuild \
+            -project MyPIU.xcodeproj \
+            -scheme MyPIU \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            test
