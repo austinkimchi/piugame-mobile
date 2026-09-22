@@ -2,11 +2,12 @@ import SwiftUI
 
 struct SongsView: View {
     @EnvironmentObject private var appModel: AppModel
-    @StateObject private var catalog = SongCatalogModel()
-    @State private var query: String
+    @ObservedObject private var catalog: SongCatalogModel
+    @Binding private var query: String
 
-    init(initialQuery: String = "") {
-        _query = State(initialValue: initialQuery)
+    init(catalog: SongCatalogModel, query: Binding<String>) {
+        self.catalog = catalog
+        _query = query
     }
 
     var body: some View {
@@ -52,7 +53,7 @@ struct SongsView: View {
             version: appModel.selectedVersion,
             cacheScope: appModel.catalogCacheScope
         )) {
-            await catalog.reload(
+            await catalog.loadIfNeeded(
                 query: query,
                 version: appModel.selectedVersion,
                 cacheScope: appModel.catalogCacheScope,
@@ -111,6 +112,15 @@ struct SongsView: View {
 
     private var isRecommendationFeed: Bool {
         query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "recommendation"
+    }
+}
+
+struct RecommendationSongsView: View {
+    @StateObject private var catalog = SongCatalogModel()
+    @State private var query = "recommendation"
+
+    var body: some View {
+        SongsView(catalog: catalog, query: $query)
     }
 }
 

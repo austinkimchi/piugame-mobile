@@ -38,6 +38,33 @@ final class SongCatalogModel: ObservableObject {
         }
     }
 
+    func loadIfNeeded(
+        query: String,
+        version: PIUGameVersion,
+        cacheScope: String? = "public",
+        debounce: Bool = true,
+        using searchCatalog: CatalogSearch? = nil
+    ) async {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let searchCatalog {
+            self.searchCatalog = searchCatalog
+        }
+        guard state != .loaded
+            || normalizedQuery != currentQuery
+            || version != currentVersion
+            || cacheScope != currentCacheScope
+        else {
+            return
+        }
+
+        await reload(
+            query: normalizedQuery,
+            version: version,
+            cacheScope: cacheScope,
+            debounce: debounce
+        )
+    }
+
     func reload(
         query: String,
         version: PIUGameVersion,

@@ -90,6 +90,44 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(newest?.listing.songs.first?.slug, "battle-no-1")
     }
 
+    @MainActor
+    func testLoadedCatalogSkipsDuplicateMountRequestButReloadsForAnotherAccount() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let catalog = SongCatalogModel(cache: CatalogCache(directory: directory))
+        var requestCount = 0
+        let search: SongCatalogModel.CatalogSearch = { _, _, _ in
+            requestCount += 1
+            return page
+        }
+
+        await catalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: search
+        )
+        await catalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: search
+        )
+        XCTAssertEqual(requestCount, 1)
+
+        await catalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            cacheScope: "account:two",
+            debounce: false,
+            using: search
+        )
+        XCTAssertEqual(requestCount, 2)
+    }
+
     private static let fixture = """
     {
       "songs": [

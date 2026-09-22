@@ -57,7 +57,7 @@ struct DashboardView: View {
                         tint: AppTheme.positive
                     )
                     NavigationLink {
-                        SongsView(initialQuery: "recommendation")
+                        RecommendationSongsView()
                     } label: {
                         MetricTile(
                             title: "Average best",
