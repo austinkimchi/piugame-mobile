@@ -1,6 +1,6 @@
 import Foundation
 
-enum PIUGameVersion: String, CaseIterable, Codable, Identifiable, Sendable {
+enum PIUGameVersion: String, CaseIterable, Codable, Hashable, Identifiable, Sendable {
     case phoenix
     case phoenix2
 

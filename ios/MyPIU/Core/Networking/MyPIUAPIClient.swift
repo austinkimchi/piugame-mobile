@@ -94,6 +94,37 @@ actor MyPIUAPIClient {
         return response.account
     }
 
+    func searchCatalog(
+        query: String,
+        cursor: String? = nil,
+        version: PIUGameVersion,
+        limit: Int = 30
+    ) async throws -> CatalogSearchPage {
+        var components = URLComponents(
+            url: url(path: "/api/songs/search"),
+            resolvingAgainstBaseURL: false
+        )!
+        var queryItems = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "limit", value: String(min(max(limit, 1), 35))),
+            URLQueryItem(name: "sortBy", value: "title"),
+            URLQueryItem(name: "sortDirection", value: "asc"),
+            URLQueryItem(name: "supportedVersion", value: version.rawValue)
+        ]
+        if let cursor {
+            queryItems.append(URLQueryItem(name: "cursor", value: cursor))
+        }
+        components.queryItems = queryItems
+        guard let requestURL = components.url else {
+            throw MyPIUAPIError.invalidResponse
+        }
+
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        return try await send(request)
+    }
+
     func upload(
         snapshot: PIUSnapshot,
         accessToken: String,
