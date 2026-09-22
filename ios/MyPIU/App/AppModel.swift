@@ -160,12 +160,14 @@ final class AppModel: ObservableObject {
     }
 
     func refresh() async {
-        Task { await retryPendingMyPIURevocations() }
+        async let revocationRetry: Void = retryPendingMyPIURevocations()
         guard let credentials else {
             state = .signedOut
+            await revocationRetry
             return
         }
         _ = await sync(using: credentials, saveAfterSuccess: false)
+        await revocationRetry
     }
 
     func handleAppActivation() async {
