@@ -21,6 +21,8 @@ class OAuthCoordinator(
     private val clock: () -> Long = System::currentTimeMillis,
     private val random: SecureRandom = SecureRandom(),
 ) {
+    private val volatilePendingRevocations = mutableListOf<MyPiuAccessToken>()
+
     fun begin(provider: MyPiuAuthProvider): String {
         val verifier = randomValue(32)
         val state = randomValue(24)
@@ -76,6 +78,24 @@ class OAuthCoordinator(
     }
 
     private suspend fun discardUnstoredToken(token: MyPiuAccessToken) {
+        if (revokeOrQueue(token)) return
+        if (volatilePendingRevocations.none { it.value == token.value }) {
+            volatilePendingRevocations += token
+        }
+        throw OAuthException(
+            "MyPIU could not securely save or revoke this session. Keep the app open and try again.",
+        )
+    }
+
+    suspend fun retryUnstoredTokenRevocations() {
+        volatilePendingRevocations.toList().forEach { token ->
+            if (revokeOrQueue(token)) {
+                volatilePendingRevocations.removeAll { it.value == token.value }
+            }
+        }
+    }
+
+    private suspend fun revokeOrQueue(token: MyPiuAccessToken): Boolean {
         val queued = runCatching { sessionStore.enqueuePendingRevocation(token) }.isSuccess
         val revoked = try {
             apiClient.revoke(token.value)
@@ -88,11 +108,7 @@ class OAuthCoordinator(
             false
         }
         if (revoked && queued) runCatching { sessionStore.removePendingRevocation(token) }
-        if (!revoked && !queued) {
-            throw OAuthException(
-                "MyPIU could not securely save or revoke this session. Keep the app open and try again.",
-            )
-        }
+        return revoked || queued
     }
 
     private fun randomValue(byteCount: Int): String = ByteArray(byteCount)

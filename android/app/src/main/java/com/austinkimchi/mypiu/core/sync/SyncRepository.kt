@@ -122,6 +122,7 @@ class SyncRepository(
     }
 
     private suspend fun retryPendingRevocations() {
+        oauthCoordinator.retryUnstoredTokenRevocations()
         sessionStore.pendingRevocations().forEach { token ->
             val revoked = try {
                 apiClient.revoke(token.value)
