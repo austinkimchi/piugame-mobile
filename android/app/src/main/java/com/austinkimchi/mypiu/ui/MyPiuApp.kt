@@ -106,8 +106,6 @@ fun MyPiuApp(
         if (listedSong != null) selectedSongFallback = listedSong
     }
     LaunchedEffect(
-        destination,
-        state.isBusy,
         state.account?.id,
         state.isMyPiuConnected,
         state.account?.piuGameVersion,
@@ -118,6 +116,8 @@ fun MyPiuApp(
             connected = state.isMyPiuConnected,
             preferredVersion = state.account?.piuGameVersion ?: state.piuVersion,
         )
+    }
+    LaunchedEffect(destination, state.isBusy) {
         if (destination == AppDestination.SONGS && !state.isBusy) catalogViewModel.start()
     }
     LaunchedEffect(catalogState.sessionInvalidated) {

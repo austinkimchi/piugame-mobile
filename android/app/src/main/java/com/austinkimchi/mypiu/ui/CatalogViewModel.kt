@@ -156,10 +156,14 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 val current = mutableState.value
                 if (isCurrentMutation && current.version == version && current.cacheScope == scope) {
                     confirmedFavorites[song.slug] = authoritative
-                    val listing = if (current.feed == CatalogFeed.FAVORITES && !authoritative) {
-                        current.listing.removeSong(song.slug)
-                    } else {
-                        current.listing.setFavorite(song.slug, authoritative)
+                    val listing = when {
+                        current.feed == CatalogFeed.FAVORITES && !authoritative -> {
+                            current.listing.removeSong(song.slug)
+                        }
+                        current.feed == CatalogFeed.FAVORITES -> {
+                            current.listing.upsertSong(song.copy(isFavorite = true))
+                        }
+                        else -> current.listing.setFavorite(song.slug, authoritative)
                     }
                     mutableState.update {
                         it.copy(listing = listing, updatingFavorites = pendingFavorites.keys.toSet())

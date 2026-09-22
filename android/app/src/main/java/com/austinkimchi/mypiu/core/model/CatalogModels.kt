@@ -54,6 +54,12 @@ data class CatalogListing(
         songs = songs.map { song -> if (song.slug == slug) song.copy(isFavorite = saved) else song },
     )
 
+    fun upsertSong(song: CatalogSong): CatalogListing {
+        val index = songs.indexOfFirst { it.slug == song.slug }
+        if (index < 0) return copy(songs = listOf(song) + songs, total = total + 1)
+        return copy(songs = songs.toMutableList().also { it[index] = song })
+    }
+
     fun removeSong(slug: String): CatalogListing {
         if (songs.none { it.slug == slug }) return this
         return copy(songs = songs.filterNot { it.slug == slug }, total = (total - 1).coerceAtLeast(0))

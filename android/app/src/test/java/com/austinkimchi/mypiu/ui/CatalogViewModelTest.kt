@@ -167,19 +167,46 @@ class CatalogViewModelTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun refavoritingFromRemovedFavoritesDetailReinsertsSong() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakeCatalogDataSource(song = favoriteSong())
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+            viewModel.setFeed(CatalogFeed.FAVORITES)
+            advanceUntilIdle()
+            val selectedSong = viewModel.state.value.listing.songs.single()
+
+            viewModel.toggleFavorite(selectedSong)
+            advanceUntilIdle()
+            assertTrue(viewModel.state.value.listing.songs.isEmpty())
+
+            viewModel.toggleFavorite(selectedSong.copy(isFavorite = false))
+            advanceUntilIdle()
+
+            assertEquals(1, viewModel.state.value.listing.total)
+            assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }
 
 private data class Search(val query: String, val cursor: String?, val version: PiuGameVersion)
 
 private class FakeCatalogDataSource(
     private val favoriteFailure: Exception? = null,
+    private val song: CatalogSong = favoriteSong().copy(isFavorite = false),
     private val favoriteHandler: (suspend (String, Boolean, PiuGameVersion) -> Boolean)? = null,
 ) : CatalogDataSource {
     val searches = mutableListOf<Search>()
     val cacheReads = mutableListOf<String>()
     val cacheWrites = mutableListOf<String>()
-    private val song = CatalogSong("song", "Song", "Artist", chartSummary = listOf("S16"))
-
     override suspend fun search(query: String, cursor: String?, version: PiuGameVersion): CatalogSearchPage {
         searches += Search(query, cursor, version)
         return CatalogSearchPage(listOf(song), null, 1)
@@ -224,3 +251,11 @@ private class FakeCatalogDataSource(
 
     override fun resolveUrl(value: String?): String? = value
 }
+
+private fun favoriteSong() = CatalogSong(
+    slug = "song",
+    title = "Song",
+    artist = "Artist",
+    chartSummary = listOf("S16"),
+    isFavorite = true,
+)
