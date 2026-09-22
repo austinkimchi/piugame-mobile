@@ -19,6 +19,8 @@
 
 ## Stage 2: PumpStats-plus product surface
 
+Current: native catalog, recommendations, favorites, offline cache, adaptive iPad navigation, completion progress, and Pumbility breakdown are available. Personal chart history, richer session summaries, and the full accessibility audit remain.
+
 - Searchable song catalog and chart detail.
 - Personal best history, recent attempts, Pumbility breakdown, and session summaries.
 - Recommendations, favorites, and progress views.

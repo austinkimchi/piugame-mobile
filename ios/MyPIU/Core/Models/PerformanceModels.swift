@@ -12,6 +12,10 @@ struct MyPIUPerformanceDashboard: Decodable, Equatable, Sendable {
         let displayName: String
         let pumbilityScore: Double?
         let rating: Double?
+        let playCount: Int?
+        let clearCount: Int?
+        let totalCharts: Int?
+        let progressPercent: Double?
         let recentArcade: String?
         let lastSyncedAt: String?
     }
@@ -70,5 +74,60 @@ struct MyPIUPerformanceDashboard: Decodable, Equatable, Sendable {
             guard let mode, let level else { return chartToken }
             return "\(mode.uppercased())\(level)"
         }
+    }
+}
+
+struct PerformanceProgressSummary: Equatable, Sendable {
+    let clearedCharts: Int?
+    let totalCharts: Int?
+    let playCount: Int?
+    let completionPercent: Double?
+
+    var remainingCharts: Int? {
+        guard let clearedCharts, let totalCharts else { return nil }
+        return max(0, totalCharts - clearedCharts)
+    }
+
+    var completionFraction: Double? {
+        completionPercent.map { $0 / 100 }
+    }
+
+    init(
+        clearCount: Int?,
+        totalCharts: Int?,
+        progressPercent: Double?,
+        playCount: Int?
+    ) {
+        let normalizedClears = clearCount.map { max(0, $0) }
+        let normalizedTotal = totalCharts.map { max(0, $0) }
+        self.clearedCharts = normalizedClears
+        self.totalCharts = normalizedTotal
+        self.playCount = playCount.map { max(0, $0) }
+
+        if let progressPercent, progressPercent.isFinite {
+            self.completionPercent = min(100, max(0, progressPercent))
+        } else if let normalizedClears, let normalizedTotal, normalizedTotal > 0 {
+            self.completionPercent = min(100, Double(normalizedClears) / Double(normalizedTotal) * 100)
+        } else {
+            self.completionPercent = nil
+        }
+    }
+
+    init(profile: MyPIUPerformanceDashboard.Profile) {
+        self.init(
+            clearCount: profile.clearCount,
+            totalCharts: profile.totalCharts,
+            progressPercent: profile.progressPercent,
+            playCount: profile.playCount
+        )
+    }
+
+    init(profile: PIUProfile) {
+        self.init(
+            clearCount: profile.clearCount,
+            totalCharts: profile.totalCharts,
+            progressPercent: profile.progressPercent.map(Double.init),
+            playCount: profile.playCount
+        )
     }
 }

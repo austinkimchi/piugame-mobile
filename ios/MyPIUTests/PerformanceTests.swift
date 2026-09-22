@@ -11,6 +11,10 @@ final class PerformanceTests: XCTestCase {
                 "displayName": "PLAYER#1234",
                 "pumbilityScore": 15770.43,
                 "rating": 18318,
+                "playCount": 1200,
+                "clearCount": 640,
+                "totalCharts": 3900,
+                "progressPercent": 16,
                 "recentArcade": "ROUND1",
                 "lastSyncedAt": "2026-09-22T07:30:00.000Z"
               },
@@ -60,9 +64,47 @@ final class PerformanceTests: XCTestCase {
         let dashboard = try JSONDecoder().decode(MyPIUPerformanceDashboard.self, from: data)
 
         XCTAssertEqual(dashboard.profile?.displayName, "PLAYER#1234")
+        XCTAssertEqual(dashboard.profile?.clearCount, 640)
+        XCTAssertEqual(dashboard.profile?.totalCharts, 3_900)
+        XCTAssertEqual(dashboard.profile?.progressPercent, 16)
         XCTAssertEqual(dashboard.totals.averageBestScore, 954_848)
         XCTAssertEqual(dashboard.recentPlays.first?.score, 954_848)
         XCTAssertEqual(dashboard.topCharts.first?.topPlayRank, 3)
+    }
+
+    func testProgressSummaryUsesReportedPercentageAndSafeCounts() {
+        let summary = PerformanceProgressSummary(
+            clearCount: 640,
+            totalCharts: 3_900,
+            progressPercent: 16,
+            playCount: 1_200
+        )
+
+        XCTAssertEqual(summary.clearedCharts, 640)
+        XCTAssertEqual(summary.remainingCharts, 3_260)
+        XCTAssertEqual(summary.playCount, 1_200)
+        XCTAssertEqual(summary.completionPercent, 16)
+        XCTAssertEqual(summary.completionFraction, 0.16)
+    }
+
+    func testProgressSummaryDerivesAndClampsCompletion() {
+        let derived = PerformanceProgressSummary(
+            clearCount: 1,
+            totalCharts: 4,
+            progressPercent: nil,
+            playCount: nil
+        )
+        let clamped = PerformanceProgressSummary(
+            clearCount: 12,
+            totalCharts: 10,
+            progressPercent: 125,
+            playCount: -4
+        )
+
+        XCTAssertEqual(derived.completionPercent, 25)
+        XCTAssertEqual(clamped.completionPercent, 100)
+        XCTAssertEqual(clamped.remainingCharts, 0)
+        XCTAssertEqual(clamped.playCount, 0)
     }
 
     func testPerformanceRowsHaveStableCompositeIdentifiers() throws {
