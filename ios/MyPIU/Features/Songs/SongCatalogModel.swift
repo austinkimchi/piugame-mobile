@@ -211,7 +211,6 @@ final class SongCatalogModel: ObservableObject {
             requestedValue: saved,
             startingRevision: favoriteRevision
         )
-        let catalogRequestID = requestID
         let version = currentVersion
         guard listing.setFavorite(saved, forSlug: song.slug) else { return }
 
@@ -236,7 +235,6 @@ final class SongCatalogModel: ObservableObject {
             rollbackFavoriteIfCurrent(
                 mutation,
                 slug: song.slug,
-                catalogRequestID: catalogRequestID,
                 version: version,
                 cacheScope: cacheScope
             )
@@ -248,7 +246,6 @@ final class SongCatalogModel: ObservableObject {
             rollbackFavoriteIfCurrent(
                 mutation,
                 slug: song.slug,
-                catalogRequestID: catalogRequestID,
                 version: version,
                 cacheScope: cacheScope
             )
@@ -260,7 +257,7 @@ final class SongCatalogModel: ObservableObject {
                     scope: cacheScope
                 )
             }
-            if requestID == catalogRequestID, currentCacheScope == cacheScope {
+            if currentVersion == version, currentCacheScope == cacheScope {
                 favoriteError = error.localizedDescription
             }
         }
@@ -330,13 +327,11 @@ final class SongCatalogModel: ObservableObject {
     private func rollbackFavoriteIfCurrent(
         _ mutation: PendingFavoriteMutation,
         slug: String,
-        catalogRequestID: UUID,
         version: PIUGameVersion,
         cacheScope: String
     ) {
         guard favoriteMutations[slug]?.id == mutation.id,
               !hasConfirmedFavorite(slug: slug, newerThan: mutation.startingRevision),
-              requestID == catalogRequestID,
               currentVersion == version,
               currentCacheScope == cacheScope else { return }
         listing.setFavorite(mutation.previousValue, forSlug: slug)

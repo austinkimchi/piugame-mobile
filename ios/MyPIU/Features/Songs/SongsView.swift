@@ -149,21 +149,16 @@ struct SongsView: View {
                 using: appModel.searchCatalog
             )
         }
-        .onReceive(appModel.$favoriteStates) { states in
-            guard let accountID = appModel.myPIUAccount?.id else { return }
-            let matchingStates = states.filter { key, _ in
-                key.accountID == accountID && key.version == catalogVersion
-            }
-            guard !matchingStates.isEmpty else { return }
+        .onReceive(appModel.favoriteChanges) { change in
+            guard change.accountID == appModel.myPIUAccount?.id,
+                  change.version == catalogVersion else { return }
             Task {
-                for (key, isFavorite) in matchingStates {
-                    await catalog.applyConfirmedFavorite(
-                        isFavorite,
-                        slug: key.songSlug,
-                        version: key.version,
-                        cacheScope: "account:\(key.accountID)"
-                    )
-                }
+                await catalog.applyConfirmedFavorite(
+                    change.isFavorite,
+                    slug: change.songSlug,
+                    version: change.version,
+                    cacheScope: "account:\(change.accountID)"
+                )
             }
         }
     }

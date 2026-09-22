@@ -38,6 +38,17 @@ struct RootView: View {
             homePath = NavigationPath()
             songsPath = NavigationPath()
         }
+        .onReceive(appModel.favoriteChanges) { change in
+            guard change.accountID == appModel.myPIUAccount?.id else { return }
+            Task {
+                await songCatalog.applyConfirmedFavorite(
+                    change.isFavorite,
+                    slug: change.songSlug,
+                    version: change.version,
+                    cacheScope: "account:\(change.accountID)"
+                )
+            }
+        }
     }
 
     private var compactLayout: some View {

@@ -3,9 +3,11 @@ import Combine
 
 @MainActor
 final class AppModel: ObservableObject {
-    struct FavoriteKey: Equatable, Hashable, Sendable {
+    struct FavoriteChange: Equatable, Identifiable, Sendable {
+        let id: UUID
         let accountID: String
         let songSlug: String
+        let isFavorite: Bool
         let version: PIUGameVersion
     }
 
@@ -41,7 +43,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var myPIUState: MyPIUState = .restoring
     @Published private(set) var performance: MyPIUPerformanceDashboard?
     @Published private(set) var performanceState: PerformanceState = .idle
-    @Published private(set) var favoriteStates: [FavoriteKey: Bool] = [:]
+    let favoriteChanges = PassthroughSubject<FavoriteChange, Never>()
     @Published private var favoriteUpdateAccounts: [String: String] = [:]
     @Published var selectedVersion: PIUGameVersion = .phoenix2
 
@@ -201,7 +203,6 @@ final class AppModel: ObservableObject {
             performance = nil
             performanceState = .idle
             performanceRequestID = UUID()
-            favoriteStates.removeAll()
             do {
                 try tokenStore.delete()
                 myPIUState = .signedOut
@@ -318,11 +319,13 @@ final class AppModel: ObservableObject {
             guard accessToken?.value == token.value, myPIUAccount?.id == accountID else {
                 throw CancellationError()
             }
-            favoriteStates[FavoriteKey(
+            favoriteChanges.send(FavoriteChange(
+                id: UUID(),
                 accountID: accountID,
                 songSlug: songSlug,
+                isFavorite: isFavorite,
                 version: version
-            )] = isFavorite
+            ))
             return isFavorite
         } catch {
             if let apiError = error as? MyPIUAPIError,
@@ -536,7 +539,6 @@ final class AppModel: ObservableObject {
         performance = nil
         performanceState = .idle
         performanceRequestID = UUID()
-        favoriteStates.removeAll()
         myPIUState = .signedOut
         return true
     }
