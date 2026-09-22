@@ -145,6 +145,30 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(otherAccount?.listing.songs.first?.isFavorite, true)
     }
 
+    func testCatalogCacheInvalidatesFavoriteFeedWhenAddingSong() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        var listing = CatalogListing()
+        listing.replace(with: page)
+        try await cache.save(listing, query: "favorites", version: .phoenix2, scope: "account:one")
+        listing.setFavorite(false, forSlug: "battle-no-1")
+        try await cache.save(listing, query: "songs", version: .phoenix2, scope: "account:one")
+
+        try await cache.setFavorite(
+            true,
+            forSlug: "battle-no-1",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+
+        let favoritesQuery = await cache.load(query: "favorites", version: .phoenix2, scope: "account:one")
+        let songsQuery = await cache.load(query: "songs", version: .phoenix2, scope: "account:one")
+        XCTAssertNil(favoritesQuery)
+        XCTAssertEqual(songsQuery?.listing.songs.first?.isFavorite, true)
+    }
+
     @MainActor
     func testLoadedCatalogSkipsDuplicateMountRequestButReloadsForAnotherAccount() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)

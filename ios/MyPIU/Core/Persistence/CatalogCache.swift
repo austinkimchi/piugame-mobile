@@ -86,6 +86,16 @@ actor CatalogCache {
         var store = readStore()
         var didChange = false
 
+        if isFavorite {
+            let previousCount = store.entries.count
+            store.entries.removeAll {
+                $0.scope == scope
+                    && $0.version == version
+                    && $0.query == "favorites"
+            }
+            didChange = store.entries.count != previousCount
+        }
+
         for entryIndex in store.entries.indices
         where store.entries[entryIndex].scope == scope
             && store.entries[entryIndex].version == version {
