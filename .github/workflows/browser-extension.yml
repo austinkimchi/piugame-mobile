@@ -23,8 +23,7 @@ jobs:
           cache-dependency-path: browser-extension/package-lock.json
       - run: npm ci
       - run: npm test
-      - name: Check JavaScript syntax
-        run: find src test scripts -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+      - run: npm run check:syntax
       - name: Package Chromium extension
         run: npm run package
       - uses: actions/upload-artifact@v4

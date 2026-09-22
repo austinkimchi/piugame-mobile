@@ -23,6 +23,7 @@ jobs:
           cache-dependency-path: browser-extension/package-lock.json
       - run: npm ci
       - run: npm test
+      - run: npm run check:syntax
       - name: Check release tag
         env:
           RELEASE_TAG: ${{ github.ref_name }}
