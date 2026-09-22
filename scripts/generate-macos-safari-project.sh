@@ -22,7 +22,7 @@ fi
 npm --prefix "$extension_root" run stage:safari
 
 xcrun --find safari-web-extension-packager >/dev/null
-xcrun safari-web-extension-packager "$staged_extension" \
+if ! xcrun safari-web-extension-packager "$staged_extension" \
   --project-location "$project_root" \
   --app-name "MyPIU Sync" \
   --bundle-identifier com.austinkimchi.mypiu.sync \
@@ -30,7 +30,12 @@ xcrun safari-web-extension-packager "$staged_extension" \
   --copy-resources \
   --no-open \
   --no-prompt \
-  --force 2>&1 | tee "$packager_log"
+  --force >"$packager_log" 2>&1; then
+  cat "$packager_log" >&2
+  exit 1
+fi
+
+cat "$packager_log"
 
 if grep -q "not supported by your current version of Safari" "$packager_log"; then
   echo "Safari packager reported unsupported manifest keys." >&2
