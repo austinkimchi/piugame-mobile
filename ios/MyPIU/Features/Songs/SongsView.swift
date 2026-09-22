@@ -89,6 +89,18 @@ struct SongsView: View {
                 using: appModel.searchCatalog
             )
         }
+        .onReceive(appModel.favoriteChanges) { change in
+            guard change.accountID == appModel.myPIUAccount?.id,
+                  change.version == catalogVersion else { return }
+            Task {
+                await catalog.applyConfirmedFavorite(
+                    change.isFavorite,
+                    slug: change.songSlug,
+                    version: change.version,
+                    cacheScope: "account:\(change.accountID)"
+                )
+            }
+        }
     }
 
     private var songList: some View {
@@ -148,18 +160,6 @@ struct SongsView: View {
                 debounce: false,
                 using: appModel.searchCatalog
             )
-        }
-        .onReceive(appModel.favoriteChanges) { change in
-            guard change.accountID == appModel.myPIUAccount?.id,
-                  change.version == catalogVersion else { return }
-            Task {
-                await catalog.applyConfirmedFavorite(
-                    change.isFavorite,
-                    slug: change.songSlug,
-                    version: change.version,
-                    cacheScope: "account:\(change.accountID)"
-                )
-            }
         }
     }
 
