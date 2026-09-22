@@ -4,6 +4,9 @@ DerivedData/
 ios/MyPIU.xcodeproj/
 ios/build/
 ios/MyPIUSafariExtension/Resources/
+android/.gradle/
+android/local.properties
+android/**/build/
 **/xcuserdata/
 *.xcuserstate
 browser-extension/node_modules/

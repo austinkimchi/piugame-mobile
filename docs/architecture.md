@@ -11,7 +11,7 @@ The native apps have independent App Store and Play Store releases, signing asse
 The app is a native MyPIU client, not a web container.
 
 - iOS uses SwiftUI, URLSession, Keychain, BackgroundTasks, and platform navigation.
-- Android will use Kotlin and Jetpack Compose after the ingest contract stabilizes.
+- Android uses Kotlin, Jetpack Compose, Android Keystore, OkHttp, and WorkManager.
 - The backend remains the source of truth for catalog metadata, community data, favorites, recommendations, and cross-device history.
 - The device is the source of PIUGAME network traffic and PIUGAME credentials.
 
@@ -29,7 +29,7 @@ Raw PIUGAME HTML is not part of the upload contract. This limits accidental cred
 ## Sync sequence
 
 ```text
-MyPIU iOS             PIUGAME                 MyPIU API
+MyPIU native app      PIUGAME                 MyPIU API
     | POST login -------->|                         |
     | GET profile/recent->|                         |
     |<------ HTML --------|                         |
