@@ -36,6 +36,7 @@ final class AppModel: ObservableObject {
     private var client: PIUGameClient?
     private var credentials: PIUCredentials?
     private var accessToken: MyPIUAccessToken?
+    private var volatilePendingRevocations: [MyPIUAccessToken] = []
     private var hasRestored = false
     private var isRetryingPendingRevocations = false
 
@@ -103,7 +104,12 @@ final class AppModel: ObservableObject {
         myPIUState = .authenticating
         do {
             let token = try await oauthCoordinator.authorize(provider: provider)
-            try tokenStore.save(token)
+            do {
+                try tokenStore.save(token)
+            } catch {
+                await discardUnstoredMyPIUToken(token)
+                return false
+            }
             accessToken = token
             guard await loadMyPIUAccount(using: token) else { return false }
             if let snapshot {
@@ -253,16 +259,50 @@ final class AppModel: ObservableObject {
         guard !isRetryingPendingRevocations else { return }
         isRetryingPendingRevocations = true
         defer { isRetryingPendingRevocations = false }
-        guard let tokens = try? tokenStore.pendingRevocations() else { return }
-        for token in tokens {
+
+        let persistedTokens = (try? tokenStore.pendingRevocations()) ?? []
+        var candidates = persistedTokens.map { (token: $0, persisted: true) }
+        for token in volatilePendingRevocations
+        where !persistedTokens.contains(where: { $0.value == token.value }) {
+            candidates.append((token: token, persisted: false))
+        }
+
+        for candidate in candidates {
+            let token = candidate.token
+            let wasRevoked: Bool
             do {
                 try await apiClient.revoke(accessToken: token.value)
-                try tokenStore.removePendingRevocation(token)
+                wasRevoked = true
             } catch let error as MyPIUAPIError where error.isUnauthorized {
-                try? tokenStore.removePendingRevocation(token)
+                wasRevoked = true
             } catch {
-                continue
+                wasRevoked = false
             }
+            guard wasRevoked else { continue }
+
+            if candidate.persisted {
+                try? tokenStore.removePendingRevocation(token)
+            }
+            volatilePendingRevocations.removeAll { $0.value == token.value }
+        }
+    }
+
+    private func discardUnstoredMyPIUToken(_ token: MyPIUAccessToken) async {
+        var securelyQueued = false
+        do {
+            try tokenStore.enqueuePendingRevocation(token)
+            securelyQueued = true
+        } catch {
+            if !volatilePendingRevocations.contains(where: { $0.value == token.value }) {
+                volatilePendingRevocations.append(token)
+            }
+        }
+
+        await retryPendingMyPIURevocations()
+        if !securelyQueued, volatilePendingRevocations.contains(where: { $0.value == token.value }) {
+            myPIUState = .failed("MyPIU could not securely save or revoke this session. Keep the app open and try again.")
+        } else {
+            myPIUState = .failed("MyPIU could not securely save this session. Sign in again.")
         }
     }
 
