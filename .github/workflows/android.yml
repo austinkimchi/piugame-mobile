@@ -20,7 +20,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: 16111833
+          log-accepted-android-sdk-licenses: false
       - name: Install Android SDK
         run: android sdk install --no-metrics "platforms/android-37.0" "build-tools/36.0.0"
       - uses: gradle/actions/setup-gradle@v4
