@@ -223,10 +223,13 @@ final class AppModel: ObservableObject {
     private func loadMyPIUAccount(using token: MyPIUAccessToken) async -> Bool {
         myPIUState = .restoring
         do {
-            myPIUAccount = try await apiClient.account(accessToken: token.value)
+            let account = try await apiClient.account(accessToken: token.value)
+            guard accessToken?.value == token.value else { return false }
+            myPIUAccount = account
             myPIUState = .ready
             return true
         } catch {
+            guard accessToken?.value == token.value else { return false }
             if let apiError = error as? MyPIUAPIError, apiError.isUnauthorized {
                 clearMyPIUSession()
             } else {
