@@ -24,7 +24,7 @@ enum CatalogChartMode: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-struct CatalogSong: Decodable, Equatable, Hashable, Identifiable, Sendable {
+struct CatalogSong: Codable, Equatable, Hashable, Identifiable, Sendable {
     let slug: String
     let title: String
     let artist: String
@@ -68,7 +68,7 @@ struct CatalogSong: Decodable, Equatable, Hashable, Identifiable, Sendable {
     }
 }
 
-struct CatalogSearchPage: Decodable, Equatable, Sendable {
+struct CatalogSearchPage: Codable, Equatable, Sendable {
     let songs: [CatalogSong]
     let nextCursor: String?
     let total: Int
@@ -80,6 +80,12 @@ struct CatalogListing: Equatable, Sendable {
     private(set) var total = 0
 
     var hasMore: Bool { nextCursor != nil }
+
+    init(songs: [CatalogSong] = [], nextCursor: String? = nil, total: Int = 0) {
+        self.songs = songs
+        self.nextCursor = nextCursor
+        self.total = total
+    }
 
     mutating func replace(with page: CatalogSearchPage) {
         songs = page.songs

@@ -21,7 +21,19 @@ struct SongsView: View {
                     }
                 }
             case .loaded where catalog.listing.songs.isEmpty:
-                ContentUnavailableView.search(text: query)
+                if catalog.isShowingCachedData {
+                    ContentUnavailableView {
+                        Label("No cached results", systemImage: "arrow.down.circle")
+                    } description: {
+                        Text("Catalog is offline.")
+                    } actions: {
+                        Button("Try Again", systemImage: "arrow.clockwise") {
+                            Task { await catalog.retry() }
+                        }
+                    }
+                } else {
+                    ContentUnavailableView.search(text: query)
+                }
             default:
                 songList
             }
@@ -47,12 +59,18 @@ struct SongsView: View {
                     NavigationLink(value: song) {
                         CatalogSongRow(song: song)
                     }
-                    .task {
+                    .task(id: catalog.paginationGeneration) {
                         await catalog.loadMoreIfNeeded(after: song)
                     }
                 }
             } header: {
-                Text("\(catalog.listing.total.formatted()) songs")
+                HStack {
+                    Text("\(catalog.listing.total.formatted()) songs")
+                    if catalog.isShowingCachedData {
+                        Spacer()
+                        Label("Offline", systemImage: "arrow.down.circle")
+                    }
+                }
             }
 
             if catalog.isLoadingMore {

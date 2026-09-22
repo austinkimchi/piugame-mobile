@@ -39,6 +39,47 @@ final class CatalogTests: XCTestCase {
         XCTAssertFalse(listing.hasMore)
     }
 
+    func testCatalogCacheSeparatesVersionsAndNormalizesQueries() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        var listing = CatalogListing()
+        listing.replace(with: page)
+        let cachedAt = Date(timeIntervalSince1970: 1_790_035_200)
+
+        try await cache.save(listing, query: "  BATTLE  ", version: .phoenix2, now: cachedAt)
+
+        let cached = await cache.load(query: "battle", version: .phoenix2)
+        let otherVersion = await cache.load(query: "battle", version: .phoenix)
+        XCTAssertEqual(cached?.listing, listing)
+        XCTAssertEqual(cached?.cachedAt, cachedAt)
+        XCTAssertNil(otherVersion)
+    }
+
+    func testCatalogCacheKeepsOnlyTheTwelveMostRecentListings() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        var listing = CatalogListing()
+        listing.replace(with: page)
+
+        for index in 0..<13 {
+            try await cache.save(
+                listing,
+                query: "query-\(index)",
+                version: .phoenix2,
+                now: Date(timeIntervalSince1970: TimeInterval(index))
+            )
+        }
+
+        let oldest = await cache.load(query: "query-0", version: .phoenix2)
+        let newest = await cache.load(query: "query-12", version: .phoenix2)
+        XCTAssertNil(oldest)
+        XCTAssertEqual(newest?.listing.songs.first?.slug, "battle-no-1")
+    }
+
     private static let fixture = """
     {
       "songs": [

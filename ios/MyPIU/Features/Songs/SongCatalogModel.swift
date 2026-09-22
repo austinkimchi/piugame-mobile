@@ -14,15 +14,19 @@ final class SongCatalogModel: ObservableObject {
     @Published private(set) var state: LoadState = .idle
     @Published private(set) var isLoadingMore = false
     @Published private(set) var paginationError: String?
+    @Published private(set) var isShowingCachedData = false
+    @Published private(set) var paginationGeneration = 0
 
     private let apiClient: MyPIUAPIClient
+    private let cache: CatalogCache
     private var requestID = UUID()
     private var listingRequestID: UUID?
     private var currentQuery = ""
     private var currentVersion: PIUGameVersion = .phoenix2
 
-    init(apiClient: MyPIUAPIClient = MyPIUAPIClient()) {
+    init(apiClient: MyPIUAPIClient = MyPIUAPIClient(), cache: CatalogCache = CatalogCache()) {
         self.apiClient = apiClient
+        self.cache = cache
     }
 
     func reload(query: String, version: PIUGameVersion, debounce: Bool = true) async {
@@ -44,19 +48,31 @@ final class SongCatalogModel: ObservableObject {
         }
         guard !Task.isCancelled, self.requestID == requestID else { return }
 
-        listing = CatalogListing()
+        let cached = await cache.load(query: normalizedQuery, version: version)
+        guard !Task.isCancelled, self.requestID == requestID else { return }
+        listing = cached?.listing ?? CatalogListing()
+        isShowingCachedData = cached != nil
         state = .loading
         do {
             let page = try await apiClient.searchCatalog(query: normalizedQuery, version: version)
             guard !Task.isCancelled, self.requestID == requestID else { return }
             listing.replace(with: page)
             listingRequestID = requestID
+            paginationGeneration += 1
+            isShowingCachedData = false
             state = .loaded
+            try? await cache.save(listing, query: normalizedQuery, version: version)
         } catch is CancellationError {
             return
         } catch {
             guard self.requestID == requestID else { return }
-            state = .failed(error.localizedDescription)
+            if cached != nil {
+                listingRequestID = requestID
+                paginationGeneration += 1
+                state = .loaded
+            } else {
+                state = .failed(error.localizedDescription)
+            }
         }
     }
 
@@ -93,6 +109,7 @@ final class SongCatalogModel: ObservableObject {
             )
             guard !Task.isCancelled, self.requestID == requestID else { return }
             listing.append(page, requestedCursor: cursor)
+            try? await cache.save(listing, query: currentQuery, version: currentVersion)
         } catch is CancellationError {
             return
         } catch {
