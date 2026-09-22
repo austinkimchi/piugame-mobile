@@ -16,7 +16,9 @@ command -v xcrun >/dev/null 2>&1 || {
   exit 1
 }
 
-npm --prefix "$extension_root" ci
+if [ "${SKIP_NPM_CI:-0}" != "1" ]; then
+  npm --prefix "$extension_root" ci
+fi
 npm --prefix "$extension_root" run stage:safari
 
 xcrun --find safari-web-extension-packager >/dev/null

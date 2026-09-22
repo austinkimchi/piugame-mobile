@@ -18,8 +18,18 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: browser-extension/package-lock.json
+      - name: Install extension dependencies
+        working-directory: browser-extension
+        run: npm ci
+      - name: Test shared extension runtime
+        working-directory: browser-extension
+        run: |
+          npm test
+          npm run check:syntax
       - name: Package Safari extension project
         id: package
+        env:
+          SKIP_NPM_CI: 1
         run: |
           ./scripts/generate-macos-safari-project.sh
 
@@ -30,11 +40,6 @@ jobs:
           RESOURCES="$(find browser-extension/dist/safari-project -type d -path '*/Shared (Extension)/Resources' -print -quit)"
           test -n "$RESOURCES"
           diff -qr browser-extension/dist/safari-mv3 "$RESOURCES"
-      - name: Test shared extension runtime
-        working-directory: browser-extension
-        run: |
-          npm test
-          npm run check:syntax
       - name: Verify generated schemes
         env:
           PROJECT: ${{ steps.package.outputs.project }}
