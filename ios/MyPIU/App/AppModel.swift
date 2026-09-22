@@ -30,7 +30,7 @@ final class AppModel: ObservableObject {
     private let credentialStore: KeychainCredentialStore
     private let tokenStore: KeychainTokenStore
     private let apiClient: MyPIUAPIClient
-    private let installationID: String
+    private var installationID: String
     private let appVersion: String?
     private let oauthCoordinator: MyPIUOAuthCoordinator
     private var client: PIUGameClient?
@@ -111,6 +111,7 @@ final class AppModel: ObservableObject {
                 await discardUnstoredMyPIUToken(token)
                 return false
             }
+            installationID = token.installationID
             accessToken = token
             guard await loadMyPIUAccount(using: token) else { return false }
             if let snapshot {
@@ -230,6 +231,7 @@ final class AppModel: ObservableObject {
                 clearMyPIUSession()
                 return
             }
+            installationID = token.installationID
             accessToken = token
             _ = await loadMyPIUAccount(using: token)
         } catch {

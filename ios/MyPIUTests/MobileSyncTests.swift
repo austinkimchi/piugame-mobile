@@ -6,10 +6,23 @@ final class MobileSyncTests: XCTestCase {
     func testExpiredAccessTokenRequiresReauthentication() {
         let token = MyPIUAccessToken(
             value: "expired-token",
-            expiresAt: Date(timeIntervalSinceNow: -1)
+            expiresAt: Date(timeIntervalSinceNow: -1),
+            installationID: "fixture-installation"
         )
 
         XCTAssertTrue(token.isExpired)
+    }
+
+    func testAccessTokenPersistsItsInstallationIdentity() throws {
+        let token = MyPIUAccessToken(
+            value: "mypiu_fixture",
+            expiresAt: Date(timeIntervalSince1970: 1_900_000_000),
+            installationID: "fixture-installation"
+        )
+
+        let restored = try JSONDecoder().decode(MyPIUAccessToken.self, from: JSONEncoder().encode(token))
+
+        XCTAssertEqual(restored.installationID, "fixture-installation")
     }
 
     func testPKCEChallengeMatchesRFC7636() {

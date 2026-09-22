@@ -74,7 +74,8 @@ actor MyPIUAPIClient {
         }
         return MyPIUAccessToken(
             value: response.accessToken,
-            expiresAt: Date(timeIntervalSinceNow: TimeInterval(response.expiresIn))
+            expiresAt: Date(timeIntervalSinceNow: TimeInterval(response.expiresIn)),
+            installationID: installationID
         )
     }
 

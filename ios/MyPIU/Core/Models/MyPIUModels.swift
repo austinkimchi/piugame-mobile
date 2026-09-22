@@ -17,6 +17,7 @@ enum MyPIUAuthProvider: String, CaseIterable, Identifiable, Sendable {
 struct MyPIUAccessToken: Codable, Equatable, Sendable {
     let value: String
     let expiresAt: Date
+    let installationID: String
 
     var isExpired: Bool { expiresAt <= Date() }
 }
