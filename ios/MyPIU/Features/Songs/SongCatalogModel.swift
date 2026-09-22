@@ -3,6 +3,12 @@ import Foundation
 
 @MainActor
 final class SongCatalogModel: ObservableObject {
+    typealias CatalogSearch = @MainActor (
+        _ query: String,
+        _ cursor: String?,
+        _ version: PIUGameVersion
+    ) async throws -> CatalogSearchPage
+
     enum LoadState: Equatable {
         case idle
         case loading
@@ -17,25 +23,38 @@ final class SongCatalogModel: ObservableObject {
     @Published private(set) var isShowingCachedData = false
     @Published private(set) var paginationGeneration = 0
 
-    private let apiClient: MyPIUAPIClient
     private let cache: CatalogCache
+    private var searchCatalog: CatalogSearch
     private var requestID = UUID()
     private var listingRequestID: UUID?
     private var currentQuery = ""
     private var currentVersion: PIUGameVersion = .phoenix2
+    private var currentCacheScope: String?
 
     init(apiClient: MyPIUAPIClient = MyPIUAPIClient(), cache: CatalogCache = CatalogCache()) {
-        self.apiClient = apiClient
         self.cache = cache
+        self.searchCatalog = { query, cursor, version in
+            try await apiClient.searchCatalog(query: query, cursor: cursor, version: version)
+        }
     }
 
-    func reload(query: String, version: PIUGameVersion, debounce: Bool = true) async {
+    func reload(
+        query: String,
+        version: PIUGameVersion,
+        cacheScope: String? = "public",
+        debounce: Bool = true,
+        using searchCatalog: CatalogSearch? = nil
+    ) async {
         let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let requestID = UUID()
         self.requestID = requestID
+        if let searchCatalog {
+            self.searchCatalog = searchCatalog
+        }
         listingRequestID = nil
         currentQuery = normalizedQuery
         currentVersion = version
+        currentCacheScope = cacheScope
         isLoadingMore = false
         paginationError = nil
 
@@ -48,20 +67,27 @@ final class SongCatalogModel: ObservableObject {
         }
         guard !Task.isCancelled, self.requestID == requestID else { return }
 
-        let cached = await cache.load(query: normalizedQuery, version: version)
+        let cached: CatalogCache.CachedListing?
+        if let cacheScope {
+            cached = await cache.load(query: normalizedQuery, version: version, scope: cacheScope)
+        } else {
+            cached = nil
+        }
         guard !Task.isCancelled, self.requestID == requestID else { return }
         listing = cached?.listing ?? CatalogListing()
         isShowingCachedData = cached != nil
         state = .loading
         do {
-            let page = try await apiClient.searchCatalog(query: normalizedQuery, version: version)
+            let page = try await self.searchCatalog(normalizedQuery, nil, version)
             guard !Task.isCancelled, self.requestID == requestID else { return }
             listing.replace(with: page)
             listingRequestID = requestID
             paginationGeneration += 1
             isShowingCachedData = false
             state = .loaded
-            try? await cache.save(listing, query: normalizedQuery, version: version)
+            if let cacheScope {
+                try? await cache.save(listing, query: normalizedQuery, version: version, scope: cacheScope)
+            }
         } catch is CancellationError {
             return
         } catch {
@@ -77,7 +103,12 @@ final class SongCatalogModel: ObservableObject {
     }
 
     func retry() async {
-        await reload(query: currentQuery, version: currentVersion, debounce: false)
+        await reload(
+            query: currentQuery,
+            version: currentVersion,
+            cacheScope: currentCacheScope,
+            debounce: false
+        )
     }
 
     func loadMoreIfNeeded(after song: CatalogSong) async {
@@ -102,14 +133,17 @@ final class SongCatalogModel: ObservableObject {
         }
 
         do {
-            let page = try await apiClient.searchCatalog(
-                query: currentQuery,
-                cursor: cursor,
-                version: currentVersion
-            )
+            let page = try await searchCatalog(currentQuery, cursor, currentVersion)
             guard !Task.isCancelled, self.requestID == requestID else { return }
             listing.append(page, requestedCursor: cursor)
-            try? await cache.save(listing, query: currentQuery, version: currentVersion)
+            if let currentCacheScope {
+                try? await cache.save(
+                    listing,
+                    query: currentQuery,
+                    version: currentVersion,
+                    scope: currentCacheScope
+                )
+            }
         } catch is CancellationError {
             return
         } catch {

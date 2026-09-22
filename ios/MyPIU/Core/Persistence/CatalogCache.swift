@@ -12,6 +12,7 @@ actor CatalogCache {
     }
 
     private struct Entry: Codable {
+        let scope: String
         let query: String
         let version: PIUGameVersion
         let songs: [CatalogSong]
@@ -20,7 +21,7 @@ actor CatalogCache {
         let cachedAt: Date
     }
 
-    private static let schemaVersion = 1
+    private static let schemaVersion = 2
     private static let maximumEntries = 12
 
     private let directory: URL
@@ -35,9 +36,11 @@ actor CatalogCache {
             ?? fileManager.temporaryDirectory.appendingPathComponent("MyPIU", isDirectory: true)
     }
 
-    func load(query: String, version: PIUGameVersion) -> CachedListing? {
+    func load(query: String, version: PIUGameVersion, scope: String) -> CachedListing? {
         let query = normalizedQuery(query)
-        guard let entry = readStore().entries.first(where: { $0.query == query && $0.version == version }) else {
+        guard let entry = readStore().entries.first(where: {
+            $0.scope == scope && $0.query == query && $0.version == version
+        }) else {
             return nil
         }
         return CachedListing(
@@ -46,12 +49,19 @@ actor CatalogCache {
         )
     }
 
-    func save(_ listing: CatalogListing, query: String, version: PIUGameVersion, now: Date = Date()) throws {
+    func save(
+        _ listing: CatalogListing,
+        query: String,
+        version: PIUGameVersion,
+        scope: String,
+        now: Date = Date()
+    ) throws {
         let query = normalizedQuery(query)
         var store = readStore()
-        store.entries.removeAll { $0.query == query && $0.version == version }
+        store.entries.removeAll { $0.scope == scope && $0.query == query && $0.version == version }
         store.entries.append(
             Entry(
+                scope: scope,
                 query: query,
                 version: version,
                 songs: listing.songs,

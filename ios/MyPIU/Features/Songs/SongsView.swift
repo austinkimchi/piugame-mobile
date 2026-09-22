@@ -3,7 +3,11 @@ import SwiftUI
 struct SongsView: View {
     @EnvironmentObject private var appModel: AppModel
     @StateObject private var catalog = SongCatalogModel()
-    @State private var query = ""
+    @State private var query: String
+
+    init(initialQuery: String = "") {
+        _query = State(initialValue: initialQuery)
+    }
 
     var body: some View {
         Group {
@@ -38,16 +42,22 @@ struct SongsView: View {
                 songList
             }
         }
-        .navigationTitle("Songs")
+        .navigationTitle(isRecommendationFeed ? "Recommendations" : "Songs")
         .navigationDestination(for: CatalogSong.self) { song in
             CatalogSongDetailView(song: song)
         }
         .searchable(text: $query, prompt: "Search the catalog")
-        .task(id: CatalogRequest(query: query, version: appModel.selectedVersion)) {
+        .task(id: CatalogRequest(
+            query: query,
+            version: appModel.selectedVersion,
+            cacheScope: appModel.catalogCacheScope
+        )) {
             await catalog.reload(
                 query: query,
                 version: appModel.selectedVersion,
-                debounce: !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                cacheScope: appModel.catalogCacheScope,
+                debounce: !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                using: appModel.searchCatalog
             )
         }
     }
@@ -65,7 +75,7 @@ struct SongsView: View {
                 }
             } header: {
                 HStack {
-                    Text("\(catalog.listing.total.formatted()) songs")
+                    Text("\(catalog.listing.total.formatted()) \(isRecommendationFeed ? "recommendations" : "songs")")
                     if catalog.isShowingCachedData {
                         Spacer()
                         Label("Offline", systemImage: "arrow.down.circle")
@@ -89,14 +99,25 @@ struct SongsView: View {
         }
         .listStyle(.plain)
         .refreshable {
-            await catalog.reload(query: query, version: appModel.selectedVersion, debounce: false)
+            await catalog.reload(
+                query: query,
+                version: appModel.selectedVersion,
+                cacheScope: appModel.catalogCacheScope,
+                debounce: false,
+                using: appModel.searchCatalog
+            )
         }
+    }
+
+    private var isRecommendationFeed: Bool {
+        query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "recommendation"
     }
 }
 
 private struct CatalogRequest: Hashable {
     let query: String
     let version: PIUGameVersion
+    let cacheScope: String?
 }
 
 private struct CatalogSongRow: View {
@@ -116,12 +137,23 @@ private struct CatalogSongRow: View {
                             .foregroundStyle(AppTheme.warning)
                             .accessibilityLabel("Premium")
                     }
+                    if song.isFavorite {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(AppTheme.warning)
+                            .accessibilityLabel("Favorite")
+                    }
                 }
                 Text(song.artist)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
+                if let recommendedChartToken = song.recommendedChartToken {
+                    Label(recommendedChartToken, systemImage: "sparkles")
+                        .font(.caption.bold().monospaced())
+                        .foregroundStyle(AppTheme.accent)
+                        .accessibilityLabel("Recommended chart \(recommendedChartToken)")
+                }
                 Text(song.chartSummary.prefix(6).joined(separator: "  "))
                     .font(.caption.weight(.semibold).monospaced())
                     .foregroundStyle(.secondary)

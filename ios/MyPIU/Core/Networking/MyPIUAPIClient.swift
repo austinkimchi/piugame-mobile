@@ -105,7 +105,8 @@ actor MyPIUAPIClient {
         query: String,
         cursor: String? = nil,
         version: PIUGameVersion,
-        limit: Int = 30
+        limit: Int = 30,
+        accessToken: String? = nil
     ) async throws -> CatalogSearchPage {
         var components = URLComponents(
             url: url(path: "/api/songs/search"),
@@ -129,6 +130,9 @@ actor MyPIUAPIClient {
         var request = URLRequest(url: requestURL)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
         return try await send(request)
     }
 

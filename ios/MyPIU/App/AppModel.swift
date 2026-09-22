@@ -72,6 +72,10 @@ final class AppModel: ObservableObject {
 
     var isConnected: Bool { credentials != nil }
     var isMyPIUConnected: Bool { accessToken != nil }
+    var catalogCacheScope: String? {
+        guard accessToken != nil else { return "public" }
+        return myPIUAccount.map { "account:\($0.id)" }
+    }
     var isMyPIUBusy: Bool {
         myPIUState == .restoring
             || myPIUState == .authenticating
@@ -233,6 +237,36 @@ final class AppModel: ObservableObject {
 
     func handleAppActivation() async {
         await retryPendingMyPIURevocations()
+    }
+
+    func searchCatalog(
+        query: String,
+        cursor: String?,
+        version: PIUGameVersion
+    ) async throws -> CatalogSearchPage {
+        guard let token = accessToken else {
+            return try await apiClient.searchCatalog(query: query, cursor: cursor, version: version)
+        }
+        guard !token.isExpired else {
+            clearMyPIUSession()
+            throw MyPIUAPIError.server(status: 401, code: "invalid_token")
+        }
+
+        do {
+            return try await apiClient.searchCatalog(
+                query: query,
+                cursor: cursor,
+                version: version,
+                accessToken: token.value
+            )
+        } catch {
+            if let apiError = error as? MyPIUAPIError,
+               apiError.isUnauthorized,
+               accessToken?.value == token.value {
+                clearMyPIUSession()
+            }
+            throw error
+        }
     }
 
     func disconnect() {

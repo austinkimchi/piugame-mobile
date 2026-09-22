@@ -41,6 +41,11 @@ struct CatalogSongDetailView: View {
                         .foregroundStyle(AppTheme.warning)
                         .accessibilityLabel("Premium")
                 }
+                if song.isFavorite {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(AppTheme.warning)
+                        .accessibilityLabel("Favorite")
+                }
             }
             Text(song.artist)
                 .font(.title3.weight(.semibold))
@@ -83,8 +88,16 @@ struct CatalogSongDetailView: View {
                                     .font(.subheadline.bold().monospaced())
                                     .frame(maxWidth: .infinity, minHeight: 38)
                                     .background(chartColor(token), in: RoundedRectangle(cornerRadius: 6))
+                                    .overlay {
+                                        if isRecommended(token) {
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .stroke(AppTheme.warning, lineWidth: 3)
+                                        }
+                                    }
                                     .foregroundStyle(.white)
-                                    .accessibilityLabel(chartAccessibilityLabel(token))
+                                    .accessibilityLabel(
+                                        chartAccessibilityLabel(token) + (isRecommended(token) ? ", recommended" : "")
+                                    )
                             }
                         }
                     }
@@ -126,5 +139,9 @@ struct CatalogSongDetailView: View {
     private func chartAccessibilityLabel(_ token: String) -> String {
         guard let mode = CatalogChartMode.allCases.first(where: { $0.contains(token) }) else { return token }
         return "\(mode.title) level \(token.dropFirst())"
+    }
+
+    private func isRecommended(_ token: String) -> Bool {
+        song.recommendedChartToken?.caseInsensitiveCompare(token) == .orderedSame
     }
 }
