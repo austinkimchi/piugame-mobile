@@ -89,7 +89,7 @@ struct PerformanceSessionView: View {
                     value: percentLabel(session.summary.clearRate),
                     tint: clearRateTint(session.summary.clearRate)
                 )
-                summaryRow("Stage breaks", value: session.summary.stageBreakCount.formatted())
+                summaryRow("Failures", value: session.summary.failedCount.formatted())
                 summaryRow("Average clear", value: scoreLabel(session.summary.averageScore))
                 summaryRow("Best score", value: scoreLabel(session.summary.bestScore))
                 summaryRow("Unique charts", value: session.summary.distinctCharts.formatted())

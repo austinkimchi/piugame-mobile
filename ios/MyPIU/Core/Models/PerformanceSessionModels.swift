@@ -7,6 +7,7 @@ struct MyPIUPerformanceSession: Decodable, Equatable, Sendable {
     struct Summary: Decodable, Equatable, Sendable {
         let playCount: Int
         let clearCount: Int
+        let failedCount: Int
         let stageBreakCount: Int
         let averageScore: Int?
         let bestScore: Int?

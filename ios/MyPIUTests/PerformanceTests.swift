@@ -205,6 +205,7 @@ final class PerformanceTests: XCTestCase {
               "summary": {
                 "playCount": 3,
                 "clearCount": 2,
+                "failedCount": 1,
                 "stageBreakCount": 1,
                 "averageScore": 925000,
                 "bestScore": 950000,
@@ -231,6 +232,7 @@ final class PerformanceTests: XCTestCase {
         let session = try JSONDecoder().decode(MyPIUPerformanceSession.self, from: data)
 
         XCTAssertEqual(session.summary.playCount, 3)
+        XCTAssertEqual(session.summary.failedCount, 1)
         XCTAssertEqual(try XCTUnwrap(session.summary.clearRate), 200.0 / 3.0, accuracy: 0.0001)
         XCTAssertEqual(session.summary.durationMinutes, 60)
         XCTAssertEqual(session.plays.first?.displayChartToken, "S19")
@@ -241,6 +243,7 @@ final class PerformanceTests: XCTestCase {
         let empty = MyPIUPerformanceSession.Summary(
             playCount: 0,
             clearCount: 0,
+            failedCount: 0,
             stageBreakCount: 0,
             averageScore: nil,
             bestScore: nil,
@@ -252,6 +255,7 @@ final class PerformanceTests: XCTestCase {
         let corrupt = MyPIUPerformanceSession.Summary(
             playCount: 1,
             clearCount: 2,
+            failedCount: 0,
             stageBreakCount: 0,
             averageScore: nil,
             bestScore: nil,
