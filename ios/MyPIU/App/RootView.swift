@@ -9,6 +9,7 @@ struct RootView: View {
     @State private var visitedDestinations: Set<Destination> = [.home]
     @State private var homePath = NavigationPath()
     @State private var songsPath = NavigationPath()
+    @State private var progressPath = NavigationPath()
     @State private var activityPath = NavigationPath()
     @State private var accountPath = NavigationPath()
     @State private var songQuery = ""
@@ -107,6 +108,7 @@ struct RootView: View {
         switch destination {
         case .home: $homePath
         case .songs: $songsPath
+        case .progress: $progressPath
         case .activity: $activityPath
         case .account: $accountPath
         }
@@ -119,6 +121,8 @@ struct RootView: View {
             DashboardView()
         case .songs:
             SongsView(catalog: songCatalog, query: $songQuery)
+        case .progress:
+            PlayerProgressView()
         case .activity:
             ActivityView(section: $activitySection)
         case .account:
@@ -144,6 +148,7 @@ struct RootView: View {
 private enum Destination: String, CaseIterable, Identifiable {
     case home
     case songs
+    case progress
     case activity
     case account
 
@@ -153,6 +158,7 @@ private enum Destination: String, CaseIterable, Identifiable {
         switch self {
         case .home: "Home"
         case .songs: "Songs"
+        case .progress: "Progress"
         case .activity: "Activity"
         case .account: "Account"
         }
@@ -162,6 +168,7 @@ private enum Destination: String, CaseIterable, Identifiable {
         switch self {
         case .home: "house"
         case .songs: "music.note.list"
+        case .progress: "chart.pie"
         case .activity: "clock.arrow.circlepath"
         case .account: "person.crop.circle"
         }

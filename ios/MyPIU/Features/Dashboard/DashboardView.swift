@@ -49,13 +49,19 @@ struct DashboardView: View {
                 }
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    MetricTile(
-                        title: "Pumbility",
-                        value: format(performance.profile?.pumbilityScore),
-                        detail: changeLabel(performance.totals.pumbilityChange24Hours),
-                        icon: "chart.line.uptrend.xyaxis",
-                        tint: AppTheme.positive
-                    )
+                    NavigationLink {
+                        PumbilityBreakdownView(performance: performance)
+                    } label: {
+                        MetricTile(
+                            title: "Pumbility",
+                            value: format(performance.profile?.pumbilityScore),
+                            detail: changeLabel(performance.totals.pumbilityChange24Hours),
+                            icon: "chart.line.uptrend.xyaxis",
+                            tint: AppTheme.positive
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Shows the Pumbility chart breakdown")
                     NavigationLink {
                         RecommendationSongsView()
                     } label: {
