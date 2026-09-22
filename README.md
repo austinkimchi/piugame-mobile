@@ -28,7 +28,7 @@ The generation script installs the pinned extension build dependencies, creates 
 
 The first vertical slice connects directly to PIUGAME PHOENIX 2, stores credentials in Keychain, parses the profile and recent-play pages on-device, and renders a native SwiftUI dashboard.
 
-For signing, privacy, and beta-distribution steps, see [the TestFlight checklist](docs/testflight.md).
+For signing, privacy, and beta-distribution steps, see [the TestFlight checklist](docs/testflight.md). The companion macOS wrapper has a separate [Safari release checklist](docs/macos-release.md).
 
 ## Status
 

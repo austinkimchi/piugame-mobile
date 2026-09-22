@@ -26,28 +26,15 @@ jobs:
         run: |
           npm test
           npm run check:syntax
-          npm run stage:safari
       - name: Package Safari extension project
         id: package
+        env:
+          SKIP_NPM_CI: 1
         run: |
-          xcrun --find safari-web-extension-packager
-          xcrun safari-web-extension-packager browser-extension/dist/safari-mv3 \
-            --project-location browser-extension/dist/safari-project \
-            --app-name "MyPIU Sync" \
-            --bundle-identifier com.austinkimchi.mypiu.sync \
-            --swift \
-            --copy-resources \
-            --no-open \
-            --no-prompt \
-            --force 2>&1 | tee "$RUNNER_TEMP/safari-packager.log"
-          if grep -q "not supported by your current version of Safari" "$RUNNER_TEMP/safari-packager.log"; then
-            echo "Safari packager reported unsupported manifest keys." >&2
-            exit 1
-          fi
+          ./scripts/generate-macos-safari-project.sh
 
           PROJECT="$(find browser-extension/dist/safari-project -name '*.xcodeproj' -print -quit)"
           test -n "$PROJECT"
-          test -f "$PROJECT/project.pbxproj"
           echo "project=$PROJECT" >> "$GITHUB_OUTPUT"
 
           RESOURCES="$(find browser-extension/dist/safari-project -type d -path '*/Shared (Extension)/Resources' -print -quit)"
@@ -70,19 +57,54 @@ jobs:
           -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO
           build
-      - name: Build macOS Safari wrapper
+      - name: Archive macOS Safari wrapper
         env:
           PROJECT: ${{ steps.package.outputs.project }}
-        run: >-
-          xcodebuild
-          -project "$PROJECT"
-          -scheme "MyPIU Sync (macOS)"
-          -destination 'generic/platform=macOS'
-          CODE_SIGNING_ALLOWED=NO
-          build
+        run: |
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme "MyPIU Sync (macOS)" \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -archivePath "$RUNNER_TEMP/MyPIUSync.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            archive
+      - name: Verify macOS release archive
+        run: |
+          APP="$RUNNER_TEMP/MyPIUSync.xcarchive/Products/Applications/MyPIU Sync.app"
+          APPEX="$(find "$APP/Contents/PlugIns" -name '*.appex' -print -quit)"
+          MANIFEST="$(find "$APPEX" -name manifest.json -print -quit)"
+          test -d "$APP"
+          test -n "$APPEX"
+          test -n "$MANIFEST"
+          test -f "$(dirname "$MANIFEST")/src/service-worker.js"
+          python3 - "$APP/Contents/Info.plist" "$APPEX/Contents/Info.plist" "$MANIFEST" <<'PY'
+          import json
+          import pathlib
+          import plistlib
+          import sys
+
+          with pathlib.Path(sys.argv[1]).open("rb") as plist_file:
+              app_info = plistlib.load(plist_file)
+          with pathlib.Path(sys.argv[2]).open("rb") as plist_file:
+              extension_info = plistlib.load(plist_file)
+          manifest = json.loads(pathlib.Path(sys.argv[3]).read_text())
+
+          assert app_info["CFBundleIdentifier"] == "com.austinkimchi.mypiu.sync"
+          assert extension_info["CFBundleIdentifier"] == "com.austinkimchi.mypiu.sync.Extension"
+          assert extension_info["NSExtension"]["NSExtensionPointIdentifier"] == "com.apple.Safari.web-extension"
+          assert manifest["manifest_version"] == 3
+          assert manifest["background"] == {"service_worker": "src/service-worker.js"}
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: mypiu-safari-project-${{ github.sha }}
           path: browser-extension/dist/safari-project
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mypiu-macos-unsigned-archive-${{ github.sha }}
+          path: ${{ runner.temp }}/MyPIUSync.xcarchive
           if-no-files-found: error
           retention-days: 7

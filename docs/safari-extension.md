@@ -22,10 +22,10 @@ xcrun safari-web-extension-packager browser-extension/dist/safari-mv3 \
 
 Safari does not currently accept the Chromium `background.type` manifest key. Staging therefore bundles the shared module worker into a classic worker and removes that one key from the generated manifest; the authored Chromium sources remain unchanged. CI fails if Apple's packager reports any other unsupported manifest keys.
 
-CI checks that the generated iOS and macOS schemes build without signing and that the copied Safari resources exactly match the staged runtime. The generated project is uploaded for seven days so its target metadata can guide native integration.
+CI checks that the generated iOS scheme builds without signing, creates an unsigned Release archive for the macOS scheme, and verifies that the copied Safari resources exactly match the staged runtime. The generated project and unsigned archive are uploaded for seven days as packaging evidence.
 
 ## Integration boundary
 
 The generated wrapper is a feasibility and compatibility artifact. `scripts/generate-ios-project.sh` stages the same Safari runtime into `ios/MyPIUSafariExtension/Resources`, then XcodeGen embeds `MyPIUSafariExtension.appex` in the existing MyPIU app. Generated resources and Xcode projects remain ignored so there is one authored JavaScript source.
 
-The macOS wrapper still needs its release identity and signing path. Distribution also requires Apple Developer signing, App Store Connect records, privacy metadata, and physical-device verification of Safari's per-site permission prompts for PIUGAME and MyPIU.
+The macOS wrapper has stable app and extension identities plus a documented signing and archive path in `macos-release.md`. Distribution still requires Apple Developer signing, App Store Connect records, privacy metadata, and physical-device verification of Safari's per-site permission prompts for PIUGAME and MyPIU.
