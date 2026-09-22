@@ -444,6 +444,49 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(cached?.listing.songs.first?.isFavorite, true)
     }
 
+    @MainActor
+    func testSuccessfulFavoriteUpdatePersistsAfterVersionSwitch() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let catalog = SongCatalogModel(cache: cache)
+        let search: SongCatalogModel.CatalogSearch = { _, _, _ in page }
+        await catalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            cacheScope: "account:one",
+            debounce: false,
+            using: search
+        )
+        let song = try XCTUnwrap(catalog.listing.songs.first)
+
+        await catalog.setFavorite(false, for: song) { _, _, _ in
+            await catalog.reload(
+                query: "battle",
+                version: .phoenix,
+                cacheScope: "account:one",
+                debounce: false,
+                using: search
+            )
+            return false
+        }
+
+        XCTAssertEqual(catalog.listing.songs.first?.isFavorite, true)
+        let oldVersionCache = await cache.load(
+            query: "battle",
+            version: .phoenix2,
+            scope: "account:one"
+        )
+        let currentVersionCache = await cache.load(
+            query: "battle",
+            version: .phoenix,
+            scope: "account:one"
+        )
+        XCTAssertEqual(oldVersionCache?.listing.songs.first?.isFavorite, false)
+        XCTAssertEqual(currentVersionCache?.listing.songs.first?.isFavorite, true)
+    }
+
     private static let fixture = """
     {
       "songs": [

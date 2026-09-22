@@ -224,7 +224,15 @@ final class SongCatalogModel: ObservableObject {
 
         do {
             let authoritativeValue = try await update(song.slug, saved, version)
-            guard favoriteMutations[song.slug]?.id == mutation.id else { return }
+            guard favoriteMutations[song.slug]?.id == mutation.id else {
+                try? await cache.setFavorite(
+                    authoritativeValue,
+                    forSlug: song.slug,
+                    version: version,
+                    scope: cacheScope
+                )
+                return
+            }
             await applyConfirmedFavorite(
                 authoritativeValue,
                 slug: song.slug,
@@ -269,16 +277,16 @@ final class SongCatalogModel: ObservableObject {
         version: PIUGameVersion,
         cacheScope: String
     ) async {
-        guard currentVersion == version, currentCacheScope == cacheScope else { return }
-
-        if confirmedFavorites[slug]?.value != isFavorite {
-            favoriteRevision += 1
-            confirmedFavorites[slug] = ConfirmedFavorite(
-                value: isFavorite,
-                revision: favoriteRevision
-            )
+        if currentVersion == version, currentCacheScope == cacheScope {
+            if confirmedFavorites[slug]?.value != isFavorite {
+                favoriteRevision += 1
+                confirmedFavorites[slug] = ConfirmedFavorite(
+                    value: isFavorite,
+                    revision: favoriteRevision
+                )
+            }
+            listing.setFavorite(isFavorite, forSlug: slug)
         }
-        listing.setFavorite(isFavorite, forSlug: slug)
         try? await cache.setFavorite(
             isFavorite,
             forSlug: slug,
