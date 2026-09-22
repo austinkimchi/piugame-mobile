@@ -1,0 +1,45 @@
+name: Browser extension release
+
+on:
+  push:
+    tags:
+      - "extension-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: browser-extension
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: browser-extension/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Check release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="$(node --input-type=module -e "import manifest from './manifest.json' with { type: 'json' }; process.stdout.write(manifest.version)")"
+          test "$RELEASE_TAG" = "extension-v$VERSION"
+      - run: npm run package
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: >-
+          gh release create "$RELEASE_TAG"
+          dist/*.zip
+          dist/*.sha256
+          --repo "$GITHUB_REPOSITORY"
+          --verify-tag
+          --generate-notes
+          --prerelease
+          --title "MyPIU Sync ${RELEASE_TAG#extension-v}"
