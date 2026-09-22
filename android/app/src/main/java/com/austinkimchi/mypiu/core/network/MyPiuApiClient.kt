@@ -22,6 +22,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class MyPiuApiException(val status: Int, val code: String) : Exception(messageFor(code)) {
     val isUnauthorized: Boolean get() = status == 401
+    val isPermanentPiuLinkError: Boolean
+        get() = code == "piu_account_not_linked" || code == "piu_username_mismatch"
 
     companion object {
         private fun messageFor(code: String): String = when (code) {

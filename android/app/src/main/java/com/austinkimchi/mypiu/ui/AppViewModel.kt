@@ -22,12 +22,15 @@ import kotlinx.coroutines.launch
 class AppViewModel(
     private val repository: SyncRepository,
     private val scheduler: SyncScheduler,
+    restoreOnInit: Boolean,
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(AppUiState(isBusy = true))
+    private val mutableState = MutableStateFlow(AppUiState(isBusy = restoreOnInit))
     val state: StateFlow<AppUiState> = mutableState.asStateFlow()
 
     init {
-        viewModelScope.launch { runOperation { repository.restoreAndSync() } }
+        if (restoreOnInit) {
+            viewModelScope.launch { runOperation { repository.restoreAndSync() } }
+        }
     }
 
     fun authorizationUrl(provider: MyPiuAuthProvider): String? = runCatching {
@@ -127,10 +130,13 @@ class AppViewModel(
         mutableState.update { it.copy(isBusy = false, message = error.message ?: "MyPIU could not complete the request.") }
     }
 
-    class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
+    class Factory(
+        private val container: AppContainer,
+        private val restoreOnInit: Boolean,
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            AppViewModel(container.repository, container.scheduler) as T
+            AppViewModel(container.repository, container.scheduler, restoreOnInit) as T
     }
 }
 

@@ -14,7 +14,10 @@ import com.austinkimchi.mypiu.ui.theme.MyPiuTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AppViewModel by viewModels {
-        AppViewModel.Factory((application as MyPIUApplication).container)
+        AppViewModel.Factory(
+            container = (application as MyPIUApplication).container,
+            restoreOnInit = intent.myPiuOAuthCallback() == null,
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,11 +43,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
-        val callback = intent.dataString
-            ?.takeIf { it.startsWith("mypiu://oauth/callback") }
-            ?: return
+        val callback = intent.myPiuOAuthCallback() ?: return
         intent.data = null
         setIntent(intent)
         viewModel.handleOAuthCallback(callback)
+    }
+}
+
+private fun Intent.myPiuOAuthCallback(): String? {
+    val uri = data ?: return null
+    return uri.toString().takeIf {
+        uri.scheme == "mypiu" && uri.host == "oauth" && uri.path == "/callback"
     }
 }

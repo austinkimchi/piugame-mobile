@@ -73,10 +73,10 @@ class SyncRepository(
             "Enter your PIUGAME username and password."
         }
         val piuSnapshot = fetch(credentials)
-        sessionStore.saveCredentials(credentials)
         val token = validToken()
         val account = token?.let { apiClient.account(it.value) }
         val result = token?.let { upload(piuSnapshot, it.value) }
+        sessionStore.saveCredentials(credentials)
         RepositorySnapshot(account, piuSnapshot, result, true, token != null)
     }
 
@@ -106,8 +106,17 @@ class SyncRepository(
         throw error
     }
 
-    private suspend fun upload(snapshot: PiuSnapshot, accessToken: String): MyPiuSyncResult =
+    private suspend fun upload(snapshot: PiuSnapshot, accessToken: String): MyPiuSyncResult = try {
         apiClient.upload(snapshot, accessToken, installationId, appVersion)
+    } catch (error: MyPiuApiException) {
+        if (error.isPermanentPiuLinkError) {
+            val credentials = sessionStore.credentials()
+            if (credentials?.username == snapshot.profile.username && credentials.version == snapshot.version) {
+                sessionStore.clearCredentials()
+            }
+        }
+        throw error
+    }
 
     private fun validToken() = sessionStore.accessToken()?.takeUnless { token ->
         if (token.isExpired()) {
