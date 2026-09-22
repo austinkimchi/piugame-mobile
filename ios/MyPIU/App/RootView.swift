@@ -3,6 +3,7 @@ import UIKit
 
 struct RootView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @EnvironmentObject private var appModel: AppModel
     @StateObject private var songCatalog = SongCatalogModel()
     @State private var selectedDestination: Destination = .home
     @State private var visitedDestinations: Set<Destination> = [.home]
@@ -31,6 +32,11 @@ struct RootView: View {
         }
         .onChange(of: horizontalSizeClass) { _, _ in
             resignFocus()
+        }
+        .onChange(of: appModel.catalogCacheScope) { oldScope, newScope in
+            guard oldScope != newScope else { return }
+            homePath = NavigationPath()
+            songsPath = NavigationPath()
         }
     }
 

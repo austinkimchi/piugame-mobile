@@ -128,6 +128,45 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(requestCount, 2)
     }
 
+    @MainActor
+    func testCanceledDebounceDoesNotMarkTheNewQueryAsLoaded() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let catalog = SongCatalogModel(cache: CatalogCache(directory: directory))
+        var requestedQueries: [String] = []
+        let search: SongCatalogModel.CatalogSearch = { query, _, _ in
+            requestedQueries.append(query)
+            return page
+        }
+
+        await catalog.loadIfNeeded(
+            query: "old",
+            version: .phoenix2,
+            debounce: false,
+            using: search
+        )
+        let debounced = Task { @MainActor in
+            await catalog.reload(
+                query: "new",
+                version: .phoenix2,
+                debounce: true,
+                using: search
+            )
+        }
+        try await Task.sleep(nanoseconds: 20_000_000)
+        debounced.cancel()
+        await debounced.value
+
+        await catalog.loadIfNeeded(
+            query: "new",
+            version: .phoenix2,
+            debounce: false,
+            using: search
+        )
+        XCTAssertEqual(requestedQueries, ["old", "new"])
+    }
+
     private static let fixture = """
     {
       "songs": [

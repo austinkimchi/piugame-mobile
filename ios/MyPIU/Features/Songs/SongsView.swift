@@ -4,10 +4,16 @@ struct SongsView: View {
     @EnvironmentObject private var appModel: AppModel
     @ObservedObject private var catalog: SongCatalogModel
     @Binding private var query: String
+    private let versionOverride: PIUGameVersion?
 
-    init(catalog: SongCatalogModel, query: Binding<String>) {
+    init(
+        catalog: SongCatalogModel,
+        query: Binding<String>,
+        versionOverride: PIUGameVersion? = nil
+    ) {
         self.catalog = catalog
         _query = query
+        self.versionOverride = versionOverride
     }
 
     var body: some View {
@@ -50,12 +56,12 @@ struct SongsView: View {
         .searchable(text: $query, prompt: "Search the catalog")
         .task(id: CatalogRequest(
             query: query,
-            version: appModel.selectedVersion,
+            version: catalogVersion,
             cacheScope: appModel.catalogCacheScope
         )) {
             await catalog.loadIfNeeded(
                 query: query,
-                version: appModel.selectedVersion,
+                version: catalogVersion,
                 cacheScope: appModel.catalogCacheScope,
                 debounce: !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 using: appModel.searchCatalog
@@ -102,7 +108,7 @@ struct SongsView: View {
         .refreshable {
             await catalog.reload(
                 query: query,
-                version: appModel.selectedVersion,
+                version: catalogVersion,
                 cacheScope: appModel.catalogCacheScope,
                 debounce: false,
                 using: appModel.searchCatalog
@@ -113,14 +119,23 @@ struct SongsView: View {
     private var isRecommendationFeed: Bool {
         query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "recommendation"
     }
+
+    private var catalogVersion: PIUGameVersion {
+        versionOverride ?? appModel.selectedVersion
+    }
 }
 
 struct RecommendationSongsView: View {
+    @EnvironmentObject private var appModel: AppModel
     @StateObject private var catalog = SongCatalogModel()
     @State private var query = "recommendation"
 
     var body: some View {
-        SongsView(catalog: catalog, query: $query)
+        SongsView(
+            catalog: catalog,
+            query: $query,
+            versionOverride: appModel.myPIUAccount?.piuGameVersion ?? appModel.selectedVersion
+        )
     }
 }
 

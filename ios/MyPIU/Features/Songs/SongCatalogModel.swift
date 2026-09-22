@@ -84,6 +84,7 @@ final class SongCatalogModel: ObservableObject {
         currentCacheScope = cacheScope
         isLoadingMore = false
         paginationError = nil
+        state = .loading
 
         if debounce, !normalizedQuery.isEmpty {
             do {
@@ -103,7 +104,6 @@ final class SongCatalogModel: ObservableObject {
         guard !Task.isCancelled, self.requestID == requestID else { return }
         listing = cached?.listing ?? CatalogListing()
         isShowingCachedData = cached != nil
-        state = .loading
         do {
             let page = try await self.searchCatalog(normalizedQuery, nil, version)
             guard !Task.isCancelled, self.requestID == requestID else { return }
