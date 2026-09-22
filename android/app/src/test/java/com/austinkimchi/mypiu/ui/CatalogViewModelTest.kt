@@ -133,7 +133,7 @@ class CatalogViewModelTest {
             val secondStarted = CompletableDeferred<Unit>()
             val secondResult = CompletableDeferred<Boolean>()
             var requestCount = 0
-            val source = FakeCatalogDataSource { _, _, _ ->
+            val source = FakeCatalogDataSource(favoriteHandler = { _, _, _ ->
                 if (requestCount++ == 0) {
                     firstStarted.complete(Unit)
                     firstResult.await()
@@ -141,7 +141,7 @@ class CatalogViewModelTest {
                     secondStarted.complete(Unit)
                     secondResult.await()
                 }
-            }
+            })
             val viewModel = CatalogViewModel(source)
             viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
             viewModel.start()
@@ -228,6 +228,51 @@ class CatalogViewModelTest {
             advanceUntilIdle()
 
             assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun staleSearchCannotOverwriteFavoriteCacheWhileFavoriteCacheWriteIsSuspended() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val searchStarted = CompletableDeferred<Unit>()
+            val searchResult = CompletableDeferred<CatalogSearchPage>()
+            val favoriteCacheStarted = CompletableDeferred<Unit>()
+            val favoriteCacheResult = CompletableDeferred<Unit>()
+            val source = FakeCatalogDataSource(
+                cacheFavoriteHandler = { _, _, _, _ ->
+                    favoriteCacheStarted.complete(Unit)
+                    favoriteCacheResult.await()
+                },
+            )
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+            val selectedSong = viewModel.state.value.listing.songs.single()
+            source.searchHandler = { _, _, _, _ ->
+                searchStarted.complete(Unit)
+                searchResult.await()
+            }
+
+            viewModel.refresh()
+            runCurrent()
+            assertTrue(searchStarted.isCompleted)
+            viewModel.toggleFavorite(selectedSong)
+            runCurrent()
+            assertTrue(favoriteCacheStarted.isCompleted)
+
+            searchResult.complete(CatalogSearchPage(listOf(selectedSong.copy(isFavorite = false)), null, 1))
+            runCurrent()
+
+            assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+            assertEquals(listOf(true), source.cachedSongFavorites.last())
+
+            favoriteCacheResult.complete(Unit)
+            advanceUntilIdle()
         } finally {
             Dispatchers.resetMain()
         }
@@ -322,10 +367,12 @@ private class FakeCatalogDataSource(
     private val song: CatalogSong = favoriteSong().copy(isFavorite = false),
     private val chartFailure: Exception? = null,
     private val favoriteHandler: (suspend (String, Boolean, PiuGameVersion) -> Boolean)? = null,
+    private val cacheFavoriteHandler: (suspend (Boolean, String, PiuGameVersion, String) -> Unit)? = null,
 ) : CatalogDataSource {
     val searches = mutableListOf<Search>()
     val cacheReads = mutableListOf<String>()
     val cacheWrites = mutableListOf<String>()
+    val cachedSongFavorites = mutableListOf<List<Boolean>>()
     var searchHandler: (suspend (String, String?, PiuGameVersion, Boolean) -> CatalogSearchPage)? = null
 
     override suspend fun search(
@@ -370,6 +417,7 @@ private class FakeCatalogDataSource(
         scope: String,
     ) {
         cacheWrites += scope
+        cachedSongFavorites += listing.songs.map(CatalogSong::isFavorite)
     }
 
     override suspend fun cacheFavorite(
@@ -377,7 +425,9 @@ private class FakeCatalogDataSource(
         slug: String,
         version: PiuGameVersion,
         scope: String,
-    ) = Unit
+    ) {
+        cacheFavoriteHandler?.invoke(saved, slug, version, scope)
+    }
 
     override fun resolveUrl(value: String?): String? = value
 }

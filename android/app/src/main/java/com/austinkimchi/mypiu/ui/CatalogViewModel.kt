@@ -172,7 +172,6 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             try {
                 val authoritative = repository.setFavorite(song.slug, requested, version)
                 val isCurrentMutation = finishFavoriteMutation(song.slug, mutation)
-                runCatching { repository.cacheFavorite(authoritative, song.slug, version, scope) }
                 val current = mutableState.value
                 if (isCurrentMutation && current.version == version && current.cacheScope == scope) {
                     confirmedFavorites[song.slug] = ConfirmedFavorite(authoritative, latestSearchRequestId)
@@ -193,6 +192,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                         )
                     }
                 }
+                runCatching { repository.cacheFavorite(authoritative, song.slug, version, scope) }
             } catch (error: CancellationException) {
                 if (finishFavoriteMutation(song.slug, mutation)) {
                     rollbackFavorite(song.slug, mutation, version, scope)
