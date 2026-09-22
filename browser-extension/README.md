@@ -2,7 +2,7 @@
 
 This unpacked Manifest V3 extension proves that PIUGAME requests can originate from a user's browser rather than the MyPIU server.
 
-It is intentionally not store-ready. The MyPIU ingest endpoint and page integration described in `../docs/mobile-sync-contract.md` must ship before publishing the extension.
+It is intentionally not store-ready. It targets the versioned ingest and extension-context endpoints described in `../docs/mobile-sync-contract.md`; those endpoints must ship before publishing the extension.
 
 ## Test
 
@@ -18,4 +18,4 @@ npm test
 3. Open `https://mypiu.austin.kim`.
 4. Use the extension toolbar action and select **Read PIUGAME now**.
 
-The popup reports the parsed player and recent-play count. It does not upload data until the versioned ingest endpoint is available.
+The popup reports the parsed player and recent-play count. MyPIU can also request an authenticated upload through the page event bridge after the backend endpoint is deployed.

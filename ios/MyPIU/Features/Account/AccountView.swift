@@ -7,6 +7,38 @@ struct AccountView: View {
 
     var body: some View {
         Form {
+            Section("MYPIU") {
+                if let account = model.myPIUAccount {
+                    LabeledContent("Account", value: account.name)
+                    if let player = account.piuProfile {
+                        LabeledContent("Linked player", value: player.displayName)
+                    }
+                    myPIUStatus
+                    Button("Disconnect MyPIU", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                        Task { await model.disconnectMyPIU() }
+                    }
+                } else if model.isMyPIUConnected {
+                    myPIUStatus
+                    Button("Retry MyPIU", systemImage: "arrow.clockwise") {
+                        Task { await model.retryMyPIU() }
+                    }
+                    .disabled(model.isMyPIUBusy)
+                    Button("Disconnect MyPIU", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                        Task { await model.disconnectMyPIU() }
+                    }
+                } else {
+                    Button("Continue with Google", systemImage: "person.badge.key") {
+                        Task { await model.connectMyPIU(provider: .google) }
+                    }
+                    .disabled(model.isMyPIUBusy)
+                    Button("Continue with Discord", systemImage: "person.badge.key") {
+                        Task { await model.connectMyPIU(provider: .discord) }
+                    }
+                    .disabled(model.isMyPIUBusy)
+                    myPIUStatus
+                }
+            }
+
             if let profile = model.snapshot?.profile {
                 Section("PIUGAME") {
                     LabeledContent("Player", value: profile.displayName)
@@ -63,6 +95,25 @@ struct AccountView: View {
                     .padding(18)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
             }
+        }
+    }
+
+    @ViewBuilder
+    private var myPIUStatus: some View {
+        switch model.myPIUState {
+        case .signedOut, .ready:
+            EmptyView()
+        case .restoring:
+            LabeledContent("MyPIU") { ProgressView() }
+        case .authenticating:
+            LabeledContent("Signing in") { ProgressView() }
+        case .uploading:
+            LabeledContent("Uploading") { ProgressView() }
+        case .synced(let imported, let duplicates):
+            LabeledContent("Last sync", value: imported > 0 ? "\(imported) new" : "\(duplicates) already saved")
+        case .failed(let message):
+            Label(message, systemImage: "exclamationmark.triangle")
+                .foregroundStyle(AppTheme.accent)
         }
     }
 }

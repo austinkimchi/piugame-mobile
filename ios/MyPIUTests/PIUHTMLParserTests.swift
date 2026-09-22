@@ -12,6 +12,7 @@ final class PIUHTMLParserTests: XCTestCase {
         XCTAssertEqual(profile.gameIDTag, "PKIMCHI#7501")
         XCTAssertEqual(profile.playCount, 215)
         XCTAssertEqual(profile.rating, 18_318)
+        XCTAssertEqual(profile.pp, 1_034)
         XCTAssertEqual(profile.clearCount, 125)
         XCTAssertEqual(profile.totalCharts, 3_646)
         XCTAssertEqual(profile.progressPercent, 3)
@@ -36,6 +37,13 @@ final class PIUHTMLParserTests: XCTestCase {
 
     func testPumbilityDecimalIsPreserved() throws {
         XCTAssertEqual(try parser.parsePumbilityScore(html: Fixtures.pumbility), 15_770.43)
+    }
+
+    func testInvalidLevelAssetsAreRejected() throws {
+        let plays = try parser.parseRecentPlays(html: Fixtures.invalidLevels)
+
+        XCTAssertEqual(plays.count, 3)
+        XCTAssertTrue(plays.allSatisfy { $0.level == nil })
     }
 }
 
@@ -77,5 +85,25 @@ private enum Fixtures {
 
     static let pumbility = """
     <div class="pumbility_total_wrap"><div class="inn"><div class="t1">Pumbility</div><div class="t2">15,770.43</div></div></div>
+    """
+
+    static let invalidLevels = """
+    <ul class="recently_playeList">
+      <li>
+        <div class="song_name"><p>PARTIAL LEVEL</p></div>
+        <div class="stepBall_in"><div class="tw"><img src="https://www.piugame.com/l_img/stepball/full/s_text.png" /></div><div class="numw"><img src="https://www.piugame.com/l_img/stepball/full/s_num_1.png" /><img src="https://www.piugame.com/l_img/stepball/full/renamed.png" /></div></div>
+        <div class="recently_date_tt">2026-04-11 12:30:00 (GMT+9)</div>
+      </li>
+      <li>
+        <div class="song_name"><p>COMBINED LEVEL</p></div>
+        <div class="stepBall_in"><div class="tw"><img src="https://www.piugame.com/l_img/stepball/full/s_text.png" /></div><div class="numw"><img src="https://www.piugame.com/l_img/stepball/full/s_num_19.png" /></div></div>
+        <div class="recently_date_tt">2026-04-11 12:30:00 (GMT+9)</div>
+      </li>
+      <li>
+        <div class="song_name"><p>PLACEHOLDER LEVEL</p></div>
+        <div class="stepBall_in"><div class="tw"><img src="https://www.piugame.com/l_img/stepball/full/s_text.png" /></div><div class="numw"><img src="https://www.piugame.com/l_img/stepball/full/placeholder_9.png" /></div></div>
+        <div class="recently_date_tt">2026-04-11 12:30:00 (GMT+9)</div>
+      </li>
+    </ul>
     """
 }

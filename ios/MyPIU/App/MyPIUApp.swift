@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct MyPIUApp: App {
     @StateObject private var model = AppModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -11,6 +12,10 @@ struct MyPIUApp: App {
                 .task {
                     BackgroundRefreshScheduler.schedule()
                     await model.restore()
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    guard phase == .active else { return }
+                    Task { await model.handleAppActivation() }
                 }
         }
         .backgroundTask(.appRefresh(BackgroundRefreshScheduler.identifier)) {

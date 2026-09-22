@@ -26,6 +26,7 @@ struct PIUProfile: Codable, Equatable, Sendable {
     let titleName: String?
     let gameIDTag: String?
     let avatarURL: URL?
+    let pp: Double?
     let pumbilityScore: Double?
     let playCount: Int?
     let rating: Int?

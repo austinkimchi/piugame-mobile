@@ -38,6 +38,7 @@ struct PIUHTMLParser: Sendable {
             titleName: try text(document, ".profile_name .name_w .t1"),
             gameIDTag: gameIDTag,
             avatarURL: try backgroundImageURL(document.select(".profile_img .re").first()?.attr("style")),
+            pp: decimal(try text(document, ".profile_etc .tt")),
             pumbilityScore: pumbilityScore,
             playCount: integer(try text(document, ".board_search .total .t2, .board_search .total_wrap .t2")),
             rating: integer(try text(document, ".play_data_wrap .my_w .num")),
@@ -104,13 +105,18 @@ struct PIUHTMLParser: Sendable {
     }
 
     private func chartLevel(_ root: Element) throws -> String? {
-        let digits = try root.select(".stepBall_in .numw img").array().compactMap { image -> String? in
+        let images = try root.select(".stepBall_in .numw img").array()
+        guard !images.isEmpty else { return nil }
+
+        var digits: [String] = []
+        for image in images {
             let source = try image.attr("src")
-            let filename = URL(string: source)?.deletingPathExtension().lastPathComponent ?? source
+            let filename = (URL(string: source)?.deletingPathExtension().lastPathComponent ?? source).lowercased()
+            guard filename.range(of: #"^[sdc]_num_[0-9]$"#, options: .regularExpression) != nil else { return nil }
             guard let digit = filename.last, digit.isNumber else { return nil }
-            return String(digit)
+            digits.append(String(digit))
         }
-        return digits.isEmpty ? nil : digits.joined()
+        return digits.joined()
     }
 
     private func assetCode(_ root: Element, containing path: String) throws -> String? {
