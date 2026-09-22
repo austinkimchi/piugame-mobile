@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
+import kotlinx.coroutines.CancellationException
 
 class OAuthException(message: String) : Exception(message)
 
@@ -64,9 +65,34 @@ class OAuthCoordinator(
             installationId = installationId,
             appVersion = appVersion,
         )
-        sessionStore.saveAccessToken(token)
+        try {
+            sessionStore.saveAccessToken(token)
+        } catch (_: Exception) {
+            discardUnstoredToken(token)
+            throw OAuthException("MyPIU could not securely save this session. Sign in again.")
+        }
         sessionStore.clearPendingOAuth()
         return token
+    }
+
+    private suspend fun discardUnstoredToken(token: MyPiuAccessToken) {
+        val queued = runCatching { sessionStore.enqueuePendingRevocation(token) }.isSuccess
+        val revoked = try {
+            apiClient.revoke(token.value)
+            true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: MyPiuApiException) {
+            error.isUnauthorized
+        } catch (_: Exception) {
+            false
+        }
+        if (revoked && queued) runCatching { sessionStore.removePendingRevocation(token) }
+        if (!revoked && !queued) {
+            throw OAuthException(
+                "MyPIU could not securely save or revoke this session. Keep the app open and try again.",
+            )
+        }
     }
 
     private fun randomValue(byteCount: Int): String = ByteArray(byteCount)

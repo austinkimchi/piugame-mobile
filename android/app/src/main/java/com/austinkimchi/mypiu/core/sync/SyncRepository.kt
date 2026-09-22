@@ -11,6 +11,7 @@ import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.network.OAuthCoordinator
 import com.austinkimchi.mypiu.core.network.PiuGameClient
 import com.austinkimchi.mypiu.core.security.SessionStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -125,9 +126,11 @@ class SyncRepository(
             val revoked = try {
                 apiClient.revoke(token.value)
                 true
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: MyPiuApiException) {
                 error.isUnauthorized
-            } catch (_: Throwable) {
+            } catch (_: Exception) {
                 false
             }
             if (revoked) sessionStore.removePendingRevocation(token)

@@ -12,6 +12,7 @@ import com.austinkimchi.mypiu.core.model.RecentPlay
 import com.austinkimchi.mypiu.core.sync.RepositorySnapshot
 import com.austinkimchi.mypiu.core.sync.SyncRepository
 import com.austinkimchi.mypiu.core.sync.SyncScheduler
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,54 +48,62 @@ class AppViewModel(
 
     fun disconnectPiu() {
         viewModelScope.launch {
-            runCatching { repository.disconnectPiu() }
-                .onSuccess {
-                    mutableState.update {
-                        it.copy(
-                            isPiuConnected = false,
-                            profile = null,
-                            recentPlays = emptyList(),
-                            message = "PIUGAME disconnected.",
-                        )
-                    }
-                    scheduler.cancel()
+            try {
+                repository.disconnectPiu()
+                mutableState.update {
+                    it.copy(
+                        isPiuConnected = false,
+                        profile = null,
+                        recentPlays = emptyList(),
+                        message = "PIUGAME disconnected.",
+                    )
                 }
-                .onFailure(::showError)
+                scheduler.cancel()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                showError(error)
+            }
         }
     }
 
     fun disconnectMyPiu() {
         viewModelScope.launch {
-            runCatching { repository.disconnectMyPiu() }
-                .onSuccess {
-                    mutableState.update {
-                        it.copy(isMyPiuConnected = false, account = null, message = "MyPIU signed out.")
-                    }
-                    scheduler.cancel()
+            try {
+                repository.disconnectMyPiu()
+                mutableState.update {
+                    it.copy(isMyPiuConnected = false, account = null, message = "MyPIU signed out.")
                 }
-                .onFailure(::showError)
+                scheduler.cancel()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                showError(error)
+            }
         }
     }
 
     private suspend fun runOperation(operation: suspend () -> RepositorySnapshot) {
         mutableState.update { it.copy(isBusy = true, message = null) }
-        runCatching { operation() }
-            .onSuccess(::apply)
-            .onFailure { error ->
-                repository.clearUnauthorizedSession(error)
-                val connection = repository.connectionState()
-                mutableState.update { current ->
-                    current.copy(
-                        isPiuConnected = connection.isPiuConnected,
-                        isMyPiuConnected = connection.isMyPiuConnected,
-                        account = current.account.takeIf { connection.isMyPiuConnected },
-                        profile = current.profile.takeIf { connection.isPiuConnected },
-                        recentPlays = current.recentPlays.takeIf { connection.isPiuConnected }.orEmpty(),
-                    )
-                }
-                if (connection.isPiuConnected && connection.isMyPiuConnected) scheduler.schedule() else scheduler.cancel()
-                showError(error)
+        try {
+            apply(operation())
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            repository.clearUnauthorizedSession(error)
+            val connection = repository.connectionState()
+            mutableState.update { current ->
+                current.copy(
+                    isPiuConnected = connection.isPiuConnected,
+                    isMyPiuConnected = connection.isMyPiuConnected,
+                    account = current.account.takeIf { connection.isMyPiuConnected },
+                    profile = current.profile.takeIf { connection.isPiuConnected },
+                    recentPlays = current.recentPlays.takeIf { connection.isPiuConnected }.orEmpty(),
+                )
             }
+            if (connection.isPiuConnected && connection.isMyPiuConnected) scheduler.schedule() else scheduler.cancel()
+            showError(error)
+        }
         mutableState.update { it.copy(isBusy = false) }
     }
 
