@@ -40,8 +40,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
-        intent.dataString
+        val callback = intent.dataString
             ?.takeIf { it.startsWith("mypiu://oauth/callback") }
-            ?.let(viewModel::handleOAuthCallback)
+            ?: return
+        intent.data = null
+        setIntent(intent)
+        viewModel.handleOAuthCallback(callback)
     }
 }

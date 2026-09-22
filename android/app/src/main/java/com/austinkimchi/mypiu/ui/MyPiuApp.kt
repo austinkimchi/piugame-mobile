@@ -41,6 +41,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -246,6 +247,12 @@ private fun PiuConnection(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var version by remember { mutableStateOf(PiuGameVersion.PHOENIX_2) }
+    LaunchedEffect(state.isPiuConnected) {
+        if (state.isPiuConnected) {
+            username = ""
+            password = ""
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HorizontalDivider()
         SectionTitle("PIUGAME", state.profile?.username)

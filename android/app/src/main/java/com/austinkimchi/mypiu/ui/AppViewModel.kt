@@ -103,7 +103,7 @@ class AppViewModel(
             current.copy(
                 isPiuConnected = snapshot.isPiuConnected,
                 isMyPiuConnected = snapshot.isMyPiuConnected,
-                account = snapshot.account ?: current.account,
+                account = if (snapshot.isMyPiuConnected) snapshot.account ?: current.account else null,
                 profile = snapshot.piuSnapshot?.profile ?: current.profile,
                 recentPlays = snapshot.piuSnapshot?.recentPlays ?: current.recentPlays,
                 message = snapshot.syncResult?.let { result ->
@@ -111,7 +111,7 @@ class AppViewModel(
                 },
             )
         }
-        if (snapshot.isPiuConnected && snapshot.isMyPiuConnected) scheduler.schedule()
+        if (snapshot.isPiuConnected && snapshot.isMyPiuConnected) scheduler.schedule() else scheduler.cancel()
     }
 
     private fun showError(error: Throwable) {
