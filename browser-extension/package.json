@@ -6,9 +6,11 @@
   "scripts": {
     "check:syntax": "find src test scripts -type f \\( -name '*.js' -o -name '*.mjs' \\) -print0 | xargs -0 -n1 node --check",
     "package": "node scripts/package.mjs",
+    "stage:safari": "node scripts/stage-safari.mjs",
     "test": "node --test"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
     "linkedom": "0.18.13"
   }
 }

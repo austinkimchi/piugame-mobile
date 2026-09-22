@@ -29,7 +29,7 @@ Complete: native catalog, recommendations, favorites, offline cache, adaptive iP
 
 ## Stage 3: companion web extension
 
-Current: the Chromium extension performs toolbar- or MyPIU-page-initiated normalized uploads, coordinates concurrent refreshes, recovers expired sessions, and produces a verified store-upload ZIP with a tag-driven release. Chrome Web Store publication and Safari remain before this stage is complete.
+Current: the Chromium extension performs toolbar- or MyPIU-page-initiated normalized uploads, coordinates concurrent refreshes, recovers expired sessions, and produces a verified store-upload ZIP with a tag-driven release. Safari packaging now stages the same audited runtime for Apple's native wrapper and verifies generated iOS and macOS builds in CI. Chrome Web Store publication and embedding the Safari target in the shipping MyPIU app remain before this stage is complete.
 
 - Manifest V3 Chromium beta.
 - MyPIU page integration and normalized-data upload.
