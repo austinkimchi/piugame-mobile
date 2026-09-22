@@ -189,6 +189,10 @@ final class AppModel: ObservableObject {
                 myPIUState = .signedOut
                 return
             }
+            guard !token.isExpired else {
+                clearMyPIUSession()
+                return
+            }
             accessToken = token
             myPIUState = .restoring
             myPIUAccount = try await apiClient.account(accessToken: token.value)
@@ -203,7 +207,11 @@ final class AppModel: ObservableObject {
     }
 
     private func uploadToMyPIU(_ snapshot: PIUSnapshot) async {
-        guard let token = accessToken, !token.isExpired else { return }
+        guard let token = accessToken else { return }
+        guard !token.isExpired else {
+            clearMyPIUSession()
+            return
+        }
         myPIUState = .uploading
         do {
             let result = try await apiClient.upload(

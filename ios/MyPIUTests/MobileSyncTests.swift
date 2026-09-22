@@ -3,6 +3,15 @@ import XCTest
 @testable import MyPIU
 
 final class MobileSyncTests: XCTestCase {
+    func testExpiredAccessTokenRequiresReauthentication() {
+        let token = MyPIUAccessToken(
+            value: "expired-token",
+            expiresAt: Date(timeIntervalSinceNow: -1)
+        )
+
+        XCTAssertTrue(token.isExpired)
+    }
+
     func testPKCEChallengeMatchesRFC7636() {
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
         XCTAssertEqual(mobilePkceChallenge(verifier), "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
