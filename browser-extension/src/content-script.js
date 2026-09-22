@@ -26,6 +26,7 @@ async function sync(upload) {
     const { parseSyncPayload } = await parserPromise;
     const payload = parseSyncPayload(result.pages, {
       username: context.piuUsername,
+      expectedDisplayName: context.piuDisplayName,
       installationId: await installationId(),
       appVersion: chrome.runtime.getManifest().version
     });
@@ -56,14 +57,6 @@ async function syncContext() {
     headers: { Accept: "application/json" }
   });
   if (response.ok) return response.json();
-
-  const piuUsername = document.documentElement.dataset.piuUsername;
-  if (piuUsername) {
-    return {
-      piuUsername,
-      piuVersion: document.documentElement.dataset.piuVersion === "phoenix" ? "phoenix" : "phoenix2"
-    };
-  }
   throw new Error("Sign in to MyPIU and link a PIUGAME account first.");
 }
 

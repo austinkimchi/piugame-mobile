@@ -32,6 +32,7 @@ test("normalizes profile and recent plays without exporting raw HTML", () => {
   }, {
     generatedAt: "2026-09-21T22:30:00.000Z",
     username: "pkimchi",
+    expectedDisplayName: "PKIMCHI#7501",
     installationId: "fixture-install",
     appVersion: "0.1.0"
   });
@@ -50,4 +51,20 @@ test("normalizes profile and recent plays without exporting raw HTML", () => {
   assert.equal(payload.recentPlays[0].score, 954_848);
   assert.equal(payload.recentPlays[0].judgments.perfect, 1_234);
   assert.equal(JSON.stringify(payload).includes("recently_playeList"), false);
+});
+
+test("rejects a PIUGAME session for another linked player", () => {
+  assert.throws(
+    () => parseSyncPayload({
+      version: "phoenix2",
+      profile: `<div class="profile_name"><div class="name_w"><span class="t2">OTHER#1234</span></div></div>`,
+      recent: "",
+      pumbility: ""
+    }, {
+      username: "pkimchi",
+      expectedDisplayName: "PKIMCHI#7501",
+      installationId: "fixture-install"
+    }),
+    /different linked player/
+  );
 });

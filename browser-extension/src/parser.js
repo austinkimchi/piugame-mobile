@@ -1,6 +1,7 @@
 export function parseSyncPayload(pages, {
   generatedAt = new Date().toISOString(),
   username = null,
+  expectedDisplayName = null,
   installationId = null,
   appVersion = null
 } = {}) {
@@ -8,10 +9,14 @@ export function parseSyncPayload(pages, {
   const recentDocument = documentFor(pages.recent);
   const pumbilityDocument = documentFor(pages.pumbility);
   const normalizedUsername = clean(username);
+  const normalizedExpectedDisplayName = identityKey(expectedDisplayName);
   const normalizedInstallationId = clean(installationId);
   const displayName = clean(profileDocument.querySelector(".profile_name .name_w .t2")?.textContent);
-  if (!normalizedUsername || !normalizedInstallationId || !displayName) {
+  if (!normalizedUsername || !normalizedExpectedDisplayName || !normalizedInstallationId || !displayName) {
     throw new Error("MyPIU could not identify the linked PIUGAME account.");
+  }
+  if (identityKey(displayName) !== normalizedExpectedDisplayName) {
+    throw new Error("The PIUGAME browser session belongs to a different linked player.");
   }
 
   return {
@@ -108,6 +113,10 @@ function documentFor(html) {
 function clean(value) {
   const result = value?.replace(/\s+/g, " ").trim();
   return result || null;
+}
+
+function identityKey(value) {
+  return clean(value)?.toLocaleLowerCase("en-US") ?? null;
 }
 
 function integer(value) {

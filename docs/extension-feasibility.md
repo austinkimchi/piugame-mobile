@@ -20,8 +20,9 @@ The extension must not request `<all_urls>`, capture PIUGAME passwords, or expor
 1. The user opens MyPIU and chooses **Sync from this browser**.
 2. The MyPIU content script asks the extension service worker for PIUGAME pages.
 3. The service worker fetches PIUGAME with `credentials: include` under explicit host permission.
-4. The content script parses the pages and posts normalized DTOs to MyPIU.
-5. If PIUGAME returns a login page, the extension opens the appropriate PIUGAME sign-in page and asks the user to retry.
+4. The content script verifies the fetched PIUGAME display identity against the account linked to MyPIU.
+5. The content script parses the pages and posts normalized DTOs to MyPIU.
+6. If PIUGAME returns a login page, the extension opens the appropriate PIUGAME sign-in page and asks the user to retry.
 
 ## Limits
 
