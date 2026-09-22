@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   copyFileSync,
   mkdirSync,
   readFileSync,
@@ -51,6 +52,7 @@ export function packageChromiumExtension() {
       const destination = join(stagingDirectory, relativePath);
       mkdirSync(dirname(destination), { recursive: true });
       copyFileSync(source, destination);
+      chmodSync(destination, 0o644);
       utimesSync(destination, fixedTimestamp, fixedTimestamp);
     }
 
