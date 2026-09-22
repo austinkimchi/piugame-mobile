@@ -47,7 +47,7 @@ class CatalogRepositoryTest {
             )
             var rejected = false
             try {
-                repository.search("", null, PiuGameVersion.PHOENIX_2)
+                repository.search("", null, PiuGameVersion.PHOENIX_2, authenticated = true)
             } catch (_: MyPiuApiException) {
                 rejected = true
             }
@@ -77,7 +77,7 @@ class CatalogRepositoryTest {
             )
             var rejected = false
             try {
-                repository.search("", null, PiuGameVersion.PHOENIX_2)
+                repository.search("", null, PiuGameVersion.PHOENIX_2, authenticated = true)
             } catch (_: MyPiuApiException) {
                 rejected = true
             }
@@ -85,6 +85,40 @@ class CatalogRepositoryTest {
             assertTrue(rejected)
             assertEquals(0, requestCount)
             assertEquals(null, sessionStore.accessToken())
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun publicCatalogSearchIgnoresStoredSession() = runTest {
+        val secrets = MemorySecretStore()
+        val sessionStore = SessionStore(secrets)
+        sessionStore.saveAccessToken(MyPiuAccessToken("private", Long.MAX_VALUE, "installation"))
+        val httpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                assertEquals(null, chain.request().header("Authorization"))
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("""{"songs":[],"nextCursor":null,"total":0}""".toResponseBody("application/json".toMediaType()))
+                    .build()
+            }
+            .build()
+        val directory = Files.createTempDirectory("mypiu-catalog-repository-test").toFile()
+        try {
+            val repository = CatalogRepository(
+                sessionStore,
+                MyPiuApiClient("https://mypiu.example/", client = httpClient),
+                CatalogCache(directory),
+            )
+
+            val page = repository.search("", null, PiuGameVersion.PHOENIX_2, authenticated = false)
+
+            assertEquals(0, page.total)
+            assertEquals("private", sessionStore.accessToken()?.value)
         } finally {
             directory.deleteRecursively()
         }

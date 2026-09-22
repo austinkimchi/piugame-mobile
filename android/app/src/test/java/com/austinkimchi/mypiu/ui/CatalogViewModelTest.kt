@@ -7,6 +7,7 @@ import com.austinkimchi.mypiu.core.model.CatalogSearchPage
 import com.austinkimchi.mypiu.core.model.CatalogSong
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
+import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,12 +43,14 @@ class CatalogViewModelTest {
 
             assertEquals("recommendation", source.searches.last().query)
             assertEquals(PiuGameVersion.PHOENIX, source.searches.last().version)
+            assertTrue(source.searches.last().authenticated)
             assertTrue(viewModel.state.value.isMyPiuConnected)
 
             viewModel.updateSession(null, connected = false, preferredVersion = null)
             advanceUntilIdle()
             assertEquals(CatalogFeed.CATALOG, viewModel.state.value.feed)
             assertEquals("", source.searches.last().query)
+            assertFalse(source.searches.last().authenticated)
         } finally {
             Dispatchers.resetMain()
         }
@@ -114,6 +117,7 @@ class CatalogViewModelTest {
             assertTrue(source.cacheReads.isEmpty())
             assertTrue(source.cacheWrites.isEmpty())
             assertFalse(viewModel.state.value.isMyPiuConnected)
+            assertFalse(source.searches.single().authenticated)
         } finally {
             Dispatchers.resetMain()
         }
@@ -195,20 +199,117 @@ class CatalogViewModelTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun staleSearchStartedBeforeFavoriteCannotUndoMutation() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val searchStarted = CompletableDeferred<Unit>()
+            val searchResult = CompletableDeferred<CatalogSearchPage>()
+            val source = FakeCatalogDataSource()
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+            val selectedSong = viewModel.state.value.listing.songs.single()
+            source.searchHandler = { _, _, _, _ ->
+                searchStarted.complete(Unit)
+                searchResult.await()
+            }
+
+            viewModel.refresh()
+            runCurrent()
+            assertTrue(searchStarted.isCompleted)
+            viewModel.toggleFavorite(selectedSong)
+            runCurrent()
+
+            searchResult.complete(CatalogSearchPage(listOf(favoriteSong().copy(isFavorite = false)), null, 1))
+            advanceUntilIdle()
+
+            assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun refreshAcceptsFavoriteChangedOnAnotherDevice() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakeCatalogDataSource()
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+
+            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single())
+            advanceUntilIdle()
+            assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+
+            viewModel.refresh()
+            advanceUntilIdle()
+
+            assertFalse(viewModel.state.value.listing.songs.single().isFavorite)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun sessionInvalidationKeepsChartHistoryInTerminalState() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakeCatalogDataSource(chartFailure = MyPiuApiException(401, "invalid_token"))
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+            val song = viewModel.state.value.listing.songs.single()
+
+            viewModel.loadChartHistory(song, "S16")
+            advanceUntilIdle()
+            viewModel.updateSession(null, connected = false, preferredVersion = null)
+            advanceUntilIdle()
+
+            val history = requireNotNull(viewModel.state.value.chartHistory)
+            assertFalse(history.isLoading)
+            assertNotNull(history.error)
+            assertEquals(null, history.performance)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }
 
-private data class Search(val query: String, val cursor: String?, val version: PiuGameVersion)
+private data class Search(
+    val query: String,
+    val cursor: String?,
+    val version: PiuGameVersion,
+    val authenticated: Boolean,
+)
 
 private class FakeCatalogDataSource(
     private val favoriteFailure: Exception? = null,
     private val song: CatalogSong = favoriteSong().copy(isFavorite = false),
+    private val chartFailure: Exception? = null,
     private val favoriteHandler: (suspend (String, Boolean, PiuGameVersion) -> Boolean)? = null,
 ) : CatalogDataSource {
     val searches = mutableListOf<Search>()
     val cacheReads = mutableListOf<String>()
     val cacheWrites = mutableListOf<String>()
-    override suspend fun search(query: String, cursor: String?, version: PiuGameVersion): CatalogSearchPage {
-        searches += Search(query, cursor, version)
+    var searchHandler: (suspend (String, String?, PiuGameVersion, Boolean) -> CatalogSearchPage)? = null
+
+    override suspend fun search(
+        query: String,
+        cursor: String?,
+        version: PiuGameVersion,
+        authenticated: Boolean,
+    ): CatalogSearchPage {
+        searches += Search(query, cursor, version, authenticated)
+        searchHandler?.let { return it(query, cursor, version, authenticated) }
         return CatalogSearchPage(listOf(song), null, 1)
     }
 
@@ -222,7 +323,10 @@ private class FakeCatalogDataSource(
         slug: String,
         chart: String,
         version: PiuGameVersion,
-    ): SongChartPerformance? = null
+    ): SongChartPerformance? {
+        chartFailure?.let { throw it }
+        return null
+    }
 
     override suspend fun cached(
         query: String,

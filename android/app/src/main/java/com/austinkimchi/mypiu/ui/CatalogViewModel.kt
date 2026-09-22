@@ -22,12 +22,14 @@ import kotlinx.coroutines.launch
 
 class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() {
     private data class PendingFavorite(val id: UUID, val previous: Boolean, val requested: Boolean)
+    private data class ConfirmedFavorite(val saved: Boolean, val protectThroughRequestId: Long)
 
     private val mutableState = MutableStateFlow(CatalogUiState())
     val state: StateFlow<CatalogUiState> = mutableState.asStateFlow()
 
     private val pendingFavorites = mutableMapOf<String, PendingFavorite>()
-    private val confirmedFavorites = mutableMapOf<String, Boolean>()
+    private val confirmedFavorites = mutableMapOf<String, ConfirmedFavorite>()
+    private var latestSearchRequestId = 0L
     private var requestGeneration = 0
     private var loadJob: Job? = null
     private var paginationJob: Job? = null
@@ -54,16 +56,25 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         pendingFavorites.clear()
         confirmedFavorites.clear()
         historyJob?.cancel()
-        mutableState.update {
-            it.copy(
+        mutableState.update { state ->
+            val disconnectedHistory = if (!accountConnected) {
+                state.chartHistory?.copy(
+                    isLoading = false,
+                    performance = null,
+                    error = state.chartHistory.error ?: SIGN_IN_FOR_HISTORY_MESSAGE,
+                )
+            } else {
+                null
+            }
+            state.copy(
                 cacheScope = scope,
                 isMyPiuConnected = accountConnected,
-                feed = if (!accountConnected && it.feed.requiresAccount) CatalogFeed.CATALOG else it.feed,
-                version = preferredVersion ?: it.version,
+                feed = if (!accountConnected && state.feed.requiresAccount) CatalogFeed.CATALOG else state.feed,
+                version = preferredVersion ?: state.version,
                 listing = CatalogListing(),
                 updatingFavorites = emptySet(),
                 favoriteError = null,
-                chartHistory = null,
+                chartHistory = disconnectedHistory,
             )
         }
         if (started) reload(debounce = false)
@@ -109,12 +120,18 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         val query = snapshot.requestQuery
         val version = snapshot.version
         val scope = snapshot.cacheScope
+        val authenticated = snapshot.isMyPiuConnected
+        val requestId = ++latestSearchRequestId
         paginationJob = viewModelScope.launch {
             mutableState.update { it.copy(isLoadingMore = true, paginationError = null) }
             try {
-                val page = repository.search(query, cursor, version)
+                val page = repository.search(query, cursor, version, authenticated)
                 if (generation != requestGeneration) return@launch
-                val listing = applyFavoriteOverrides(mutableState.value.listing.append(page, cursor))
+                val listing = applyFavoriteOverrides(
+                    mutableState.value.listing.append(page, cursor),
+                    requestId,
+                )
+                retireFavoriteOverrides(requestId)
                 mutableState.update { it.copy(listing = listing, isLoadingMore = false) }
                 scope?.let { runCatching { repository.cache(listingForCache(listing), query, version, it) } }
             } catch (error: CancellationException) {
@@ -155,7 +172,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 runCatching { repository.cacheFavorite(authoritative, song.slug, version, scope) }
                 val current = mutableState.value
                 if (isCurrentMutation && current.version == version && current.cacheScope == scope) {
-                    confirmedFavorites[song.slug] = authoritative
+                    confirmedFavorites[song.slug] = ConfirmedFavorite(authoritative, latestSearchRequestId)
                     val listing = when {
                         current.feed == CatalogFeed.FAVORITES && !authoritative -> {
                             current.listing.removeSong(song.slug)
@@ -210,7 +227,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                     chartHistory = ChartHistoryUiState(
                         songSlug = song.slug,
                         chartToken = chartToken,
-                        error = "Sign in to MyPIU to view chart history.",
+                        error = SIGN_IN_FOR_HISTORY_MESSAGE,
                     ),
                 )
             }
@@ -274,6 +291,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             val query = snapshot.requestQuery
             val version = snapshot.version
             val scope = snapshot.cacheScope
+            val authenticated = snapshot.isMyPiuConnected
             mutableState.update {
                 it.copy(
                     listing = CatalogListing(),
@@ -291,10 +309,15 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                     it.copy(listing = applyFavoriteOverrides(cached.listing), isShowingCachedData = true)
                 }
             }
+            val requestId = ++latestSearchRequestId
             try {
-                val page = repository.search(query, null, version)
+                val page = repository.search(query, null, version, authenticated)
                 if (generation != requestGeneration) return@launch
-                val listing = applyFavoriteOverrides(CatalogListing(page.songs, page.nextCursor, page.total))
+                val listing = applyFavoriteOverrides(
+                    CatalogListing(page.songs, page.nextCursor, page.total),
+                    requestId,
+                )
+                retireFavoriteOverrides(requestId)
                 mutableState.update {
                     it.copy(
                         listing = listing,
@@ -319,12 +342,22 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         }
     }
 
-    private fun applyFavoriteOverrides(listing: CatalogListing): CatalogListing = listing.copy(
+    private fun applyFavoriteOverrides(
+        listing: CatalogListing,
+        requestId: Long? = null,
+    ): CatalogListing = listing.copy(
         songs = listing.songs.map { song ->
-            val saved = pendingFavorites[song.slug]?.requested ?: confirmedFavorites[song.slug]
+            val confirmed = confirmedFavorites[song.slug]
+                ?.takeIf { requestId == null || requestId <= it.protectThroughRequestId }
+                ?.saved
+            val saved = pendingFavorites[song.slug]?.requested ?: confirmed
             if (saved == null) song else song.copy(isFavorite = saved)
         },
     )
+
+    private fun retireFavoriteOverrides(requestId: Long) {
+        confirmedFavorites.entries.removeAll { it.value.protectThroughRequestId <= requestId }
+    }
 
     private fun listingForCache(listing: CatalogListing): CatalogListing = listing.copy(
         songs = listing.songs.map { song ->
@@ -371,6 +404,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
     private companion object {
         const val PUBLIC_SCOPE = "public"
         const val SEARCH_DEBOUNCE_MILLIS = 300L
+        const val SIGN_IN_FOR_HISTORY_MESSAGE = "Sign in to MyPIU to view chart history."
     }
 }
 

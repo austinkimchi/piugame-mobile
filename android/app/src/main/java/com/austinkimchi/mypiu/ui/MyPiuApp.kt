@@ -243,6 +243,7 @@ fun MyPiuApp(
                 else -> ChartHistoryScreen(
                     song = selectedSong,
                     chartToken = selectedChartToken.orEmpty(),
+                    sessionKey = "${catalogState.cacheScope}:${catalogState.version.serialName}",
                     state = catalogState.chartHistory,
                     onLoad = { catalogViewModel.loadChartHistory(selectedSong, selectedChartToken.orEmpty()) },
                     onRetry = {

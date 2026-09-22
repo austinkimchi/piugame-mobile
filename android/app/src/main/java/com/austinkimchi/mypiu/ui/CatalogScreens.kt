@@ -455,11 +455,12 @@ private fun ChartBadge(token: String, isRecommended: Boolean, enabled: Boolean, 
 fun ChartHistoryScreen(
     song: CatalogSong,
     chartToken: String,
+    sessionKey: String,
     state: ChartHistoryUiState?,
     onLoad: () -> Unit,
     onRetry: () -> Unit,
 ) {
-    LaunchedEffect(song.slug, chartToken) { onLoad() }
+    LaunchedEffect(song.slug, chartToken, sessionKey) { onLoad() }
     when {
         state == null || state.songSlug != song.slug || state.chartToken != chartToken || state.isLoading -> {
             CenteredProgress("Loading chart history")
