@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @StateObject private var songCatalog = SongCatalogModel()
     @State private var selectedDestination: Destination = .home
+    @State private var visitedDestinations: Set<Destination> = [.home]
     @State private var homePath = NavigationPath()
     @State private var songsPath = NavigationPath()
     @State private var activityPath = NavigationPath()
@@ -24,7 +25,8 @@ struct RootView: View {
             }
         }
         .tint(AppTheme.accent)
-        .onChange(of: selectedDestination) { _, _ in
+        .onChange(of: selectedDestination) { _, destination in
+            visitedDestinations.insert(destination)
             resignFocus()
         }
         .onChange(of: horizontalSizeClass) { _, _ in
@@ -54,7 +56,7 @@ struct RootView: View {
             .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 280)
         } detail: {
             ZStack {
-                ForEach(Destination.allCases) { destination in
+                ForEach(Destination.allCases.filter(visitedDestinations.contains)) { destination in
                     navigationStack(for: destination)
                         .opacity(selectedDestination == destination ? 1 : 0)
                         .allowsHitTesting(selectedDestination == destination)
