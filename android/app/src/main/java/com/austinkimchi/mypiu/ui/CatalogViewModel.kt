@@ -40,7 +40,11 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
     }
 
     fun updateSession(accountId: String?, connected: Boolean, preferredVersion: PiuGameVersion?) {
-        val scope = accountId?.let { "account:$it" } ?: PUBLIC_SCOPE
+        val scope = when {
+            accountId != null -> "account:$accountId"
+            connected -> null
+            else -> PUBLIC_SCOPE
+        }
         val accountConnected = connected && accountId != null
         val current = mutableState.value
         val preferredVersionChanged = preferredVersion != null && current.version != preferredVersion
@@ -104,7 +108,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 if (generation != requestGeneration) return@launch
                 val listing = applyFavoriteOverrides(mutableState.value.listing.append(page, cursor))
                 mutableState.update { it.copy(listing = listing, isLoadingMore = false) }
-                runCatching { repository.cache(listingForCache(listing), query, version, scope) }
+                scope?.let { runCatching { repository.cache(listingForCache(listing), query, version, it) } }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -126,7 +130,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         val requested = !song.isFavorite
         val mutation = PendingFavorite(song.isFavorite, requested)
         val version = snapshot.version
-        val scope = snapshot.cacheScope
+        val scope = snapshot.cacheScope ?: return
         pendingFavorites[song.slug] = mutation
         mutableState.update {
             it.copy(
@@ -196,7 +200,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             return
         }
         val version = current.version
-        val scope = current.cacheScope
+        val scope = current.cacheScope ?: return
         historyJob = viewModelScope.launch {
             mutableState.update {
                 it.copy(chartHistory = ChartHistoryUiState(song.slug, chartToken, isLoading = true))
@@ -263,7 +267,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                     paginationError = null,
                 )
             }
-            val cached = repository.cached(query, version, scope)
+            val cached = scope?.let { repository.cached(query, version, it) }
             if (generation != requestGeneration) return@launch
             if (cached != null) {
                 mutableState.update {
@@ -282,7 +286,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                         error = null,
                     )
                 }
-                runCatching { repository.cache(listingForCache(listing), query, version, scope) }
+                scope?.let { runCatching { repository.cache(listingForCache(listing), query, version, it) } }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -357,7 +361,7 @@ data class CatalogUiState(
     val feed: CatalogFeed = CatalogFeed.CATALOG,
     val query: String = "",
     val version: PiuGameVersion = PiuGameVersion.PHOENIX_2,
-    val cacheScope: String = "public",
+    val cacheScope: String? = "public",
     val isMyPiuConnected: Boolean = false,
     val listing: CatalogListing = CatalogListing(),
     val isLoading: Boolean = false,

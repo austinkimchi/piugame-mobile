@@ -27,13 +27,13 @@ class CatalogRepository(
         query: String,
         cursor: String?,
         version: PiuGameVersion,
-    ): CatalogSearchPage = withSession { token ->
+    ): CatalogSearchPage = withSession(allowAnonymous = true) { token ->
         apiClient.searchCatalog(query, cursor, version, token)
     }
 
     override suspend fun setFavorite(slug: String, saved: Boolean, version: PiuGameVersion): Boolean {
-        return withSession { token ->
-            apiClient.setFavorite(slug, saved, version, token ?: throw MyPiuApiException(401, "invalid_token"))
+        return withSession(allowAnonymous = false) { token ->
+            apiClient.setFavorite(slug, saved, version, requireNotNull(token))
         }
     }
 
@@ -42,8 +42,8 @@ class CatalogRepository(
         chart: String,
         version: PiuGameVersion,
     ): SongChartPerformance? {
-        return withSession { token ->
-            apiClient.chartPerformance(slug, chart, version, token ?: throw MyPiuApiException(401, "invalid_token"))
+        return withSession(allowAnonymous = false) { token ->
+            apiClient.chartPerformance(slug, chart, version, requireNotNull(token))
         }
     }
 
@@ -69,8 +69,20 @@ class CatalogRepository(
 
     override fun resolveUrl(value: String?): String? = apiClient.resolveUrl(value)
 
-    private suspend fun <Value> withSession(operation: suspend (String?) -> Value): Value {
-        val token = validToken()?.value
+    private suspend fun <Value> withSession(
+        allowAnonymous: Boolean,
+        operation: suspend (String?) -> Value,
+    ): Value {
+        val storedToken = sessionStore.accessToken()
+        val token = when {
+            storedToken == null && allowAnonymous -> null
+            storedToken == null -> throw MyPiuApiException(401, "invalid_token")
+            storedToken.isExpired() -> {
+                sessionStore.clearAccessToken()
+                throw MyPiuApiException(401, "invalid_token")
+            }
+            else -> storedToken.value
+        }
         return try {
             operation(token)
         } catch (error: MyPiuApiException) {
@@ -82,15 +94,6 @@ class CatalogRepository(
                 sessionStore.clearAccessToken()
             }
             throw error
-        }
-    }
-
-    private fun validToken() = sessionStore.accessToken()?.takeUnless { token ->
-        if (token.isExpired()) {
-            sessionStore.clearAccessToken()
-            true
-        } else {
-            false
         }
     }
 }

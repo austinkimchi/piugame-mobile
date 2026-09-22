@@ -102,18 +102,23 @@ fun MyPiuApp(
 
     BackHandler(enabled = selectedSongSlug != null, onBack = ::navigateBack)
 
-    LaunchedEffect(destination) {
-        if (destination == AppDestination.SONGS) catalogViewModel.start()
-    }
     LaunchedEffect(listedSong) {
         if (listedSong != null) selectedSongFallback = listedSong
     }
-    LaunchedEffect(state.account?.id, state.isMyPiuConnected, state.account?.piuGameVersion, state.piuVersion) {
+    LaunchedEffect(
+        destination,
+        state.isBusy,
+        state.account?.id,
+        state.isMyPiuConnected,
+        state.account?.piuGameVersion,
+        state.piuVersion,
+    ) {
         catalogViewModel.updateSession(
             accountId = state.account?.id,
             connected = state.isMyPiuConnected,
             preferredVersion = state.account?.piuGameVersion ?: state.piuVersion,
         )
+        if (destination == AppDestination.SONGS && !state.isBusy) catalogViewModel.start()
     }
     LaunchedEffect(catalogState.sessionInvalidated) {
         if (catalogState.sessionInvalidated) {

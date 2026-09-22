@@ -96,6 +96,26 @@ class CatalogViewModelTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun unresolvedAccountSessionIsNeverCachedAsPublicData() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakeCatalogDataSource()
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession(null, connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+
+            assertEquals(null, viewModel.state.value.cacheScope)
+            assertTrue(source.cacheReads.isEmpty())
+            assertTrue(source.cacheWrites.isEmpty())
+            assertFalse(viewModel.state.value.isMyPiuConnected)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }
 
 private data class Search(val query: String, val cursor: String?, val version: PiuGameVersion)
@@ -104,6 +124,8 @@ private class FakeCatalogDataSource(
     private val favoriteFailure: Exception? = null,
 ) : CatalogDataSource {
     val searches = mutableListOf<Search>()
+    val cacheReads = mutableListOf<String>()
+    val cacheWrites = mutableListOf<String>()
     private val song = CatalogSong("song", "Song", "Artist", chartSummary = listOf("S16"))
 
     override suspend fun search(query: String, cursor: String?, version: PiuGameVersion): CatalogSearchPage {
@@ -126,14 +148,19 @@ private class FakeCatalogDataSource(
         query: String,
         version: PiuGameVersion,
         scope: String,
-    ): CatalogCache.CachedListing? = null
+    ): CatalogCache.CachedListing? {
+        cacheReads += scope
+        return null
+    }
 
     override suspend fun cache(
         listing: CatalogListing,
         query: String,
         version: PiuGameVersion,
         scope: String,
-    ) = Unit
+    ) {
+        cacheWrites += scope
+    }
 
     override suspend fun cacheFavorite(
         saved: Boolean,

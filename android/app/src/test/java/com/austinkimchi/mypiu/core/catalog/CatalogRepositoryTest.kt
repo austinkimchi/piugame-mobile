@@ -58,6 +58,37 @@ class CatalogRepositoryTest {
             directory.deleteRecursively()
         }
     }
+
+    @Test
+    fun expiredSessionDoesNotSilentlyFallBackToPublicCatalog() = runTest {
+        val secrets = MemorySecretStore()
+        val sessionStore = SessionStore(secrets)
+        sessionStore.saveAccessToken(MyPiuAccessToken("expired", 0, "installation"))
+        var requestCount = 0
+        val httpClient = OkHttpClient.Builder()
+            .addInterceptor { error("Unexpected request ${++requestCount}") }
+            .build()
+        val directory = Files.createTempDirectory("mypiu-catalog-repository-test").toFile()
+        try {
+            val repository = CatalogRepository(
+                sessionStore,
+                MyPiuApiClient("https://mypiu.example/", client = httpClient),
+                CatalogCache(directory),
+            )
+            var rejected = false
+            try {
+                repository.search("", null, PiuGameVersion.PHOENIX_2)
+            } catch (_: MyPiuApiException) {
+                rejected = true
+            }
+
+            assertTrue(rejected)
+            assertEquals(0, requestCount)
+            assertEquals(null, sessionStore.accessToken())
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
 }
 
 private class MemorySecretStore : SecretStore {
