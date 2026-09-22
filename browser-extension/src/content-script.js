@@ -18,13 +18,16 @@ window.addEventListener("mypiu:request-extension-sync", () => {
 
 async function sync(upload) {
   try {
-    const version = document.documentElement.dataset.piuVersion === "phoenix" ? "phoenix" : "phoenix2";
+    const context = await syncContext();
+    const version = context.piuVersion === "phoenix" ? "phoenix" : "phoenix2";
     const result = await chrome.runtime.sendMessage({ type: "mypiu:fetch-piugame", version });
     if (!result?.ok) return { ok: false, error: result?.error ?? "PIUGAME sync failed." };
     parserPromise ??= import(chrome.runtime.getURL("src/parser.js"));
     const { parseSyncPayload } = await parserPromise;
     const payload = parseSyncPayload(result.pages, {
-      username: document.documentElement.dataset.piuUsername ?? null
+      username: context.piuUsername,
+      installationId: await installationId(),
+      appVersion: chrome.runtime.getManifest().version
     });
 
     if (upload) {
@@ -45,4 +48,30 @@ async function sync(upload) {
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "PIUGAME sync failed." };
   }
+}
+
+async function syncContext() {
+  const response = await fetch("/api/mobile/v1/extension/context", {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" }
+  });
+  if (response.ok) return response.json();
+
+  const piuUsername = document.documentElement.dataset.piuUsername;
+  if (piuUsername) {
+    return {
+      piuUsername,
+      piuVersion: document.documentElement.dataset.piuVersion === "phoenix" ? "phoenix" : "phoenix2"
+    };
+  }
+  throw new Error("Sign in to MyPIU and link a PIUGAME account first.");
+}
+
+async function installationId() {
+  const key = "mypiuInstallationId";
+  const stored = await chrome.storage.local.get(key);
+  if (stored[key]) return stored[key];
+  const value = crypto.randomUUID();
+  await chrome.storage.local.set({ [key]: value });
+  return value;
 }

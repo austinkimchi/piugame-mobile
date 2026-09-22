@@ -12,6 +12,7 @@ final class PIUHTMLParserTests: XCTestCase {
         XCTAssertEqual(profile.gameIDTag, "PKIMCHI#7501")
         XCTAssertEqual(profile.playCount, 215)
         XCTAssertEqual(profile.rating, 18_318)
+        XCTAssertEqual(profile.pp, 1_034)
         XCTAssertEqual(profile.clearCount, 125)
         XCTAssertEqual(profile.totalCharts, 3_646)
         XCTAssertEqual(profile.progressPercent, 3)

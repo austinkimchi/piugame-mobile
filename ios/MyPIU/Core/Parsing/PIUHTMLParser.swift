@@ -38,6 +38,7 @@ struct PIUHTMLParser: Sendable {
             titleName: try text(document, ".profile_name .name_w .t1"),
             gameIDTag: gameIDTag,
             avatarURL: try backgroundImageURL(document.select(".profile_img .re").first()?.attr("style")),
+            pp: decimal(try text(document, ".profile_etc .tt")),
             pumbilityScore: pumbilityScore,
             playCount: integer(try text(document, ".board_search .total .t2, .board_search .total_wrap .t2")),
             rating: integer(try text(document, ".play_data_wrap .my_w .num")),

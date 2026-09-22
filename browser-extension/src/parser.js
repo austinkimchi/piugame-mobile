@@ -1,20 +1,50 @@
-export function parseSyncPayload(pages, { generatedAt = new Date().toISOString(), username = null } = {}) {
+export function parseSyncPayload(pages, {
+  generatedAt = new Date().toISOString(),
+  username = null,
+  installationId = null,
+  appVersion = null
+} = {}) {
   const profileDocument = documentFor(pages.profile);
   const recentDocument = documentFor(pages.recent);
   const pumbilityDocument = documentFor(pages.pumbility);
+  const normalizedUsername = clean(username);
+  const normalizedInstallationId = clean(installationId);
+  const displayName = clean(profileDocument.querySelector(".profile_name .name_w .t2")?.textContent);
+  if (!normalizedUsername || !normalizedInstallationId || !displayName) {
+    throw new Error("MyPIU could not identify the linked PIUGAME account.");
+  }
 
   return {
     schemaVersion: 1,
+    idempotencyKey: `browser-extension:${normalizedInstallationId}:${generatedAt}`,
+    installationId: normalizedInstallationId,
     source: "browser-extension",
+    appVersion: clean(appVersion),
     piuVersion: pages.version,
     generatedAt,
     profile: {
-      username: clean(username),
-      displayName: clean(profileDocument.querySelector(".profile_name .name_w .t2")?.textContent),
+      username: normalizedUsername,
+      displayName,
+      titleName: clean(profileDocument.querySelector(".profile_name .name_w .t1")?.textContent),
+      gameId: null,
+      pumpTag: displayName,
+      avatarUrl: backgroundImageURL(profileDocument.querySelector(".profile_img .re")?.getAttribute("style")),
       pumbilityScore: decimal(pumbilityDocument.querySelector(".pumbility_total_wrap .t2")?.textContent),
+      pp: decimal(profileDocument.querySelector(".profile_etc .tt")?.textContent),
+      rating: integer(profileDocument.querySelector(".play_data_wrap .my_w .num")?.textContent),
       playCount: integer(profileDocument.querySelector(".board_search .total .t2, .board_search .total_wrap .t2")?.textContent),
       clearCount: integer(profileDocument.querySelector(".clear_w .l_con .t1")?.textContent?.split("/")[0]),
-      totalCharts: integer(profileDocument.querySelector(".clear_w .l_con .t1")?.textContent?.split("/")[1])
+      totalCharts: integer(profileDocument.querySelector(".clear_w .l_con .t1")?.textContent?.split("/")[1]),
+      progressPercent: integer(profileDocument.querySelector(".clear_w .graph .num")?.textContent),
+      plateCounts: Object.fromEntries(
+        [...profileDocument.querySelectorAll(".plate_w .list li")].flatMap((item) => {
+          const code = item.querySelector("[data-type]")?.getAttribute("data-type")?.toLowerCase();
+          const count = integer(item.querySelector(".t_num")?.textContent);
+          return code && count !== null ? [[code, count]] : [];
+        })
+      ),
+      recentArcade: timeValue(profileDocument, "recently access games"),
+      lastAccess: timeValue(profileDocument, "last access date")
     },
     recentPlays: [...recentDocument.querySelectorAll(".recently_playeList > li")].flatMap(parseRecentPlay)
   };
@@ -34,6 +64,11 @@ function parseRecentPlay(item) {
     const source = [...item.querySelectorAll("img")].map((image) => image.getAttribute("src") ?? "").find((value) => value.includes(path));
     return source?.split("/").pop()?.replace(/\.[^.]+$/, "").toLowerCase() ?? null;
   };
+  const judgment = (name) => integer(
+    [...item.querySelectorAll("table.recently_play td")]
+      .find((cell) => cell.getAttribute("data-th")?.toLowerCase() === name)
+      ?.querySelector(".tx")?.textContent
+  );
 
   return [{
     songName,
@@ -43,8 +78,27 @@ function parseRecentPlay(item) {
     grade: assetCode("/grade/"),
     plate: assetCode("/plate/"),
     stageBreak,
+    judgments: {
+      perfect: judgment("perfect"),
+      great: judgment("great"),
+      good: judgment("good"),
+      bad: judgment("bad"),
+      miss: judgment("miss")
+    },
     playedAt: clean(item.querySelector(".recently_date_tt")?.textContent)
   }];
+}
+
+function backgroundImageURL(style) {
+  return style?.match(/url\(['"]?([^'")]+)/i)?.[1] ?? null;
+}
+
+function timeValue(document, prefix) {
+  const text = [...document.querySelectorAll(".time_w .tt")]
+    .map((element) => clean(element.textContent))
+    .find((value) => value?.toLowerCase().startsWith(prefix));
+  if (!text) return null;
+  return clean(text.slice(text.indexOf(":") + 1));
 }
 
 function documentFor(html) {
