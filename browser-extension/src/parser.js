@@ -65,7 +65,8 @@ function parseRecentPlay(item) {
   const level = [...item.querySelectorAll(".stepBall_in .numw img")]
     .map((image) => image.getAttribute("src")?.match(/(?:num_|_)(\d)\.[a-z]+$/i)?.[1] ?? "")
     .join("") || null;
-  if (!mode || !level) return [];
+  const playedAt = clean(item.querySelector(".recently_date_tt")?.textContent);
+  if (!mode || !level || !playedAt) return [];
   const assetCode = (path) => {
     const source = [...item.querySelectorAll("img")].map((image) => image.getAttribute("src") ?? "").find((value) => value.includes(path));
     return source?.split("/").pop()?.replace(/\.[^.]+$/, "").toLowerCase() ?? null;
@@ -91,7 +92,7 @@ function parseRecentPlay(item) {
       bad: judgment("bad"),
       miss: judgment("miss")
     },
-    playedAt: clean(item.querySelector(".recently_date_tt")?.textContent)
+    playedAt
   }];
 }
 
