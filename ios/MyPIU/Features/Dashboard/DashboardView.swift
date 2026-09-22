@@ -242,7 +242,7 @@ struct PerformanceChartRow: View {
     }
 }
 
-private struct ChartTokenBadge: View {
+struct ChartTokenBadge: View {
     let chartToken: String
 
     var body: some View {
@@ -255,7 +255,7 @@ private struct ChartTokenBadge: View {
     }
 }
 
-private func performanceGradeLabel(_ value: String?) -> String {
+func performanceGradeLabel(_ value: String?) -> String {
     var grade = value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
     if grade.hasPrefix("x_") { grade.removeFirst(2) }
     guard !grade.isEmpty else { return "Played" }
@@ -264,7 +264,7 @@ private func performanceGradeLabel(_ value: String?) -> String {
     return grade.replacingOccurrences(of: "_", with: " ").uppercased() + (isPlus ? "+" : "")
 }
 
-private func performanceDateLabel(_ value: String?) -> String {
+func performanceDateLabel(_ value: String?) -> String {
     guard let value else { return "Time unavailable" }
     let fractional = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
     let standard = Date.ISO8601FormatStyle()
