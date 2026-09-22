@@ -3,11 +3,28 @@ import Foundation
 
 @MainActor
 final class SongCatalogModel: ObservableObject {
+    private struct PendingFavoriteMutation {
+        let id: UUID
+        let previousValue: Bool
+        let requestedValue: Bool
+        let startingRevision: Int
+    }
+
+    private struct ConfirmedFavorite {
+        let value: Bool
+        let revision: Int
+    }
+
     typealias CatalogSearch = @MainActor (
         _ query: String,
         _ cursor: String?,
         _ version: PIUGameVersion
     ) async throws -> CatalogSearchPage
+    typealias FavoriteUpdate = @MainActor (
+        _ songSlug: String,
+        _ saved: Bool,
+        _ version: PIUGameVersion
+    ) async throws -> Bool
 
     enum LoadState: Equatable {
         case idle
@@ -22,6 +39,7 @@ final class SongCatalogModel: ObservableObject {
     @Published private(set) var paginationError: String?
     @Published private(set) var isShowingCachedData = false
     @Published private(set) var paginationGeneration = 0
+    @Published private(set) var favoriteError: String?
 
     private let cache: CatalogCache
     private var searchCatalog: CatalogSearch
@@ -30,6 +48,9 @@ final class SongCatalogModel: ObservableObject {
     private var currentQuery = ""
     private var currentVersion: PIUGameVersion = .phoenix2
     private var currentCacheScope: String?
+    private var favoriteMutations: [String: PendingFavoriteMutation] = [:]
+    private var confirmedFavorites: [String: ConfirmedFavorite] = [:]
+    private var favoriteRevision = 0
 
     init(apiClient: MyPIUAPIClient = MyPIUAPIClient(), cache: CatalogCache = CatalogCache()) {
         self.cache = cache
@@ -78,6 +99,12 @@ final class SongCatalogModel: ObservableObject {
         if let searchCatalog {
             self.searchCatalog = searchCatalog
         }
+        if cacheScope != currentCacheScope || version != currentVersion {
+            favoriteMutations.removeAll()
+            confirmedFavorites.removeAll()
+            favoriteRevision = 0
+            favoriteError = nil
+        }
         listingRequestID = nil
         currentQuery = normalizedQuery
         currentVersion = version
@@ -102,19 +129,29 @@ final class SongCatalogModel: ObservableObject {
             cached = nil
         }
         guard !Task.isCancelled, self.requestID == requestID else { return }
-        listing = cached?.listing ?? CatalogListing()
+        listing = listingApplyingCurrentFavorites(cached?.listing ?? CatalogListing())
         isShowingCachedData = cached != nil
+        let startingFavoriteRevision = favoriteRevision
         do {
             let page = try await self.searchCatalog(normalizedQuery, nil, version)
             guard !Task.isCancelled, self.requestID == requestID else { return }
-            listing.replace(with: page)
+            listing.replace(with: pageApplyingFavorites(page, confirmedAfter: startingFavoriteRevision))
             listingRequestID = requestID
             paginationGeneration += 1
             isShowingCachedData = false
             state = .loaded
             if let cacheScope {
-                try? await cache.save(listing, query: normalizedQuery, version: version, scope: cacheScope)
+                try? await cache.save(
+                    listingForCache(),
+                    query: normalizedQuery,
+                    version: version,
+                    scope: cacheScope
+                )
             }
+            guard self.requestID == requestID,
+                  currentVersion == version,
+                  currentCacheScope == cacheScope else { return }
+            discardConfirmedFavorites(through: startingFavoriteRevision)
         } catch is CancellationError {
             return
         } catch {
@@ -148,9 +185,120 @@ final class SongCatalogModel: ObservableObject {
         await loadMore()
     }
 
+    func song(slug: String) -> CatalogSong? {
+        listing.songs.first(where: { $0.slug == slug })
+    }
+
+    func isUpdatingFavorite(slug: String) -> Bool {
+        favoriteMutations[slug] != nil
+    }
+
+    func clearFavoriteError() {
+        favoriteError = nil
+    }
+
+    func setFavorite(
+        _ saved: Bool,
+        for song: CatalogSong,
+        using update: FavoriteUpdate
+    ) async {
+        guard favoriteMutations[song.slug] == nil else { return }
+        guard let cacheScope = currentCacheScope, cacheScope.hasPrefix("account:") else { return }
+
+        let mutation = PendingFavoriteMutation(
+            id: UUID(),
+            previousValue: song.isFavorite,
+            requestedValue: saved,
+            startingRevision: favoriteRevision
+        )
+        let version = currentVersion
+        guard listing.setFavorite(saved, forSlug: song.slug) else { return }
+
+        favoriteError = nil
+        favoriteMutations[song.slug] = mutation
+        defer {
+            if favoriteMutations[song.slug]?.id == mutation.id {
+                favoriteMutations[song.slug] = nil
+            }
+        }
+
+        do {
+            let authoritativeValue = try await update(song.slug, saved, version)
+            guard favoriteMutations[song.slug]?.id == mutation.id else {
+                try? await cache.setFavorite(
+                    authoritativeValue,
+                    forSlug: song.slug,
+                    version: version,
+                    scope: cacheScope
+                )
+                return
+            }
+            await applyConfirmedFavorite(
+                authoritativeValue,
+                slug: song.slug,
+                version: version,
+                cacheScope: cacheScope
+            )
+        } catch is CancellationError {
+            rollbackFavoriteIfCurrent(
+                mutation,
+                slug: song.slug,
+                version: version,
+                cacheScope: cacheScope
+            )
+        } catch {
+            let shouldRestoreCache = !hasConfirmedFavorite(
+                slug: song.slug,
+                newerThan: mutation.startingRevision
+            )
+            rollbackFavoriteIfCurrent(
+                mutation,
+                slug: song.slug,
+                version: version,
+                cacheScope: cacheScope
+            )
+            if shouldRestoreCache {
+                try? await cache.setFavorite(
+                    mutation.previousValue,
+                    forSlug: song.slug,
+                    version: version,
+                    scope: cacheScope
+                )
+            }
+            if currentVersion == version, currentCacheScope == cacheScope {
+                favoriteError = error.localizedDescription
+            }
+        }
+    }
+
+    func applyConfirmedFavorite(
+        _ isFavorite: Bool,
+        slug: String,
+        version: PIUGameVersion,
+        cacheScope: String
+    ) async {
+        if currentVersion == version, currentCacheScope == cacheScope {
+            if confirmedFavorites[slug]?.value != isFavorite {
+                favoriteRevision += 1
+                confirmedFavorites[slug] = ConfirmedFavorite(
+                    value: isFavorite,
+                    revision: favoriteRevision
+                )
+            }
+            listing.setFavorite(isFavorite, forSlug: slug)
+        }
+        try? await cache.setFavorite(
+            isFavorite,
+            forSlug: slug,
+            version: version,
+            scope: cacheScope
+        )
+    }
+
     private func loadMore() async {
         guard listingRequestID == requestID, !isLoadingMore, let cursor = listing.nextCursor else { return }
         let requestID = self.requestID
+        let startingFavoriteRevision = favoriteRevision
         isLoadingMore = true
         paginationError = nil
         defer {
@@ -162,20 +310,89 @@ final class SongCatalogModel: ObservableObject {
         do {
             let page = try await searchCatalog(currentQuery, cursor, currentVersion)
             guard !Task.isCancelled, self.requestID == requestID else { return }
-            listing.append(page, requestedCursor: cursor)
+            listing.append(
+                pageApplyingFavorites(page, confirmedAfter: startingFavoriteRevision),
+                requestedCursor: cursor
+            )
             if let currentCacheScope {
                 try? await cache.save(
-                    listing,
+                    listingForCache(),
                     query: currentQuery,
                     version: currentVersion,
                     scope: currentCacheScope
                 )
             }
+            guard self.requestID == requestID else { return }
+            discardConfirmedFavorites(through: startingFavoriteRevision)
         } catch is CancellationError {
             return
         } catch {
             guard self.requestID == requestID else { return }
             paginationError = error.localizedDescription
         }
+    }
+
+    private func rollbackFavoriteIfCurrent(
+        _ mutation: PendingFavoriteMutation,
+        slug: String,
+        version: PIUGameVersion,
+        cacheScope: String
+    ) {
+        guard favoriteMutations[slug]?.id == mutation.id,
+              !hasConfirmedFavorite(slug: slug, newerThan: mutation.startingRevision),
+              currentVersion == version,
+              currentCacheScope == cacheScope else { return }
+        listing.setFavorite(mutation.previousValue, forSlug: slug)
+    }
+
+    private func listingApplyingCurrentFavorites(_ source: CatalogListing) -> CatalogListing {
+        var listing = source
+        for (slug, favorite) in confirmedFavorites {
+            listing.setFavorite(favorite.value, forSlug: slug)
+        }
+        for (slug, mutation) in favoriteMutations {
+            listing.setFavorite(mutation.requestedValue, forSlug: slug)
+        }
+        return listing
+    }
+
+    private func pageApplyingFavorites(
+        _ source: CatalogSearchPage,
+        confirmedAfter startingRevision: Int
+    ) -> CatalogSearchPage {
+        var songs = source.songs
+        for index in songs.indices {
+            let slug = songs[index].slug
+            if let favorite = confirmedFavorites[slug], favorite.revision > startingRevision {
+                songs[index].isFavorite = favorite.value
+            }
+            if let mutation = favoriteMutations[slug] {
+                songs[index].isFavorite = mutation.requestedValue
+            }
+        }
+        return CatalogSearchPage(songs: songs, nextCursor: source.nextCursor, total: source.total)
+    }
+
+    private func listingForCache() -> CatalogListing {
+        var cacheListing = listing
+        for (slug, mutation) in favoriteMutations {
+            let value = if let favorite = confirmedFavorites[slug],
+                           favorite.revision > mutation.startingRevision {
+                favorite.value
+            } else {
+                mutation.previousValue
+            }
+            cacheListing.setFavorite(value, forSlug: slug)
+        }
+        return cacheListing
+    }
+
+    private func hasConfirmedFavorite(slug: String, newerThan revision: Int) -> Bool {
+        guard let favorite = confirmedFavorites[slug] else { return false }
+        return favorite.revision > revision
+    }
+
+    private func discardConfirmedFavorites(through revision: Int) {
+        confirmedFavorites = confirmedFavorites.filter { $0.value.revision > revision }
     }
 }

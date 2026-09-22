@@ -15,7 +15,7 @@ actor CatalogCache {
         let scope: String
         let query: String
         let version: PIUGameVersion
-        let songs: [CatalogSong]
+        var songs: [CatalogSong]
         let nextCursor: String?
         let total: Int
         let cachedAt: Date
@@ -73,6 +73,30 @@ actor CatalogCache {
         store.entries.sort { $0.cachedAt > $1.cachedAt }
         store.entries = Array(store.entries.prefix(Self.maximumEntries))
 
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        try encoder.encode(store).write(to: cacheURL, options: .atomic)
+    }
+
+    func setFavorite(
+        _ isFavorite: Bool,
+        forSlug slug: String,
+        version: PIUGameVersion,
+        scope: String
+    ) throws {
+        var store = readStore()
+        var didChange = false
+
+        for entryIndex in store.entries.indices
+        where store.entries[entryIndex].scope == scope
+            && store.entries[entryIndex].version == version {
+            guard let songIndex = store.entries[entryIndex].songs.firstIndex(where: { $0.slug == slug }) else {
+                continue
+            }
+            store.entries[entryIndex].songs[songIndex].isFavorite = isFavorite
+            didChange = true
+        }
+
+        guard didChange else { return }
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         try encoder.encode(store).write(to: cacheURL, options: .atomic)
     }

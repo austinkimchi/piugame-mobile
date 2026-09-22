@@ -36,7 +36,7 @@ struct CatalogSong: Codable, Equatable, Hashable, Identifiable, Sendable {
     let series: String?
     let tags: [String]
     let isPremium: Bool
-    let isFavorite: Bool
+    var isFavorite: Bool
     let recommendedChartToken: String?
 
     var id: String { slug }
@@ -100,6 +100,13 @@ struct CatalogListing: Equatable, Sendable {
         songs.append(contentsOf: page.songs.filter { knownSlugs.insert($0.slug).inserted })
         nextCursor = page.nextCursor == requestedCursor ? nil : page.nextCursor
         total = page.total
+    }
+
+    @discardableResult
+    mutating func setFavorite(_ isFavorite: Bool, forSlug slug: String) -> Bool {
+        guard let index = songs.firstIndex(where: { $0.slug == slug }) else { return false }
+        songs[index].isFavorite = isFavorite
+        return true
     }
 }
 
