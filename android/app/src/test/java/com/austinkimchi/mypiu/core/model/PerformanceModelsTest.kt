@@ -121,7 +121,6 @@ class PerformanceModelsTest {
                   "plate": "rg",
                   "mode": "S",
                   "level": "19",
-                  "songImageUrl": "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png",
                   "playedAt": "2026-09-22T07:20:00.000Z",
                   "stageBreak": false
                 }],
@@ -167,6 +166,7 @@ class PerformanceModelsTest {
                   "grade": "aa",
                   "mode": "S",
                   "level": "19",
+                  "songImageUrl": "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png",
                   "playedAt": "2026-09-22T07:20:00.000Z",
                   "stageBreak": false
                 }]
