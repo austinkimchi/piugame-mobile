@@ -26,19 +26,6 @@ struct SongChartHistoryView: View {
         }
         .navigationTitle(chartToken)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if appModel.isMyPIUConnected {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        refreshID = UUID()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .disabled(state == .loading)
-                    .accessibilityLabel("Refresh chart history")
-                }
-            }
-        }
         .task(id: request) {
             await load(request)
         }

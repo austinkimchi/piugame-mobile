@@ -496,7 +496,9 @@ private val ChartHistoryUiState?.orDefaultLoading: Boolean
 private fun ConnectionHeader(state: AppUiState) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = state.profile?.displayName ?: state.account?.name ?: "Your player dashboard",
+            text = state.profile?.displayName
+                ?: state.account?.username?.takeIf { it.isNotBlank() }
+                ?: "Your player dashboard",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
         )
@@ -580,7 +582,7 @@ private fun MyPiuConnection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HorizontalDivider()
-        SectionTitle("MyPIU account", state.account?.email)
+        SectionTitle("MyPIU account", state.account?.username?.takeIf { it.isNotBlank() } ?: "Username not set")
         if (state.isMyPiuConnected) {
             FilledTonalButton(onClick = onDisconnect, enabled = !state.isBusy) {
                 Icon(Icons.Default.AccountCircle, contentDescription = null)
