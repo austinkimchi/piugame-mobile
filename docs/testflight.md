@@ -1,18 +1,41 @@
 # TestFlight release checklist
 
-MyPIU is configured for automatic signing with bundle ID `com.austinkimchi.mypiu`. The repository intentionally does not contain an Apple Developer Team ID, signing certificate, provisioning profile, or App Store Connect credential.
+MyPIU is configured for automatic signing with bundle ID `com.austinkimchi.mypiu`. The repository intentionally does not contain an Apple Developer Team ID, signing certificate, provisioning profile, or App Store Connect credential. The protected `ios-testflight` GitHub environment supplies a short-lived runner with an App Store Connect team key; Xcode uses automatic signing and Apple's cloud-managed distribution certificate, so no distribution certificate private key is copied into GitHub.
 
 CI creates an unsigned generic-device Release archive and verifies the built app and embedded Safari extension identities, matching versions, dSYMs, privacy manifest, app icon assets, extension runtime, URL callback, background mode, and export-compliance declaration. The retained archive is packaging evidence only: it is not installable, cannot be uploaded to App Store Connect, and does not replace Apple's signed archive validation.
 
 ## One-time App Store Connect setup
 
-1. Create the explicit App ID and App Store Connect app record for `com.austinkimchi.mypiu`.
+1. Create explicit App IDs for `com.austinkimchi.mypiu` and `com.austinkimchi.mypiu.safari`, then create the App Store Connect app record for the main app ID.
 2. Set the iOS privacy policy URL to `https://mypiu.austin.kim/privacy`.
 3. Complete App Privacy using the same linked, non-tracking data categories declared in `PrivacyInfo.xcprivacy`: name, email address, user ID, device ID, gameplay content, and coarse location.
 4. Add a feedback email, beta description, and testing notes under TestFlight test information.
 5. Create an internal tester group. External testing requires beta app review.
 
-## Archive and upload
+## Protected release environment
+
+Create a GitHub environment named `ios-testflight`. Limit deployment branches to `main`, add a required reviewer who is able to verify the requested version and build number, and disable administrator bypass. Add these environment values:
+
+| Kind | Name | Value |
+| --- | --- | --- |
+| Variable | `APPLE_TEAM_ID` | The 10-character Apple Developer Team ID |
+| Variable | `APP_STORE_CONNECT_KEY_ID` | The 10-character App Store Connect team-key ID |
+| Variable | `APP_STORE_CONNECT_ISSUER_ID` | The App Store Connect issuer UUID |
+| Secret | `APP_STORE_CONNECT_PRIVATE_KEY` | The complete one-time-downloaded `AuthKey_*.p8` contents |
+
+Use a [team API key](https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api), because Apple does not permit individual API keys to access provisioning endpoints. Give it only the [role needed to upload builds](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds), and ensure the team configuration grants access to Certificates, Identifiers & Profiles and [cloud-managed app distribution](https://developer.apple.com/help/account/certificates/cloud-managed-certificates). Revoke the key immediately if it is exposed. The workflow validates the identifiers and EC private key before contacting Apple, writes the key with mode `0600`, and removes it even when a later step fails.
+
+## Automated archive and upload
+
+1. Increment `CURRENT_PROJECT_VERSION` in `ios/project.yml`. Keep `MARKETING_VERSION` as three period-separated integers, such as `0.1.0`, and leave it unchanged for replacement beta builds of the same release.
+2. Let the ordinary **iOS** workflow pass on `main`.
+3. Run **iOS signed release** from the Actions page on `main` with **Upload the verified IPA to App Store Connect** disabled. Approve the protected environment deployment after checking the commit and version.
+4. Download `mypiu-ios-signed-<version>-<build>`, run `shasum -a 256 -c MyPIU.ipa.sha256`, and retain the checksum with the release record.
+5. Run the workflow again with upload enabled. The workflow exports and verifies the exact IPA first, retains it for 14 days, then uploads it with Apple's Transporter and JWT authentication. An accepted upload still needs time to process before it appears in App Store Connect.
+
+The signed workflow verifies the app and embedded Safari extension bundle IDs, versions, signatures, App Store provisioning profiles, expiration dates, team ownership, and production entitlements. It never selects a TestFlight group or submits an external beta for review; those remain separate operator decisions in App Store Connect.
+
+## Local fallback
 
 Use Xcode 26 or newer on a Mac signed in to the Apple Developer account:
 
@@ -22,8 +45,6 @@ open ios/MyPIU.xcodeproj
 ```
 
 In Xcode, select the MyPIU and MyPIUSafariExtension targets, choose the same development team for both, and confirm automatic signing succeeds. Select a generic iOS device, then use **Product > Archive**. In Organizer, validate the archive and choose **Distribute App > TestFlight & App Store**.
-
-For each upload, increment `CURRENT_PROJECT_VERSION` in `project.yml`. Keep `MARKETING_VERSION` as three period-separated integers, such as `0.1.0`, and leave it unchanged for replacement beta builds of the same release.
 
 After changing either version, let the iOS CI archive gate pass before creating the signed archive. The CI artifact is named `mypiu-ios-unsigned-archive-<commit>` and contains `MyPIU.xcarchive.zip` plus its SHA-256 file. It is retained for seven days for comparison with the signed release candidate. After downloading it on macOS, run `shasum -a 256 -c MyPIU.xcarchive.zip.sha256`, then extract it with `ditto -x -k MyPIU.xcarchive.zip .` so bundle permissions and metadata are preserved.
 

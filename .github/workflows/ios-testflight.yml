@@ -1,0 +1,159 @@
+name: iOS signed release
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: Upload the verified IPA to App Store Connect
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-signed-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    environment: ios-testflight
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      APP_STORE_CONNECT_KEY_ID: ${{ vars.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ vars.APP_STORE_CONNECT_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Test iOS release helpers
+        run: ./scripts/test-ios-release-helpers.sh
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: browser-extension/package-lock.json
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project and Safari resources
+        run: ./scripts/generate-ios-project.sh
+      - name: Run tests
+        working-directory: ios
+        run: |
+          DEVICE_ID="$(python3 - <<'PY'
+          import json
+          import subprocess
+
+          devices = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"]))["devices"]
+          print(next(
+              device["udid"]
+              for runtime in devices.values()
+              for device in runtime
+              if device["isAvailable"] and device["name"].startswith("iPhone")
+          ))
+          PY
+          )"
+          xcodebuild \
+            -project MyPIU.xcodeproj \
+            -scheme MyPIU \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+      - name: Read release version
+        id: release_version
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -project MyPIU.xcodeproj \
+            -scheme MyPIU \
+            -configuration Release \
+            -showBuildSettings \
+            -json > "$RUNNER_TEMP/mypiu-release-settings.json"
+          MARKETING_VERSION="$(jq -er '.[] | select(.target == "MyPIU") | .buildSettings.MARKETING_VERSION' "$RUNNER_TEMP/mypiu-release-settings.json")"
+          BUILD_NUMBER="$(jq -er '.[] | select(.target == "MyPIU") | .buildSettings.CURRENT_PROJECT_VERSION' "$RUNNER_TEMP/mypiu-release-settings.json")"
+          grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' <<< "$MARKETING_VERSION"
+          grep -Eq '^[1-9][0-9]*$' <<< "$BUILD_NUMBER"
+          echo "marketing_version=$MARKETING_VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+      - name: Restore App Store Connect key
+        id: apple_key
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          key_path="$HOME/.private_keys/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"
+          ./scripts/prepare-app-store-connect-key.sh "$key_path"
+          echo "path=$key_path" >> "$GITHUB_OUTPUT"
+      - name: Archive signed iOS release
+        working-directory: ios
+        run: >-
+          xcodebuild
+          -project MyPIU.xcodeproj
+          -scheme MyPIU
+          -configuration Release
+          -destination 'generic/platform=iOS'
+          -archivePath "$RUNNER_TEMP/MyPIU.xcarchive"
+          -derivedDataPath "$RUNNER_TEMP/MyPIUSignedDerivedData"
+          -allowProvisioningUpdates
+          -authenticationKeyPath "${{ steps.apple_key.outputs.path }}"
+          -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID"
+          -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
+          DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
+          archive
+      - name: Verify signed archive contents
+        run: |
+          ./scripts/verify-ios-archive.sh \
+            "$RUNNER_TEMP/MyPIU.xcarchive" \
+            "${{ steps.release_version.outputs.marketing_version }}" \
+            "${{ steps.release_version.outputs.build_number }}"
+          codesign --verify --strict --verbose=2 \
+            "$RUNNER_TEMP/MyPIU.xcarchive/Products/Applications/MyPIU.app"
+      - name: Export App Store IPA
+        run: |
+          ./scripts/create-ios-export-options.sh \
+            "$RUNNER_TEMP/ExportOptions.plist" "$APPLE_TEAM_ID"
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/MyPIU.xcarchive" \
+            -exportPath "$RUNNER_TEMP/MyPIUExport" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "${{ steps.apple_key.outputs.path }}" \
+            -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
+      - name: Verify App Store IPA
+        id: ipa
+        run: |
+          ipa_path="$(find "$RUNNER_TEMP/MyPIUExport" -type f -name '*.ipa' -print -quit)"
+          test -n "$ipa_path"
+          ./scripts/verify-ios-ipa.sh \
+            "$ipa_path" \
+            "${{ steps.release_version.outputs.marketing_version }}" \
+            "${{ steps.release_version.outputs.build_number }}" \
+            "$APPLE_TEAM_ID"
+          (
+            cd "$(dirname "$ipa_path")"
+            shasum -a 256 "$(basename "$ipa_path")" > "$(basename "$ipa_path").sha256"
+          )
+          echo "path=$ipa_path" >> "$GITHUB_OUTPUT"
+      - name: Retain signed release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: mypiu-ios-signed-${{ steps.release_version.outputs.marketing_version }}-${{ steps.release_version.outputs.build_number }}
+          path: |
+            ${{ steps.ipa.outputs.path }}
+            ${{ steps.ipa.outputs.path }}.sha256
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload verified IPA to App Store Connect
+        if: inputs.upload_to_testflight
+        run: >-
+          xcrun iTMSTransporter
+          -m upload
+          -assetFile "${{ steps.ipa.outputs.path }}"
+          -apiKey "$APP_STORE_CONNECT_KEY_ID"
+          -apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+          -v informational
+      - name: Remove App Store Connect key
+        if: always()
+        run: rm -f "$HOME/.private_keys/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"
