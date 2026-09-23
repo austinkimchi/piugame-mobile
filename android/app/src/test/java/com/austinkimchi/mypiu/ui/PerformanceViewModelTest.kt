@@ -1,6 +1,7 @@
 package com.austinkimchi.mypiu.ui
 
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
+import com.austinkimchi.mypiu.core.model.MyPiuPerformanceSession
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.performance.PerformanceDataSource
 import com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal
@@ -141,6 +142,8 @@ class PerformanceViewModelTest {
                         dashboard("Replacement")
                     }
                 }
+
+                override suspend fun session(): MyPiuPerformanceSession? = null
             }
             val viewModel = PerformanceViewModel(source)
             viewModel.updateSession("one", connected = true)
@@ -180,18 +183,130 @@ class PerformanceViewModelTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun recentSessionLoadsSeparatelyAndRefreshesWithDashboard() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakePerformanceDataSource(
+                dashboards = ArrayDeque(listOf(dashboard("Player"), dashboard("Updated"))),
+                sessions = ArrayDeque(listOf(session(4), session(6))),
+            )
+            val viewModel = PerformanceViewModel(source)
+            viewModel.updateSession("one", connected = true)
+            viewModel.start()
+            advanceUntilIdle()
+
+            viewModel.loadSession()
+            advanceUntilIdle()
+            assertEquals(4, viewModel.state.value.session?.summary?.playCount)
+            assertTrue(viewModel.state.value.isSessionLoaded)
+
+            viewModel.refresh()
+            advanceUntilIdle()
+            assertEquals(6, viewModel.state.value.session?.summary?.playCount)
+            assertEquals(2, source.sessionRequests)
+            assertEquals("Updated", viewModel.state.value.dashboard?.profile?.displayName)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun accountSwitchClearsLoadedSession() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakePerformanceDataSource(
+                dashboards = ArrayDeque(listOf(dashboard("First"), dashboard("Second"))),
+                sessions = ArrayDeque(listOf(session(4))),
+            )
+            val viewModel = PerformanceViewModel(source)
+            viewModel.updateSession("one", connected = true)
+            viewModel.start()
+            advanceUntilIdle()
+            viewModel.loadSession()
+            advanceUntilIdle()
+            assertEquals(4, viewModel.state.value.session?.summary?.playCount)
+
+            viewModel.updateSession("two", connected = true)
+
+            assertNull(viewModel.state.value.session)
+            assertFalse(viewModel.state.value.isSessionLoaded)
+            advanceUntilIdle()
+            assertEquals("Second", viewModel.state.value.dashboard?.profile?.displayName)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun oldSessionAuthorizationFailureCannotInvalidateReplacementSession() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            lateinit var oldRequest: Continuation<MyPiuPerformanceSession?>
+            var dashboardRequests = 0
+            var sessionRequests = 0
+            val source = object : PerformanceDataSource {
+                override suspend fun dashboard(): MyPiuPerformanceDashboard =
+                    dashboard(if (dashboardRequests++ == 0) "First" else "Replacement")
+
+                override suspend fun session(): MyPiuPerformanceSession? {
+                    sessionRequests += 1
+                    return if (sessionRequests == 1) {
+                        suspendCoroutine { oldRequest = it }
+                    } else {
+                        session(6)
+                    }
+                }
+            }
+            val viewModel = PerformanceViewModel(source)
+            viewModel.updateSession("one", connected = true)
+            viewModel.start()
+            advanceUntilIdle()
+            viewModel.loadSession()
+            runCurrent()
+
+            viewModel.updateSession(null, connected = false)
+            viewModel.updateSession("one", connected = true)
+            advanceUntilIdle()
+            viewModel.loadSession()
+            advanceUntilIdle()
+            assertEquals(6, viewModel.state.value.session?.summary?.playCount)
+
+            oldRequest.resumeWithException(MyPiuApiException(401, "invalid_token"))
+            advanceUntilIdle()
+
+            assertTrue(viewModel.state.value.isConnected)
+            assertFalse(viewModel.state.value.sessionInvalidated)
+            assertEquals(6, viewModel.state.value.session?.summary?.playCount)
+            assertEquals("Replacement", viewModel.state.value.dashboard?.profile?.displayName)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }
 
 private class FakePerformanceDataSource(
     private val dashboards: ArrayDeque<MyPiuPerformanceDashboard> = ArrayDeque(),
+    private val sessions: ArrayDeque<MyPiuPerformanceSession?> = ArrayDeque(),
     private val failure: Exception? = null,
 ) : PerformanceDataSource {
     var requests = 0
+    var sessionRequests = 0
 
     override suspend fun dashboard(): MyPiuPerformanceDashboard {
         requests += 1
         failure?.let { throw it }
         return dashboards.removeFirst()
+    }
+
+    override suspend fun session(): MyPiuPerformanceSession? {
+        sessionRequests += 1
+        failure?.let { throw it }
+        return sessions.removeFirst()
     }
 }
 
@@ -209,4 +324,17 @@ private fun dashboard(name: String) = MyPiuPerformanceDashboard(
     ),
     canSync = true,
     mongoReady = true,
+)
+
+private fun session(playCount: Int) = MyPiuPerformanceSession(
+    summary = MyPiuPerformanceSession.Summary(
+        playCount = playCount,
+        clearCount = playCount,
+        failedCount = 0,
+        stageBreakCount = 0,
+        distinctCharts = playCount,
+        startedAt = "2026-09-22T06:00:00Z",
+        endedAt = "2026-09-22T07:00:00Z",
+        durationMinutes = 60,
+    ),
 )

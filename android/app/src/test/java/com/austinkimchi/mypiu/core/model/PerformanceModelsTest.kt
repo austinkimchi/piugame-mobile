@@ -22,6 +22,28 @@ class PerformanceModelsTest {
     }
 
     @Test
+    fun sessionDecodesSummaryAndSharedPlayContract() {
+        val response = json.decodeFromString<PerformanceSessionResponse>(SESSION_FIXTURE)
+        val session = response.session ?: error("Expected session")
+
+        assertEquals(4, session.summary.playCount)
+        assertEquals(75.0, session.summary.clearRate ?: 0.0, 0.001)
+        assertEquals("S19", session.plays.single().displayChartToken)
+        assertEquals(73, session.summary.durationMinutes)
+    }
+
+    @Test
+    fun sessionClearRateHandlesEmptyAndClampsInvalidCounts() {
+        val empty = sessionSummary(playCount = 0, clearCount = 0)
+        val overReported = sessionSummary(playCount = 2, clearCount = 3)
+        val negative = sessionSummary(playCount = 2, clearCount = -1)
+
+        assertNull(empty.clearRate)
+        assertEquals(100.0, overReported.clearRate ?: 0.0, 0.001)
+        assertEquals(0.0, negative.clearRate ?: -1.0, 0.001)
+    }
+
+    @Test
     fun progressSummaryUsesReportedPercentageAndSafeCounts() {
         val summary = PerformanceProgressSummary.from(
             clearCount = 640,
@@ -108,5 +130,46 @@ class PerformanceModelsTest {
               }
             }
         """.trimIndent()
+
+        val SESSION_FIXTURE = """
+            {
+              "session": {
+                "summary": {
+                  "playCount": 4,
+                  "clearCount": 3,
+                  "failedCount": 1,
+                  "stageBreakCount": 1,
+                  "averageScore": 932100,
+                  "bestScore": 978500,
+                  "distinctCharts": 3,
+                  "startedAt": "2026-09-22T06:07:00.000Z",
+                  "endedAt": "2026-09-22T07:20:00.000Z",
+                  "durationMinutes": 73
+                },
+                "plays": [{
+                  "id": "session-play-1",
+                  "songName": "Big Daddy",
+                  "chartToken": "big-daddy:s:19",
+                  "score": 928767,
+                  "grade": "aa",
+                  "mode": "S",
+                  "level": "19",
+                  "playedAt": "2026-09-22T07:20:00.000Z",
+                  "stageBreak": false
+                }]
+              }
+            }
+        """.trimIndent()
     }
 }
+
+private fun sessionSummary(playCount: Int, clearCount: Int) = MyPiuPerformanceSession.Summary(
+    playCount = playCount,
+    clearCount = clearCount,
+    failedCount = 0,
+    stageBreakCount = 0,
+    distinctCharts = 0,
+    startedAt = "2026-09-22T06:00:00Z",
+    endedAt = "2026-09-22T06:00:00Z",
+    durationMinutes = 0,
+)

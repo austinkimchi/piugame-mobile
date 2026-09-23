@@ -1,12 +1,14 @@
 package com.austinkimchi.mypiu.core.performance
 
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
+import com.austinkimchi.mypiu.core.model.MyPiuPerformanceSession
 import com.austinkimchi.mypiu.core.network.MyPiuApiClient
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.security.SessionStore
 
 interface PerformanceDataSource {
     suspend fun dashboard(): MyPiuPerformanceDashboard
+    suspend fun session(): MyPiuPerformanceSession?
 }
 
 class PerformanceRepository(
@@ -14,6 +16,8 @@ class PerformanceRepository(
     private val apiClient: MyPiuApiClient,
 ) : PerformanceDataSource {
     override suspend fun dashboard(): MyPiuPerformanceDashboard = withSession(apiClient::performance)
+
+    override suspend fun session(): MyPiuPerformanceSession? = withSession(apiClient::performanceSession)
 
     private suspend fun <Value> withSession(operation: suspend (String) -> Value): Value {
         val storedToken = sessionStore.accessToken()
