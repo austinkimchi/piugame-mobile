@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -61,6 +62,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -444,7 +449,7 @@ private fun ConnectionHeader(state: AppUiState) {
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ConnectionBadge("MyPIU", state.isMyPiuConnected)
             ConnectionBadge("PIUGAME", state.isPiuConnected)
         }
@@ -483,19 +488,32 @@ private fun StatusMessage(message: String) {
 
 @Composable
 private fun PlayerSummary(profile: PiuProfile) {
+    val metrics = listOf(
+        "Pumbility" to (profile.pumbilityScore?.let { NumberFormat.getNumberInstance().format(it) } ?: "-"),
+        "Rating" to (profile.rating?.let { NumberFormat.getIntegerInstance().format(it) } ?: "-"),
+        "Plays" to (profile.playCount?.let { NumberFormat.getIntegerInstance().format(it) } ?: "-"),
+    )
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle("Player summary", profile.titleName)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Metric("Pumbility", profile.pumbilityScore?.let { NumberFormat.getNumberInstance().format(it) } ?: "-", Modifier.weight(1f))
-            Metric("Rating", profile.rating?.let { NumberFormat.getIntegerInstance().format(it) } ?: "-", Modifier.weight(1f))
-            Metric("Plays", profile.playCount?.let { NumberFormat.getIntegerInstance().format(it) } ?: "-", Modifier.weight(1f))
+        if (LocalDensity.current.fontScale >= 1.5f) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                metrics.forEach { (label, value) -> Metric(label, value, Modifier.fillMaxWidth()) }
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                metrics.forEach { (label, value) -> Metric(label, value, Modifier.weight(1f)) }
+            }
         }
     }
 }
 
 @Composable
 private fun Metric(label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier, tonalElevation = 1.dp, shape = RoundedCornerShape(6.dp)) {
+    Surface(
+        modifier = modifier.semantics(mergeDescendants = true) {},
+        tonalElevation = 1.dp,
+        shape = RoundedCornerShape(6.dp),
+    ) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black, maxLines = 1)
@@ -519,7 +537,7 @@ private fun MyPiuConnection(
                 Text("Sign out")
             }
         } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 MyPiuAuthProvider.entries.forEach { provider ->
                     Button(onClick = { onAuthorize(provider) }, enabled = !state.isBusy) {
                         Icon(Icons.Default.AccountCircle, contentDescription = null)
@@ -601,7 +619,13 @@ private fun SectionTitle(title: String, detail: String?) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
         detail?.let {
-            Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                it,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -609,7 +633,17 @@ private fun SectionTitle(title: String, detail: String?) {
 @Composable
 private fun RecentPlayRow(play: RecentPlay) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clearAndSetSemantics {
+                contentDescription = listOf(
+                    play.songName,
+                    performanceChartTokenAccessibilityLabel(play.chartToken),
+                    if (play.stageBreak) "Failed" else play.score?.let(NumberFormat.getIntegerInstance()::format)
+                        ?: "Score unavailable",
+                    play.playedAt ?: "Time unavailable",
+                ).joinToString()
+            },
         shape = RoundedCornerShape(6.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {

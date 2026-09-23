@@ -61,6 +61,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -289,13 +293,21 @@ private fun CatalogSongRow(
             )
         }
         if (canFavorite) {
-            IconButton(onClick = onToggleFavorite, enabled = !isUpdatingFavorite) {
+            val favoriteLabel = if (song.isFavorite) "Remove from favorites" else "Add to favorites"
+            IconButton(
+                onClick = onToggleFavorite,
+                enabled = !isUpdatingFavorite,
+                modifier = Modifier.semantics {
+                    contentDescription = favoriteLabel
+                    if (isUpdatingFavorite) stateDescription = "Updating"
+                },
+            ) {
                 if (isUpdatingFavorite) {
                     CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
                 } else {
                     Icon(
                         imageVector = if (song.isFavorite) Icons.Default.Star else Icons.Outlined.Star,
-                        contentDescription = if (song.isFavorite) "Remove from favorites" else "Add to favorites",
+                        contentDescription = null,
                         tint = if (song.isFavorite) Color(0xFFC28719) else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -338,13 +350,21 @@ fun SongDetailScreen(
                     }
                     Spacer(Modifier.weight(1f))
                     if (isMyPiuConnected) {
-                        IconButton(onClick = onToggleFavorite, enabled = !isUpdatingFavorite) {
+                        val favoriteLabel = if (song.isFavorite) "Remove from favorites" else "Add to favorites"
+                        IconButton(
+                            onClick = onToggleFavorite,
+                            enabled = !isUpdatingFavorite,
+                            modifier = Modifier.semantics {
+                                contentDescription = favoriteLabel
+                                if (isUpdatingFavorite) stateDescription = "Updating"
+                            },
+                        ) {
                             if (isUpdatingFavorite) {
                                 CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
                             } else {
                                 Icon(
                                     if (song.isFavorite) Icons.Default.Star else Icons.Outlined.Star,
-                                    contentDescription = if (song.isFavorite) "Remove from favorites" else "Add to favorites",
+                                    contentDescription = null,
                                     tint = if (song.isFavorite) Color(0xFFC28719) else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -442,13 +462,32 @@ private fun ChartBadge(token: String, isRecommended: Boolean, enabled: Boolean, 
         modifier = Modifier
             .widthIn(min = 64.dp)
             .height(48.dp)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+            .then(if (enabled) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .semantics {
+                contentDescription = performanceChartTokenAccessibilityLabel(token)
+                if (isRecommended) stateDescription = "Recommended chart"
+            },
         shape = RoundedCornerShape(6.dp),
         color = color,
         border = if (isRecommended) BorderStroke(3.dp, Color(0xFFFFC247)) else null,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(token, color = Color.White, fontWeight = FontWeight.Black)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (isRecommended) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+                Text(
+                    token,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.clearAndSetSemantics {},
+                )
+            }
         }
     }
 }
@@ -537,7 +576,26 @@ private fun SummaryRow(label: String, value: String) {
 
 @Composable
 private fun AttemptRow(attempt: SongChartPerformance.Attempt) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val result = if (attempt.isFailed) "Failed" else scoreLabel(attempt.score)
+    val judgments = listOf(
+        "Perfect" to attempt.judgments.perfect,
+        "Great" to attempt.judgments.great,
+        "Good" to attempt.judgments.good,
+        "Bad" to attempt.judgments.bad,
+        "Miss" to attempt.judgments.miss,
+    ).mapNotNull { (label, value) -> value?.let { "$label ${NumberFormat.getIntegerInstance().format(it)}" } }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clearAndSetSemantics {
+                contentDescription = listOf(
+                    gradeLabel(attempt.grade),
+                    result,
+                    dateLabel(attempt.playedAt),
+                ).plus(judgments).joinToString()
+            },
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(gradeLabel(attempt.grade), fontWeight = FontWeight.Bold)
