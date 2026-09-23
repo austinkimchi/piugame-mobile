@@ -12,7 +12,7 @@ MyPIU publishes `com.austinkimchi.mypiu` as an Android App Bundle. Google Play A
 
 ## Protected GitHub environment
 
-Create an `android-beta` environment with deployment reviewers, then add these environment secrets:
+The `android-beta` environment exists and its custom deployment policy permits only `main`. The current GitHub billing plan does not provide required-reviewer protection rules for private repositories; add reviewers if the plan changes. After Play Console enrollment and upload-key creation, add these environment secrets:
 
 | Secret | Value |
 | --- | --- |
@@ -37,7 +37,7 @@ Keep the original keystore and passwords in an independent secure backup. Never 
 
 1. Run the **Android beta bundle** workflow from the Actions page.
 2. Enter a semantic `version_name` and a `version_code` greater than every code previously uploaded to Play but no greater than Play's `2100000000` limit.
-3. Approve the protected environment deployment.
+3. If a required-reviewer rule becomes available later, approve the environment deployment.
 4. Download and extract the `mypiu-android-beta-<version>-<code>` artifact, then run `sha256sum -c app-release.aab.sha256` in the extracted directory.
 5. Upload `app-release.aab` to the Play internal testing track, add release notes, review the generated device support, and roll out to internal testers.
 

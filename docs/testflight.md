@@ -1,6 +1,6 @@
 # TestFlight release checklist
 
-MyPIU is configured for automatic signing with bundle ID `com.austinkimchi.mypiu`. The repository intentionally does not contain an Apple Developer Team ID, signing certificate, provisioning profile, or App Store Connect credential. The protected `ios-testflight` GitHub environment supplies a short-lived runner with an App Store Connect team key; Xcode uses automatic signing and Apple's cloud-managed distribution certificate, so no distribution certificate private key is copied into GitHub.
+MyPIU is configured for automatic signing with bundle ID `com.austinkimchi.mypiu`. The repository intentionally does not contain an Apple Developer Team ID, signing certificate, provisioning profile, or App Store Connect credential. Once configured, the `ios-testflight` GitHub environment will supply a short-lived runner with an App Store Connect team key; Xcode uses automatic signing and Apple's cloud-managed distribution certificate, so no distribution certificate private key is copied into GitHub.
 
 CI creates an unsigned generic-device Release archive and verifies the built app and embedded Safari extension identities, matching versions, dSYMs, privacy manifest, app icon assets, extension runtime, URL callback, background mode, and export-compliance declaration. The retained archive is packaging evidence only: it is not installable, cannot be uploaded to App Store Connect, and does not replace Apple's signed archive validation.
 
@@ -14,7 +14,9 @@ CI creates an unsigned generic-device Release archive and verifies the built app
 
 ## Protected release environment
 
-Create a GitHub environment named `ios-testflight`. Limit deployment branches to `main`, add a required reviewer who is able to verify the requested version and build number, and disable administrator bypass. Add these environment values:
+The `ios-testflight` GitHub environment exists and its custom deployment policy permits only `main`. The current GitHub billing plan does not provide required-reviewer protection rules for private repositories. If the plan changes, add a reviewer who can verify the requested version and build number and disable administrator bypass. Until then, the workflow's `main` guard, manual dispatch, and export-only default are the available release controls. See [GitHub's environment availability notes](https://docs.github.com/en/rest/deployments/environments#about-deployment-environments).
+
+After Apple Developer enrollment, add these environment values:
 
 | Kind | Name | Value |
 | --- | --- | --- |
@@ -29,7 +31,7 @@ Use a [team API key](https://developer.apple.com/documentation/appstoreconnectap
 
 1. Increment `CURRENT_PROJECT_VERSION` in `ios/project.yml`. Keep `MARKETING_VERSION` as three period-separated integers, such as `0.1.0`, and leave it unchanged for replacement beta builds of the same release.
 2. Let the ordinary **iOS** workflow pass on `main`.
-3. Run **iOS signed release** from the Actions page on `main` with **Upload the verified IPA to App Store Connect** disabled. Approve the protected environment deployment after checking the commit and version.
+3. Check the commit and version, then run **iOS signed release** from the Actions page on `main` with **Upload the verified IPA to App Store Connect** disabled. If a required-reviewer rule becomes available later, approve the environment deployment separately.
 4. Download `mypiu-ios-signed-<version>-<build>`, verify both checksum files with `shasum -a 256 -c`, and retain the IPA plus `MyPIU.xcarchive.zip` with the release record. GitHub retains this recovery copy for 90 days, but it is not a permanent archive.
 5. Run the workflow again with upload enabled. The workflow exports and verifies the IPA, retains it with the matching archive and dSYMs, then gives that exact IPA to Apple's Transporter. An accepted upload still needs time to process before it appears in App Store Connect.
 
