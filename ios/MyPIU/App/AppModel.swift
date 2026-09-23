@@ -3,6 +3,12 @@ import Combine
 
 @MainActor
 final class AppModel: ObservableObject {
+    private struct RestorationOperation {
+        let id: UUID
+        let task: Task<Void, Never>
+        var observers: [UUID: AsyncStream<Void>.Continuation]
+    }
+
     struct FavoriteChange: Equatable, Identifiable, Sendable {
         let id: UUID
         let accountID: String
@@ -59,7 +65,7 @@ final class AppModel: ObservableObject {
     private var volatilePendingRevocations: [MyPIUAccessToken] = []
     private var performanceRequestID = UUID()
     private var hasRestored = false
-    private var restorationTask: Task<Void, Never>?
+    private var restorationOperation: RestorationOperation?
     private var isPIUGameSyncInFlight = false
     private var lastPIUGameSyncAttemptAt: Date?
     private var isRetryingPendingRevocations = false
@@ -101,20 +107,71 @@ final class AppModel: ObservableObject {
     }
 
     func restore() async {
-        guard !hasRestored else { return }
-        if let restorationTask {
-            await restorationTask.value
-            return
+        while !hasRestored && !Task.isCancelled {
+            await observeRestoration()
+        }
+    }
+
+    private func observeRestoration() async {
+        let operationID = startRestorationIfNeeded()
+        let observerID = UUID()
+        let updates = AsyncStream<Void> { continuation in
+            guard var operation = restorationOperation, operation.id == operationID else {
+                continuation.finish()
+                return
+            }
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.removeRestorationObserver(observerID, operationID: operationID)
+                }
+            }
+            operation.observers[observerID] = continuation
+            restorationOperation = operation
         }
 
+        for await _ in updates {}
+    }
+
+    private func startRestorationIfNeeded() -> UUID {
+        if let restorationOperation {
+            return restorationOperation.id
+        }
+
+        let operationID = UUID()
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.restoreOnce()
+            self.finishRestoration(
+                operationID,
+                completed: !Task.isCancelled
+            )
         }
-        restorationTask = task
-        await task.value
-        restorationTask = nil
-        hasRestored = true
+        restorationOperation = RestorationOperation(
+            id: operationID,
+            task: task,
+            observers: [:]
+        )
+        return operationID
+    }
+
+    private func finishRestoration(_ operationID: UUID, completed: Bool) {
+        guard let operation = restorationOperation, operation.id == operationID else { return }
+        restorationOperation = nil
+        if completed {
+            hasRestored = true
+        }
+        for observer in operation.observers.values {
+            observer.finish()
+        }
+    }
+
+    private func removeRestorationObserver(_ observerID: UUID, operationID: UUID) {
+        guard var operation = restorationOperation, operation.id == operationID else { return }
+        operation.observers[observerID] = nil
+        if operation.observers.isEmpty {
+            operation.task.cancel()
+        }
+        restorationOperation = operation
     }
 
     private func restoreOnce() async {
