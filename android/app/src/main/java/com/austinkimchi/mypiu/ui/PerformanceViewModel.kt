@@ -36,11 +36,7 @@ class PerformanceViewModel(
             refreshSignal.revision.collect { revision ->
                 if (revision == observedRefreshRevision) return@collect
                 observedRefreshRevision = revision
-                if (started) {
-                    val refreshSession = mutableState.value.isSessionLoaded
-                    refresh()
-                    if (refreshSession) loadSession(force = true)
-                }
+                if (started) refresh()
             }
         }
     }
@@ -68,8 +64,10 @@ class PerformanceViewModel(
     }
 
     fun refresh() {
-        if (!mutableState.value.isConnected) return
+        val snapshot = mutableState.value
+        if (!snapshot.isConnected) return
         reload()
+        if (snapshot.isSessionLoaded || snapshot.isSessionLoading) reloadSession()
     }
 
     fun loadSession(force: Boolean = false) {

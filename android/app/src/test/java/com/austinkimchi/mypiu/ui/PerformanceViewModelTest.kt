@@ -185,12 +185,12 @@ class PerformanceViewModelTest {
     }
 
     @Test
-    fun recentSessionLoadsSeparatelyAndCanBeRefreshed() = runTest {
+    fun recentSessionLoadsSeparatelyAndRefreshesWithDashboard() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         try {
             val source = FakePerformanceDataSource(
-                dashboards = ArrayDeque(listOf(dashboard("Player"))),
+                dashboards = ArrayDeque(listOf(dashboard("Player"), dashboard("Updated"))),
                 sessions = ArrayDeque(listOf(session(4), session(6))),
             )
             val viewModel = PerformanceViewModel(source)
@@ -203,11 +203,11 @@ class PerformanceViewModelTest {
             assertEquals(4, viewModel.state.value.session?.summary?.playCount)
             assertTrue(viewModel.state.value.isSessionLoaded)
 
-            viewModel.loadSession(force = true)
+            viewModel.refresh()
             advanceUntilIdle()
             assertEquals(6, viewModel.state.value.session?.summary?.playCount)
             assertEquals(2, source.sessionRequests)
-            assertEquals("Player", viewModel.state.value.dashboard?.profile?.displayName)
+            assertEquals("Updated", viewModel.state.value.dashboard?.profile?.displayName)
         } finally {
             Dispatchers.resetMain()
         }
