@@ -32,7 +32,7 @@ struct RecentPlayPresentation: Equatable, Identifiable {
         chartToken = play.displayChartToken
         score = play.score
         grade = play.grade
-        plate = play.plate
+        plate = play.plate ?? snapshotPlay?.plate
         stageBreak = play.stageBreak
         judgments = snapshotPlay?.judgments ?? JudgmentCounts(
             perfect: nil,
@@ -57,7 +57,7 @@ struct RecentPlayPresentation: Equatable, Identifiable {
             judgments.perfect.map { PlayJudgmentValue(label: "Perfect", value: $0, tint: AppTheme.accent) },
             judgments.great.map { PlayJudgmentValue(label: "Great", value: $0, tint: AppTheme.info) },
             judgments.good.map { PlayJudgmentValue(label: "Good", value: $0, tint: AppTheme.warning) },
-            judgments.bad.map { PlayJudgmentValue(label: "Bad", value: $0, tint: .orange) },
+            judgments.bad.map { PlayJudgmentValue(label: "Bad", value: $0, tint: AppTheme.judgmentBad) },
             judgments.miss.map { PlayJudgmentValue(label: "Miss", value: $0, tint: AppTheme.danger) }
         ].compactMap { $0 }
     }
@@ -158,7 +158,6 @@ struct RecentPlayDetailView: View {
                 if let plate = displayAssetName(play.plate) {
                     resultChip(plate)
                 }
-                resultChip(performanceGradeLabel(play.grade))
             }
         }
         .padding(18)

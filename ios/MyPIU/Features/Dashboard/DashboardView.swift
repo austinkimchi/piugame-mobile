@@ -427,7 +427,7 @@ struct ChartTokenBadge: View {
             .font(.caption.bold().monospaced())
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
-            .background(AppTheme.ink)
+            .background(AppTheme.levelBadgeBackground)
             .foregroundStyle(.white)
             .accessibilityLabel(performanceChartTokenAccessibilityLabel(chartToken))
     }

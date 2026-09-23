@@ -26,6 +26,8 @@ struct SongsView: View {
     @EnvironmentObject private var appModel: AppModel
     @ObservedObject private var catalog: SongCatalogModel
     @Binding private var query: String
+    @State private var filters = CatalogFilters.empty
+    @State private var showingFilters = false
     private let versionOverride: PIUGameVersion?
     private let feed: Feed
 
@@ -88,6 +90,26 @@ struct SongsView: View {
         }
         .modifier(CatalogSearchModifier(query: $query, enabled: feed == .catalog))
         .toolbar {
+            if feed == .catalog {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingFilters = true
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                            if filters.selectionCount > 0 {
+                                Text(filters.selectionCount.formatted())
+                                    .font(.caption2.bold().monospacedDigit())
+                            }
+                        }
+                    }
+                    .accessibilityLabel(
+                        filters.selectionCount == 0
+                            ? "Filter songs"
+                            : "Filter songs, \(filters.selectionCount) selected"
+                    )
+                }
+            }
             if feed == .catalog, appModel.isMyPIUConnected {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
@@ -98,6 +120,12 @@ struct SongsView: View {
                     .accessibilityLabel("Favorite songs")
                 }
             }
+        }
+        .sheet(isPresented: $showingFilters) {
+            SongFilterSheet(
+                filters: $filters,
+                options: catalog.listing.filterOptions
+            )
         }
         .alert(
             "Couldn't Update Favorite",
@@ -117,14 +145,30 @@ struct SongsView: View {
         .task(id: CatalogRequest(
             query: query,
             version: catalogVersion,
+            filters: filters,
             cacheScope: appModel.catalogCacheScope
         )) {
             await catalog.loadIfNeeded(
                 query: query,
                 version: catalogVersion,
+                filters: filters,
                 cacheScope: appModel.catalogCacheScope,
                 debounce: feed == .catalog && !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                using: appModel.searchCatalog
+                using: { query, cursor, version in
+                    try await appModel.searchCatalog(
+                        query: query,
+                        cursor: cursor,
+                        version: version
+                    )
+                },
+                usingFiltered: { query, cursor, version, filters in
+                    try await appModel.searchCatalog(
+                        query: query,
+                        cursor: cursor,
+                        version: version,
+                        filters: filters
+                    )
+                }
             )
         }
         .onReceive(appModel.favoriteChanges) { change in
@@ -194,9 +238,24 @@ struct SongsView: View {
             await catalog.reload(
                 query: query,
                 version: catalogVersion,
+                filters: filters,
                 cacheScope: appModel.catalogCacheScope,
                 debounce: false,
-                using: appModel.searchCatalog
+                using: { query, cursor, version in
+                    try await appModel.searchCatalog(
+                        query: query,
+                        cursor: cursor,
+                        version: version
+                    )
+                },
+                usingFiltered: { query, cursor, version, filters in
+                    try await appModel.searchCatalog(
+                        query: query,
+                        cursor: cursor,
+                        version: version,
+                        filters: filters
+                    )
+                }
             )
         }
     }
@@ -293,7 +352,202 @@ private struct CatalogSearchModifier: ViewModifier {
 private struct CatalogRequest: Hashable {
     let query: String
     let version: PIUGameVersion
+    let filters: CatalogFilters
     let cacheScope: String?
+}
+
+private struct SongFilterSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var filters: CatalogFilters
+    let options: CatalogFilterOptions
+
+    private let levelColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("LEVEL MATCHING") {
+                    Picker("Match selected levels", selection: $filters.levelMode) {
+                        Text("All").tag(CatalogLevelMode.and)
+                        Text("Any").tag(CatalogLevelMode.or)
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                if !options.charts.isEmpty {
+                    Section("CHART TYPE") {
+                        ForEach(options.charts, id: \.self) { value in
+                            filterRow(
+                                label: chartLabel(value),
+                                selected: filters.charts.contains(value)
+                            ) {
+                                toggle(value, at: \.charts)
+                            }
+                        }
+                    }
+                }
+
+                if !options.levels.isEmpty {
+                    Section("LEVEL") {
+                        LazyVGrid(columns: levelColumns, spacing: 8) {
+                            ForEach(options.levels, id: \.self) { value in
+                                FilterChip(
+                                    label: value.uppercased(),
+                                    selected: filters.levels.contains(value)
+                                ) {
+                                    toggle(value, at: \.levels)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                if !options.folders.isEmpty {
+                    Section {
+                        NavigationLink {
+                            MultiSelectFilterView(
+                                title: "Folders",
+                                options: options.folders,
+                                selection: $filters.folders
+                            )
+                        } label: {
+                            filterNavigationLabel("Folder", count: filters.folders.count)
+                        }
+                    }
+                }
+
+                if !options.series.isEmpty {
+                    Section {
+                        NavigationLink {
+                            MultiSelectFilterView(
+                                title: "Series",
+                                options: options.series,
+                                selection: $filters.series
+                            )
+                        } label: {
+                            filterNavigationLabel("Series", count: filters.series.count)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Filter songs")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Reset") {
+                        filters = .empty
+                    }
+                    .disabled(filters.isEmpty)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func filterRow(
+        label: String,
+        selected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(label)
+                    .foregroundStyle(AppTheme.ink)
+                Spacer()
+                if selected {
+                    Image(systemName: "checkmark")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppTheme.accent)
+                }
+            }
+        }
+    }
+
+    private func filterNavigationLabel(_ title: String, count: Int) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            if count > 0 {
+                Text(count.formatted())
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func chartLabel(_ value: String) -> String {
+        switch value.lowercased() {
+        case "singles": "Singles"
+        case "doubles": "Doubles"
+        case "co-op": "Co-op"
+        default: value.uppercased()
+        }
+    }
+
+    private func toggle(
+        _ value: String,
+        at keyPath: WritableKeyPath<CatalogFilters, [String]>
+    ) {
+        var values = filters[keyPath: keyPath]
+        if let index = values.firstIndex(of: value) {
+            values.remove(at: index)
+        } else {
+            values.append(value)
+        }
+        filters[keyPath: keyPath] = values
+    }
+}
+
+private struct MultiSelectFilterView: View {
+    let title: String
+    let options: [String]
+    @Binding var selection: [String]
+
+    var body: some View {
+        List(options, id: \.self) { value in
+            Button {
+                if let index = selection.firstIndex(of: value) {
+                    selection.remove(at: index)
+                } else {
+                    selection.append(value)
+                }
+            } label: {
+                HStack {
+                    Text(value)
+                        .foregroundStyle(AppTheme.ink)
+                    Spacer()
+                    if selection.contains(value) {
+                        Image(systemName: "checkmark")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
+            }
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct FilterChip: View {
+    let label: String
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.caption.bold().monospaced())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .foregroundStyle(selected ? Color.white : AppTheme.ink)
+                .background(selected ? AppTheme.levelBadgeBackground : AppTheme.pageBackground)
+                .overlay(Rectangle().stroke(selected ? AppTheme.levelBadgeBackground : AppTheme.border))
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 private struct CatalogSongRow: View {

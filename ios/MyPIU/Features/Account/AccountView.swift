@@ -26,18 +26,10 @@ struct AccountView: View {
                         LabeledContent("Linked player", value: player.displayName)
                     }
                     myPIUStatus
-                    Button("Disconnect MyPIU", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
-                        Task { await model.disconnectMyPIU() }
-                    }
-                    .disabled(model.isMyPIUBusy)
                 } else if model.isMyPIUConnected {
                     myPIUStatus
                     Button("Retry MyPIU", systemImage: "arrow.clockwise") {
                         Task { await model.retryMyPIU() }
-                    }
-                    .disabled(model.isMyPIUBusy)
-                    Button("Disconnect MyPIU", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
-                        Task { await model.disconnectMyPIU() }
                     }
                     .disabled(model.isMyPIUBusy)
                 } else {
@@ -50,15 +42,6 @@ struct AccountView: View {
                     }
                     .disabled(model.isMyPIUBusy)
                     myPIUStatus
-                }
-            }
-
-            if model.isMyPIUConnected {
-                Section("ACCOUNT DATA") {
-                    Button("Delete MyPIU Account", systemImage: "trash", role: .destructive) {
-                        showingAccountDeletion = true
-                    }
-                    .disabled(model.isMyPIUBusy)
                 }
             }
 
@@ -75,9 +58,6 @@ struct AccountView: View {
                     }
                     .disabled(model.state == .syncing)
 
-                    Button("Disconnect PIUGAME", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
-                        model.disconnect()
-                    }
                 }
             } else {
                 Section("PIUGAME") {
@@ -120,6 +100,27 @@ struct AccountView: View {
                     Label("Privacy Policy", systemImage: "hand.raised")
                 }
                 LabeledContent("Version", value: applicationInfo.displayVersion)
+            }
+
+            if model.isConnected || model.isMyPIUConnected {
+                Section("CONNECTED ACCOUNTS") {
+                    if model.isConnected {
+                        Button("Disconnect PIUGAME", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                            model.disconnect()
+                        }
+                    }
+                    if model.isMyPIUConnected {
+                        Button("Disconnect MyPIU", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                            Task { await model.disconnectMyPIU() }
+                        }
+                        .disabled(model.isMyPIUBusy)
+
+                        Button("Delete MyPIU Account", systemImage: "trash", role: .destructive) {
+                            showingAccountDeletion = true
+                        }
+                        .disabled(model.isMyPIUBusy)
+                    }
+                }
             }
         }
         .navigationTitle("Account")

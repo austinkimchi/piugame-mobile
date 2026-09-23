@@ -166,7 +166,7 @@ final class PerformanceTests: XCTestCase {
             chartToken: "battle-no-1:s:19",
             score: 954_848,
             grade: "s",
-            plate: "rg",
+            plate: nil,
             mode: "S",
             level: "19",
             playedAt: "2026-09-22T07:20:00.000Z",
@@ -190,6 +190,7 @@ final class PerformanceTests: XCTestCase {
 
         XCTAssertEqual(match, snapshotPlay)
         XCTAssertEqual(presentation.songImageURL, snapshotPlay.songImageURL)
+        XCTAssertEqual(presentation.plate, "rg")
         XCTAssertEqual(presentation.judgments.perfect, 900)
         XCTAssertEqual(presentation.judgmentValues.reduce(0) { $0 + $1.value }, 926)
     }

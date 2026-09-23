@@ -366,10 +366,16 @@ final class AppModel: ObservableObject {
     func searchCatalog(
         query: String,
         cursor: String?,
-        version: PIUGameVersion
+        version: PIUGameVersion,
+        filters: CatalogFilters = .empty
     ) async throws -> CatalogSearchPage {
         guard let token = accessToken else {
-            return try await apiClient.searchCatalog(query: query, cursor: cursor, version: version)
+            return try await apiClient.searchCatalog(
+                query: query,
+                cursor: cursor,
+                version: version,
+                filters: filters
+            )
         }
         guard !token.isExpired else {
             clearMyPIUSession()
@@ -381,6 +387,7 @@ final class AppModel: ObservableObject {
                 query: query,
                 cursor: cursor,
                 version: version,
+                filters: filters,
                 accessToken: token.value
             )
             guard accessToken?.value == token.value else {

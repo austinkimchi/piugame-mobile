@@ -74,25 +74,95 @@ struct CatalogSearchPage: Codable, Equatable, Sendable {
     let songs: [CatalogSong]
     let nextCursor: String?
     let total: Int
+    let filterOptions: CatalogFilterOptions
+
+    init(
+        songs: [CatalogSong],
+        nextCursor: String?,
+        total: Int,
+        filterOptions: CatalogFilterOptions = .empty
+    ) {
+        self.songs = songs
+        self.nextCursor = nextCursor
+        self.total = total
+        self.filterOptions = filterOptions
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case songs
+        case nextCursor
+        case total
+        case filterOptions
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        songs = try container.decode([CatalogSong].self, forKey: .songs)
+        nextCursor = try container.decodeIfPresent(String.self, forKey: .nextCursor)
+        total = try container.decode(Int.self, forKey: .total)
+        filterOptions = try container.decodeIfPresent(CatalogFilterOptions.self, forKey: .filterOptions) ?? .empty
+    }
+}
+
+struct CatalogFilterOptions: Codable, Equatable, Sendable {
+    let folders: [String]
+    let series: [String]
+    let levels: [String]
+    let charts: [String]
+
+    static let empty = CatalogFilterOptions(folders: [], series: [], levels: [], charts: [])
+}
+
+enum CatalogLevelMode: String, CaseIterable, Identifiable, Sendable {
+    case and
+    case or
+
+    var id: String { rawValue }
+}
+
+struct CatalogFilters: Equatable, Hashable, Sendable {
+    var folders: [String] = []
+    var series: [String] = []
+    var levels: [String] = []
+    var charts: [String] = []
+    var levelMode: CatalogLevelMode = .and
+
+    static let empty = CatalogFilters()
+
+    var isEmpty: Bool {
+        folders.isEmpty && series.isEmpty && levels.isEmpty && charts.isEmpty
+    }
+
+    var selectionCount: Int {
+        folders.count + series.count + levels.count + charts.count
+    }
 }
 
 struct CatalogListing: Equatable, Sendable {
     private(set) var songs: [CatalogSong] = []
     private(set) var nextCursor: String?
     private(set) var total = 0
+    private(set) var filterOptions: CatalogFilterOptions = .empty
 
     var hasMore: Bool { nextCursor != nil }
 
-    init(songs: [CatalogSong] = [], nextCursor: String? = nil, total: Int = 0) {
+    init(
+        songs: [CatalogSong] = [],
+        nextCursor: String? = nil,
+        total: Int = 0,
+        filterOptions: CatalogFilterOptions = .empty
+    ) {
         self.songs = songs
         self.nextCursor = nextCursor
         self.total = total
+        self.filterOptions = filterOptions
     }
 
     mutating func replace(with page: CatalogSearchPage) {
         songs = page.songs
         nextCursor = page.nextCursor
         total = page.total
+        filterOptions = page.filterOptions
     }
 
     mutating func append(_ page: CatalogSearchPage, requestedCursor: String) {
@@ -100,6 +170,7 @@ struct CatalogListing: Equatable, Sendable {
         songs.append(contentsOf: page.songs.filter { knownSlugs.insert($0.slug).inserted })
         nextCursor = page.nextCursor == requestedCursor ? nil : page.nextCursor
         total = page.total
+        filterOptions = page.filterOptions
     }
 
     @discardableResult

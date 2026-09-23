@@ -79,6 +79,18 @@ final class PIUHTMLParserTests: XCTestCase {
         XCTAssertEqual(try parser.parsePumbilityScore(html: html), 15_770.43)
     }
 
+    func testPumbilityPrefersTotalOverPerChartContribution() throws {
+        let html = """
+        <div class="pumbility_total_wrap">
+          <div class="info-wrap"><div class="score">
+            15,770<span class="pumbility-point-sub">.43</span>
+          </div></div>
+        </div>
+        """
+
+        XCTAssertEqual(try parser.parsePumbilityScore(html: html), 15_770.43)
+    }
+
     func testInvalidLevelAssetsAreRejected() throws {
         let plays = try parser.parseRecentPlays(html: Fixtures.invalidLevels)
 

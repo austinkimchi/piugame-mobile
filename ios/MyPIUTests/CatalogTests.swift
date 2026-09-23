@@ -13,6 +13,19 @@ final class CatalogTests: XCTestCase {
         XCTAssertTrue(page.songs.first?.isFavorite == true)
     }
 
+    func testCatalogPageDecodesWebsiteFilterOptions() throws {
+        let data = Data(
+            #"{"songs":[],"nextCursor":null,"total":0,"filterOptions":{"folders":["Original"],"series":["PHOENIX 2"],"levels":["19"],"charts":["singles"]}}"#.utf8
+        )
+
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: data)
+
+        XCTAssertEqual(page.filterOptions.folders, ["Original"])
+        XCTAssertEqual(page.filterOptions.series, ["PHOENIX 2"])
+        XCTAssertEqual(page.filterOptions.levels, ["19"])
+        XCTAssertEqual(page.filterOptions.charts, ["singles"])
+    }
+
     func testCatalogURLsResolveAgainstProductionOrigin() throws {
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
         let song = try XCTUnwrap(page.songs.first)
@@ -205,6 +218,36 @@ final class CatalogTests: XCTestCase {
             using: search
         )
         XCTAssertEqual(requestCount, 2)
+    }
+
+    @MainActor
+    func testCatalogForwardsWebsiteStyleFilters() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let catalog = SongCatalogModel(cache: CatalogCache(directory: directory))
+        let filters = CatalogFilters(
+            folders: ["Original"],
+            series: ["PHOENIX 2"],
+            levels: ["19"],
+            charts: ["singles"],
+            levelMode: .or
+        )
+        var receivedFilters: CatalogFilters?
+
+        await catalog.loadIfNeeded(
+            query: "battle",
+            version: .phoenix2,
+            filters: filters,
+            debounce: false,
+            using: { _, _, _ in page },
+            usingFiltered: { _, _, _, requestFilters in
+                receivedFilters = requestFilters
+                return page
+            }
+        )
+
+        XCTAssertEqual(receivedFilters, filters)
     }
 
     @MainActor
