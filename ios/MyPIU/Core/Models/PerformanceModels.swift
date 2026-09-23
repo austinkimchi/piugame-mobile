@@ -25,11 +25,14 @@ struct MyPIUPerformanceDashboard: Decodable, Equatable, Sendable {
         let name: String
         let metric: String
         let current: Double
+        let previousTarget: Double?
         let target: Double
 
         var progressFraction: Double {
-            guard target > 0 else { return 0 }
-            return min(1, max(0, current / target))
+            let intervalStart = previousTarget ?? 0
+            let interval = target - intervalStart
+            guard interval > 0 else { return 0 }
+            return min(1, max(0, (current - intervalStart) / interval))
         }
 
         var remaining: Double {

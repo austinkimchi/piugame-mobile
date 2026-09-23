@@ -30,10 +30,19 @@ data class MyPiuPerformanceDashboard(
         val name: String,
         val metric: String,
         val current: Double,
+        val previousTarget: Double? = null,
         val target: Double,
     ) {
         val progressFraction: Float
-            get() = if (target > 0) (current / target).coerceIn(0.0, 1.0).toFloat() else 0f
+            get() {
+                val intervalStart = previousTarget ?: 0.0
+                val interval = target - intervalStart
+                return if (interval > 0) {
+                    ((current - intervalStart) / interval).coerceIn(0.0, 1.0).toFloat()
+                } else {
+                    0f
+                }
+            }
 
         val remaining: Double
             get() = (target - current).coerceAtLeast(0.0)
