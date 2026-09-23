@@ -33,6 +33,7 @@ struct CatalogSong: Codable, Equatable, Hashable, Identifiable, Sendable {
     let bpm: String?
     let chartSummary: [String]
     let folder: String?
+    let folderPosition: Int?
     let series: String?
     let tags: [String]
     let isPremium: Bool
@@ -49,6 +50,13 @@ struct CatalogSong: Codable, Equatable, Hashable, Identifiable, Sendable {
         resolvedMyPIUURL("/songs/\(slug)")
     }
 
+    var folderLabel: String? {
+        if let folder {
+            return folderPosition.map { "\(folder) #\($0)" } ?? folder
+        }
+        return series
+    }
+
     func charts(for mode: CatalogChartMode) -> [String] {
         chartSummary.filter(mode.contains)
     }
@@ -62,6 +70,7 @@ struct CatalogSong: Codable, Equatable, Hashable, Identifiable, Sendable {
         case bpm
         case chartSummary
         case folder
+        case folderPosition
         case series
         case tags
         case isPremium

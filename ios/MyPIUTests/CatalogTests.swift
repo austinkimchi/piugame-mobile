@@ -9,6 +9,7 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(page.nextCursor, "Mg")
         XCTAssertEqual(page.songs.first?.title, "BATTLE NO.1")
         XCTAssertEqual(page.songs.first?.chartSummary, ["S10", "S19", "D20", "C2"])
+        XCTAssertEqual(page.songs.first?.folderLabel, "ORIGINAL #49")
         XCTAssertTrue(page.songs.first?.isPremium == true)
         XCTAssertTrue(page.songs.first?.isFavorite == true)
     }
@@ -266,6 +267,7 @@ final class CatalogTests: XCTestCase {
             bpm: firstSong.bpm,
             chartSummary: firstSong.chartSummary,
             folder: firstSong.folder,
+            folderPosition: firstSong.folderPosition,
             series: firstSong.series,
             tags: firstSong.tags,
             isPremium: firstSong.isPremium,
@@ -716,6 +718,7 @@ final class CatalogTests: XCTestCase {
           "bpm": "200",
           "chartSummary": ["S10", "S19", "D20", "C2"],
           "folder": "ORIGINAL",
+          "folderPosition": 49,
           "series": "XX",
           "tags": ["intense"],
           "isPremium": true,

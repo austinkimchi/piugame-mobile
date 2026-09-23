@@ -190,20 +190,22 @@ struct SongsView: View {
         List {
             Section {
                 ForEach(catalog.listing.songs) { song in
-                    HStack(spacing: 8) {
-                        NavigationLink(value: song) {
-                            CatalogSongRow(song: song)
-                        }
-                        .buttonStyle(.plain)
-
+                    NavigationLink(value: song) {
+                        CatalogSongRow(song: song)
+                    }
+                    .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         if canUpdateFavorites {
-                            FavoriteButton(
-                                isFavorite: song.isFavorite,
-                                isUpdating: isUpdatingFavorite(song.slug)
-                            ) {
+                            Button {
                                 updateFavorite(for: song)
+                            } label: {
+                                Label(
+                                    song.isFavorite ? "Unfavorite" : "Favorite",
+                                    systemImage: song.isFavorite ? "star.slash.fill" : "star.fill"
+                                )
                             }
-                            .buttonStyle(.borderless)
+                            .tint(song.isFavorite ? .gray : AppTheme.warning)
+                            .disabled(isUpdatingFavorite(song.slug))
                         }
                     }
                     .task(id: catalog.paginationGeneration) {
@@ -602,20 +604,25 @@ private struct CatalogSongRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
-                if let recommendedChartToken = song.recommendedChartToken {
-                    Label(recommendedChartToken, systemImage: "sparkles")
-                        .font(.caption.bold().monospaced())
-                        .foregroundStyle(AppTheme.accent)
-                        .lineLimit(2)
-                        .accessibilityLabel("Recommended chart \(recommendedChartToken)")
+                HStack(spacing: 5) {
+                    ForEach(Array(song.chartSummary.prefix(6)), id: \.self) { token in
+                        let recommended = song.recommendedChartToken?.caseInsensitiveCompare(token) == .orderedSame
+                        Text(token)
+                            .font(.caption.weight(.semibold).monospaced())
+                            .foregroundStyle(recommended ? AppTheme.positive : .secondary)
+                            .padding(.horizontal, recommended ? 5 : 0)
+                            .padding(.vertical, recommended ? 2 : 0)
+                            .background(
+                                recommended ? AppTheme.positive.opacity(0.14) : .clear,
+                                in: RoundedRectangle(cornerRadius: 4)
+                            )
+                            .accessibilityLabel(recommended ? "\(token), recommended" : token)
+                    }
                 }
-                Text(song.chartSummary.prefix(6).joined(separator: "  "))
-                    .font(.caption.weight(.semibold).monospaced())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
 
-                if let folder = song.folder ?? song.series {
-                    Text(folder)
+                if let folderLabel = song.folderLabel {
+                    Text(folderLabel)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)

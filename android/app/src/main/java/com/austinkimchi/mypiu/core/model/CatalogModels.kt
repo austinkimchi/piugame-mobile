@@ -34,6 +34,7 @@ data class CatalogSong(
     val bpm: String? = null,
     val chartSummary: List<String> = emptyList(),
     val folder: String? = null,
+    val folderPosition: Int? = null,
     val series: String? = null,
     val tags: List<String> = emptyList(),
     val isPremium: Boolean = false,
@@ -41,6 +42,9 @@ data class CatalogSong(
     val recommendedChartToken: String? = null,
 ) {
     fun charts(mode: CatalogChartMode): List<String> = chartSummary.filter(mode::contains)
+
+    val folderLabel: String?
+        get() = folder?.let { name -> folderPosition?.let { "$name #$it" } ?: name } ?: series
 }
 
 @Serializable

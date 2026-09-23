@@ -19,6 +19,7 @@ class CatalogModelsTest {
         assertEquals(listOf("S10", "S19"), song.charts(CatalogChartMode.SINGLE))
         assertEquals(listOf("D20"), song.charts(CatalogChartMode.DOUBLE))
         assertEquals(listOf("C2"), song.charts(CatalogChartMode.COOP))
+        assertEquals("ORIGINAL #49", song.folderLabel)
         assertTrue(song.isPremium)
         assertTrue(song.isFavorite)
     }
@@ -44,6 +45,7 @@ class CatalogModelsTest {
                 "bpm": "200",
                 "chartSummary": ["S10", "S19", "D20", "C2"],
                 "folder": "ORIGINAL",
+                "folderPosition": 49,
                 "series": "XX",
                 "tags": ["intense"],
                 "isPremium": true,
