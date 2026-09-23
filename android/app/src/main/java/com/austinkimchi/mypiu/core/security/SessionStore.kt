@@ -2,6 +2,7 @@ package com.austinkimchi.mypiu.core.security
 
 import com.austinkimchi.mypiu.core.model.MyPiuAccessToken
 import com.austinkimchi.mypiu.core.model.PiuCredentials
+import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -14,8 +15,30 @@ class SessionStore(
     fun clearCredentials() = secrets.remove(CREDENTIALS)
 
     fun accessToken(): MyPiuAccessToken? = secrets.get(ACCESS_TOKEN)?.let(json::decodeFromString)
-    fun saveAccessToken(value: MyPiuAccessToken) = secrets.put(ACCESS_TOKEN, json.encodeToString(value))
-    fun clearAccessToken() = secrets.remove(ACCESS_TOKEN)
+    fun saveAccessToken(value: MyPiuAccessToken) {
+        secrets.put(ACCESS_TOKEN, json.encodeToString(value))
+        if (storedAccountIdentity()?.accessToken != value.value) secrets.remove(ACCOUNT_IDENTITY)
+    }
+
+    fun clearAccessToken() {
+        secrets.remove(ACCESS_TOKEN)
+        secrets.remove(ACCOUNT_IDENTITY)
+    }
+
+    fun accountIdentity(accessToken: String): AccountIdentity? = storedAccountIdentity()
+        ?.takeIf { it.accessToken == accessToken }
+        ?.let { AccountIdentity(it.accountId, it.preferredVersion) }
+
+    fun saveAccountIdentity(
+        accessToken: String,
+        accountId: String,
+        preferredVersion: PiuGameVersion,
+    ) {
+        secrets.put(
+            ACCOUNT_IDENTITY,
+            json.encodeToString(StoredAccountIdentity(accessToken, accountId, preferredVersion)),
+        )
+    }
 
     fun pendingRevocations(): List<MyPiuAccessToken> =
         secrets.get(PENDING_REVOCATIONS)?.let(json::decodeFromString) ?: emptyList()
@@ -47,9 +70,22 @@ class SessionStore(
         val createdAtEpochMillis: Long,
     )
 
+    data class AccountIdentity(val accountId: String, val preferredVersion: PiuGameVersion?)
+
+    @Serializable
+    private data class StoredAccountIdentity(
+        val accessToken: String,
+        val accountId: String,
+        val preferredVersion: PiuGameVersion? = null,
+    )
+
+    private fun storedAccountIdentity(): StoredAccountIdentity? =
+        secrets.get(ACCOUNT_IDENTITY)?.let(json::decodeFromString)
+
     private companion object {
         const val CREDENTIALS = "piu_credentials"
         const val ACCESS_TOKEN = "mypiu_access_token"
+        const val ACCOUNT_IDENTITY = "mypiu_account_identity"
         const val PENDING_REVOCATIONS = "mypiu_pending_revocations"
         const val PENDING_OAUTH = "mypiu_pending_oauth"
     }

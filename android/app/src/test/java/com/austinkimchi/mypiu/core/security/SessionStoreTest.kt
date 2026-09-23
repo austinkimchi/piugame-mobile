@@ -18,13 +18,38 @@ class SessionStoreTest {
 
         store.saveCredentials(credentials)
         store.saveAccessToken(token)
+        store.saveAccountIdentity(token.value, "account-one", PiuGameVersion.PHOENIX)
         assertEquals(credentials, store.credentials())
         assertEquals(token, store.accessToken())
+        assertEquals(
+            SessionStore.AccountIdentity("account-one", PiuGameVersion.PHOENIX),
+            store.accountIdentity(token.value),
+        )
 
         store.clearCredentials()
         store.clearAccessToken()
         assertNull(store.credentials())
         assertNull(store.accessToken())
+        assertNull(store.accountIdentity(token.value))
+    }
+
+    @Test
+    fun accountIdentityIsBoundToCurrentAccessToken() {
+        val store = SessionStore(MemorySecretStore())
+        val first = MyPiuAccessToken("first", 1_900_000_000_000, "installation")
+        val replacement = MyPiuAccessToken("replacement", 1_900_000_000_000, "installation")
+        store.saveAccessToken(first)
+        store.saveAccountIdentity(first.value, "account-one", PiuGameVersion.PHOENIX)
+
+        store.saveAccessToken(replacement)
+
+        assertNull(store.accountIdentity(first.value))
+        assertNull(store.accountIdentity(replacement.value))
+        store.saveAccountIdentity(replacement.value, "account-two", PiuGameVersion.PHOENIX_2)
+        assertEquals(
+            SessionStore.AccountIdentity("account-two", PiuGameVersion.PHOENIX_2),
+            store.accountIdentity(replacement.value),
+        )
     }
 
     @Test

@@ -5,12 +5,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class PiuGameVersion(val displayName: String, val baseUrl: String) {
+enum class PiuGameVersion(val displayName: String, val baseUrl: String, val serialName: String) {
     @SerialName("phoenix")
-    PHOENIX("PHOENIX", "https://phoenix.piugame.com"),
+    PHOENIX("PHOENIX", "https://phoenix.piugame.com", "phoenix"),
 
     @SerialName("phoenix2")
-    PHOENIX_2("PHOENIX 2", "https://www.piugame.com"),
+    PHOENIX_2("PHOENIX 2", "https://www.piugame.com", "phoenix2"),
 }
 
 data class PiuProfile(

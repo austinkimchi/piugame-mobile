@@ -38,7 +38,7 @@ Current: the Chromium extension performs toolbar- or MyPIU-page-initiated normal
 
 ## Stage 4: Android
 
-Current: the native Kotlin/Compose foundation connects directly to PIUGAME, parses profile, Pumbility, and recent-play data on-device, encrypts credentials and MyPIU tokens with Android Keystore, uploads through the mobile ingest contract, and schedules best-effort WorkManager refreshes. Feature parity with the iOS production baseline remains in later slices.
+Current: the native Kotlin/Compose app connects directly to PIUGAME, parses profile, Pumbility, and recent-play data on-device, encrypts credentials and MyPIU tokens with Android Keystore, uploads through the mobile ingest contract, and schedules best-effort WorkManager refreshes. Its native Songs destination now covers searchable versioned catalogs, recommendations, favorites, song/chart detail, personal chart history, pagination, and account-scoped offline caching. Progress, Pumbility detail, session summaries, adaptive large-screen navigation, and the accessibility audit remain for later parity slices.
 
 - Kotlin/Compose app using the stable ingest contract.
 - Android Keystore credentials and WorkManager best-effort refresh.

@@ -2,12 +2,18 @@ package com.austinkimchi.mypiu.core.network
 
 import com.austinkimchi.mypiu.core.model.AccountResponse
 import com.austinkimchi.mypiu.core.model.ApiErrorResponse
+import com.austinkimchi.mypiu.core.model.CatalogSearchPage
+import com.austinkimchi.mypiu.core.model.ChartPerformanceResponse
+import com.austinkimchi.mypiu.core.model.FavoriteUpdatePayload
+import com.austinkimchi.mypiu.core.model.FavoriteUpdateResponse
 import com.austinkimchi.mypiu.core.model.MobilePerformanceImportPayload
 import com.austinkimchi.mypiu.core.model.MyPiuAccessToken
 import com.austinkimchi.mypiu.core.model.MyPiuAccount
 import com.austinkimchi.mypiu.core.model.MyPiuAuthProvider
 import com.austinkimchi.mypiu.core.model.MyPiuSyncResult
+import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.PiuSnapshot
+import com.austinkimchi.mypiu.core.model.SongChartPerformance
 import com.austinkimchi.mypiu.core.model.TokenResponse
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +28,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class MyPiuApiException(val status: Int, val code: String) : Exception(messageFor(code)) {
     val isUnauthorized: Boolean get() = status == 401
+    val isAccountNotFound: Boolean get() = code == "account_not_found"
     val isPermanentPiuLinkError: Boolean
         get() = code == "piu_account_not_linked" || code == "piu_username_mismatch"
 
@@ -30,6 +37,11 @@ class MyPiuApiException(val status: Int, val code: String) : Exception(messageFo
             "invalid_token" -> "Your MyPIU session expired. Sign in again."
             "piu_account_not_linked" -> "Link this PIUGAME account on MyPIU before uploading."
             "piu_username_mismatch" -> "The PIUGAME username does not match the account linked to MyPIU."
+            "account_not_found" -> "This MyPIU account no longer exists."
+            "song_not_found" -> "This song is not available in the selected PIU version."
+            "chart_not_found" -> "This chart is not available in the selected PIU version."
+            "invalid_chart", "invalid_version" -> "MyPIU could not identify that chart."
+            "favorite_update_failed" -> "MyPIU could not update this favorite. Try again."
             "rate_limited" -> "MyPIU is receiving syncs too quickly. Try again shortly."
             "account_busy" -> "MyPIU is finishing another account update. Try again shortly."
             else -> "MyPIU could not complete the request."
@@ -114,6 +126,80 @@ class MyPiuApiClient(
             .build()
         return send(request)
     }
+
+    suspend fun searchCatalog(
+        query: String,
+        cursor: String?,
+        version: PiuGameVersion,
+        accessToken: String?,
+    ): CatalogSearchPage {
+        val requestUrl = url("api/songs/search").newBuilder()
+            .addQueryParameter("q", query)
+            .addQueryParameter("limit", "30")
+            .addQueryParameter("sortBy", "title")
+            .addQueryParameter("sortDirection", "asc")
+            .addQueryParameter("supportedVersion", version.serialName)
+            .apply { cursor?.let { addQueryParameter("cursor", it) } }
+            .build()
+        val request = Request.Builder()
+            .url(requestUrl)
+            .header("Accept", "application/json")
+            .apply { accessToken?.let { header("Authorization", "Bearer $it") } }
+            .get()
+            .build()
+        return send(request)
+    }
+
+    suspend fun setFavorite(
+        slug: String,
+        saved: Boolean,
+        version: PiuGameVersion,
+        accessToken: String?,
+    ): Boolean {
+        val token = accessToken ?: throw MyPiuApiException(401, "invalid_token")
+        val requestUrl = baseUrl.newBuilder()
+            .addPathSegments("api/mobile/v1/songs")
+            .addPathSegment(slug)
+            .addPathSegment("favorite")
+            .build()
+        val request = Request.Builder()
+            .url(requestUrl)
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/json")
+            .put(json.encodeToString(FavoriteUpdatePayload(saved, version)).toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+        val response: FavoriteUpdateResponse = send(request)
+        if (response.slug != slug) throw MyPiuApiException(500, "invalid_response")
+        return response.isFavorite
+    }
+
+    suspend fun chartPerformance(
+        slug: String,
+        chart: String,
+        version: PiuGameVersion,
+        accessToken: String?,
+    ): SongChartPerformance? {
+        val token = accessToken ?: throw MyPiuApiException(401, "invalid_token")
+        val requestUrl = baseUrl.newBuilder()
+            .addPathSegments("api/mobile/v1/songs")
+            .addPathSegment(slug)
+            .addPathSegment("performance")
+            .addQueryParameter("chart", chart)
+            .addQueryParameter("version", version.serialName)
+            .build()
+        val request = Request.Builder()
+            .url(requestUrl)
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        return send<ChartPerformanceResponse>(request).performance
+    }
+
+    fun resolveUrl(value: String?): String? = value
+        ?.takeIf(String::isNotBlank)
+        ?.let(baseUrl::resolve)
+        ?.toString()
 
     suspend fun revoke(accessToken: String) {
         val request = authenticatedRequest("api/mobile/v1/token", accessToken).delete().build()
