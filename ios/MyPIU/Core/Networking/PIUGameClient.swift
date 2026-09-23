@@ -105,11 +105,13 @@ actor PIUGameClient {
         ]
         request.httpBody = components.percentEncodedQuery?.data(using: .utf8)
 
-        _ = try await send(request)
-        let probe = try await fetchHTML(path: "/my_page/play_data.php")
-        guard hasAuthenticatedProfile(probe) else {
+        let loginResponse = try await validatedResponse(for: request)
+        if loginResponse.url?.path.lowercased() == "/bbs/login_check.php" {
             throw PIUGameClientError.authenticationFailed
         }
+        // Authenticated pages retain PIUGAME's site-wide login form. Reaching
+        // this protected URL without a login redirect is the session check.
+        let probe = try await fetchHTML(path: "/my_page/play_data.php")
         authenticatedUsername = username
         return probe
     }
@@ -131,10 +133,6 @@ actor PIUGameClient {
 
     func fetchSnapshot(username: String) async throws -> PIUSnapshot {
         let profileHTML = try await fetchHTML(path: "/my_page/play_data.php")
-        guard hasAuthenticatedProfile(profileHTML) else {
-            authenticatedUsername = nil
-            throw PIUGameClientError.authenticationFailed
-        }
         authenticatedUsername = username
         return try await fetchSnapshot(username: username, profileHTML: profileHTML)
     }
@@ -142,10 +140,7 @@ actor PIUGameClient {
     private func authenticatedProfile(username: String, password: String) async throws -> String {
         if authenticatedUsername == username {
             do {
-                let profileHTML = try await fetchHTML(path: "/my_page/play_data.php")
-                if hasAuthenticatedProfile(profileHTML) {
-                    return profileHTML
-                }
+                return try await fetchHTML(path: "/my_page/play_data.php")
             } catch {
                 guard isAuthenticationFailure(error) else { throw error }
             }
@@ -159,10 +154,6 @@ actor PIUGameClient {
         async let pumbilityHTML = fetchHTML(path: "/my_page/pumbility.php")
 
         let (recentPage, pumbilityPage) = try await (recentHTML, pumbilityHTML)
-        guard !isLoginPage(recentPage), !isLoginPage(pumbilityPage) else {
-            authenticatedUsername = nil
-            throw PIUGameClientError.authenticationFailed
-        }
         let pumbility = try parser.parsePumbilityScore(html: pumbilityPage)
         return try PIUSnapshot(
             version: version,
@@ -184,6 +175,10 @@ actor PIUGameClient {
     }
 
     private func send(_ request: URLRequest) async throws -> Data {
+        try await validatedResponse(for: request).data
+    }
+
+    private func validatedResponse(for request: URLRequest) async throws -> PIUGameHTTPResponse {
         let response = try await transport.response(for: request)
         if isLoginURL(response.url) {
             authenticatedUsername = nil
@@ -195,34 +190,7 @@ actor PIUGameClient {
             }
             throw PIUGameClientError.unexpectedStatus(response.statusCode)
         }
-        return response.data
-    }
-
-    private func hasAuthenticatedProfile(_ html: String) -> Bool {
-        !isLoginPage(html) && html.range(
-            of: "subProfile_wrap|play_data_wrap|profile_name",
-            options: [.regularExpression, .caseInsensitive]
-        ) != nil
-    }
-
-    private func isLoginPage(_ html: String) -> Bool {
-        let hasLoginForm = html.range(
-            of: #"form[^>]+action\s*=\s*['"][^'"]*login_check\.php"#,
-            options: [.regularExpression, .caseInsensitive]
-        ) != nil
-        let hasUsername = html.range(
-            of: #"name\s*=\s*['"]?mb_id['"]?"#,
-            options: [.regularExpression, .caseInsensitive]
-        ) != nil
-        let hasPassword = html.range(
-            of: #"name\s*=\s*['"]?mb_password['"]?"#,
-            options: [.regularExpression, .caseInsensitive]
-        ) != nil
-        return hasLoginForm
-            || (hasUsername && hasPassword)
-            || html.localizedCaseInsensitiveContains(
-                "you must be logged in to use many of pump it up online services"
-            )
+        return response
     }
 
     private func isLoginURL(_ url: URL?) -> Bool {
