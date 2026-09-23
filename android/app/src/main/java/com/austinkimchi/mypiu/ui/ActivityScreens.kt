@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -254,10 +255,10 @@ private fun PerformancePlayRow(play: MyPiuPerformanceDashboard.Play) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 10.dp)
-            .semantics(mergeDescendants = true) {
+            .clearAndSetSemantics {
                 contentDescription = listOf(
                     play.songName,
-                    play.displayChartToken,
+                    performanceChartTokenAccessibilityLabel(play.displayChartToken),
                     grade,
                     score,
                     performanceDateLabel(play.playedAt),
@@ -295,10 +296,10 @@ private fun LocalPerformancePlayRow(play: RecentPlay) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 10.dp)
-            .semantics(mergeDescendants = true) {
+            .clearAndSetSemantics {
                 contentDescription = listOf(
                     play.songName,
-                    play.chartToken,
+                    performanceChartTokenAccessibilityLabel(play.chartToken),
                     grade,
                     score,
                     play.playedAt ?: "Time unavailable",
@@ -335,11 +336,11 @@ private fun PerformanceChartRow(chart: MyPiuPerformanceDashboard.Chart) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 10.dp)
-            .semantics(mergeDescendants = true) {
+            .clearAndSetSemantics {
                 contentDescription = listOfNotNull(
                     chart.songName,
                     chart.topPlayRank?.let { "Rank $it" },
-                    chart.displayChartToken,
+                    performanceChartTokenAccessibilityLabel(chart.displayChartToken),
                     performanceGradeLabel(chart.bestGrade),
                     formatActivityInteger(chart.bestScore),
                     chart.delta?.takeIf { it > 0 }?.let { "Improved by ${formatActivityInteger(it)}" },
@@ -465,6 +466,22 @@ internal fun performanceGradeLabel(value: String?): String {
 
 internal fun performancePlayIsFailed(grade: String?, stageBreak: Boolean): Boolean =
     stageBreak || grade?.trim()?.lowercase()?.startsWith("x_") == true
+
+internal fun performanceChartTokenAccessibilityLabel(token: String): String {
+    val normalized = token.trim().uppercase()
+    val prefix = normalized.firstOrNull() ?: return token
+    var level = normalized.drop(1)
+    val isPlus = level.endsWith('+')
+    if (isPlus) level = level.dropLast(1)
+    if (level.isEmpty() || level.any { !it.isDigit() }) return token
+    val spokenLevel = level + if (isPlus) " plus" else ""
+    return when (prefix) {
+        'S' -> "Single level $spokenLevel"
+        'D' -> "Double level $spokenLevel"
+        'C' -> "Co-op level $spokenLevel"
+        else -> token
+    }
+}
 
 internal fun performanceDateLabel(value: String?): String {
     if (value == null) return "Time unavailable"

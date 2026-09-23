@@ -43,6 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -308,7 +310,18 @@ fun PumbilityBreakdownScreen(performance: MyPiuPerformanceDashboard) {
 @Composable
 private fun PumbilityChartRow(chart: MyPiuPerformanceDashboard.Chart) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).semantics(mergeDescendants = true) {},
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clearAndSetSemantics {
+                contentDescription = listOfNotNull(
+                    chart.topPlayRank?.let { "Rank $it" },
+                    chart.songName,
+                    performanceChartTokenAccessibilityLabel(chart.displayChartToken),
+                    chart.topPumbilityScore?.let { "Pumbility ${formatDecimal(it)}" },
+                    chart.bestScore?.let { "Score ${formatInteger(it)}" },
+                ).joinToString()
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
