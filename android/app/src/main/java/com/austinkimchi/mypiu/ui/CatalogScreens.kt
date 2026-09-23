@@ -660,7 +660,7 @@ private fun JudgmentRow(judgments: JudgmentCounts) {
 }
 
 @Composable
-private fun SongArtwork(url: String?, modifier: Modifier) {
+internal fun SongArtwork(url: String?, modifier: Modifier) {
     Box(
         modifier = modifier.clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,

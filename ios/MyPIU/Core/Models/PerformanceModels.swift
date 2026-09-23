@@ -64,6 +64,9 @@ struct MyPIUPerformanceDashboard: Decodable, Equatable, Sendable {
         let stageBreak: Bool
         var arcadeName: String? = nil
         var judgments: JudgmentCounts? = nil
+        var songImageUrl: URL? = nil
+
+        var songImageURL: URL? { songImageUrl }
 
         var displayChartToken: String {
             guard let mode, let level else { return chartToken }

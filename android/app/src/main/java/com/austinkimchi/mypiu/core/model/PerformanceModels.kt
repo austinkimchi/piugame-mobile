@@ -68,6 +68,7 @@ data class MyPiuPerformanceDashboard(
         val stageBreak: Boolean = false,
         val arcadeName: String? = null,
         val judgments: JudgmentCounts? = null,
+        val songImageUrl: String? = null,
     ) {
         val displayChartToken: String
             get() = if (mode != null && level != null) "${mode.uppercase()}$level" else chartToken

@@ -48,11 +48,10 @@ struct PerformanceSessionsView: View {
             } else {
                 List {
                     ForEach(sessions) { session in
-                        NavigationLink {
-                            PerformanceSessionView(session: session)
-                        } label: {
-                            SessionRow(session: session)
-                        }
+                        SessionRow(
+                            session: session,
+                            snapshotPlays: appModel.snapshot?.recentPlays ?? []
+                        )
                         .task {
                             await loadMoreIfNeeded(after: session)
                         }
@@ -144,6 +143,15 @@ struct PerformanceSessionsView: View {
 struct PerformanceSessionView: View {
     @EnvironmentObject private var appModel: AppModel
     let session: MyPIUPerformanceSession
+    private let initiallyPresentedPlayID: String?
+    @State private var presentedPlayID: String?
+    @State private var didPresentInitialPlay = false
+
+    init(session: MyPIUPerformanceSession, initiallyPresentedPlayID: String? = nil) {
+        self.session = session
+        self.initiallyPresentedPlayID = initiallyPresentedPlayID
+        _presentedPlayID = State(initialValue: nil)
+    }
 
     var body: some View {
         List {
@@ -180,6 +188,41 @@ struct PerformanceSessionView: View {
         .listStyle(.insetGrouped)
         .navigationTitle(sessionDayLabel(session.summary.endedAt))
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            guard !didPresentInitialPlay, let initiallyPresentedPlayID else { return }
+            didPresentInitialPlay = true
+            Task { @MainActor in
+                await Task.yield()
+                presentedPlayID = initiallyPresentedPlayID
+            }
+        }
+        .navigationDestination(isPresented: playDestinationIsPresented) {
+            if let play = presentedPlay {
+                RecentPlayDetailView(
+                    play: RecentPlayPresentation(
+                        play: play,
+                        snapshotPlay: matchingRecentPlay(
+                            for: play,
+                            in: appModel.snapshot?.recentPlays ?? []
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    private var presentedPlay: MyPIUPerformanceDashboard.Play? {
+        guard let presentedPlayID else { return nil }
+        return session.plays.first { $0.id == presentedPlayID }
+    }
+
+    private var playDestinationIsPresented: Binding<Bool> {
+        Binding(
+            get: { presentedPlay != nil },
+            set: { isPresented in
+                if !isPresented { presentedPlayID = nil }
+            }
+        )
     }
 
     private var clearSummaryRow: some View {
@@ -204,28 +247,75 @@ struct PerformanceSessionView: View {
 
 private struct SessionRow: View {
     let session: MyPIUPerformanceSession
+    let snapshotPlays: [RecentPlay]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(sessionTimestampLabel(session.summary.endedAt))
-                .font(.headline)
-            if let arcadeName = session.arcadeName, !arcadeName.isEmpty {
-                Label(arcadeName, systemImage: "mappin.and.ellipse")
-                    .font(.caption)
+        VStack(alignment: .leading, spacing: 10) {
+            NavigationLink {
+                PerformanceSessionView(session: session)
+            } label: {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(sessionTimestampLabel(session.summary.endedAt))
+                        .font(.headline)
+                    if let arcadeName = session.arcadeName, !arcadeName.isEmpty {
+                        Label(arcadeName, systemImage: "mappin.and.ellipse")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    HStack(spacing: 4) {
+                        Text("Clear \(session.summary.clearCount.formatted())/\(session.summary.playCount.formatted())")
+                        Text("(\(percentLabel(session.summary.clearRate)))")
+                            .foregroundStyle(clearRateTint(session.summary.clearRate))
+                        Text("· \(playModeSummary(session.plays))")
+                    }
+                    .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            HStack(spacing: 4) {
-                Text("Clear \(session.summary.clearCount.formatted())/\(session.summary.playCount.formatted())")
-                Text("(\(percentLabel(session.summary.clearRate)))")
-                    .foregroundStyle(clearRateTint(session.summary.clearRate))
-                Text("· \(playModeSummary(session.plays))")
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows the complete session")
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 8) {
+                    ForEach(session.plays) { play in
+                        let snapshotPlay = matchingRecentPlay(for: play, in: snapshotPlays)
+                        NavigationLink {
+                            PerformanceSessionView(
+                                session: session,
+                                initiallyPresentedPlayID: play.id
+                            )
+                        } label: {
+                            SessionPlayArtwork(play: play, snapshotPlay: snapshotPlay)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Opens this play inside the session")
+                    }
+                }
             }
-            .font(.caption.monospacedDigit())
-            .foregroundStyle(.secondary)
+            .scrollClipDisabled()
         }
-        .padding(.vertical, 3)
-        .accessibilityElement(children: .combine)
+        .padding(.vertical, 7)
+    }
+}
+
+private struct SessionPlayArtwork: View {
+    let play: MyPIUPerformanceDashboard.Play
+    let snapshotPlay: RecentPlay?
+
+    var body: some View {
+        VStack(spacing: 4) {
+            SongArtwork(url: play.songImageURL ?? snapshotPlay?.songImageURL, size: 56)
+            Text(play.displayChartToken)
+                .font(.caption2.bold().monospaced())
+                .foregroundStyle(AppTheme.mutedInk)
+                .lineLimit(1)
+        }
+        .frame(width: 56)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(play.songName), \(performanceChartTokenAccessibilityLabel(play.displayChartToken))")
     }
 }
 

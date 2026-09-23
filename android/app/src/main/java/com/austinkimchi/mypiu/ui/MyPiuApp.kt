@@ -99,6 +99,7 @@ fun MyPiuApp(
     var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
     var showingPumbility by rememberSaveable { mutableStateOf(false) }
     var selectedSessionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedSessionPlayId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSongSlug by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedChartToken by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSongVersionName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -108,6 +109,9 @@ fun MyPiuApp(
         performanceState.sessions.firstOrNull { session ->
             session.id == selectedId || (session.id.isBlank() && session.summary.endedAt == selectedId)
         }
+    }
+    val selectedSessionPlay = selectedSessionPlayId?.let { selectedId ->
+        selectedPerformanceSession?.plays?.firstOrNull { it.id == selectedId }
     }
     val selectedSongFallback = remember(selectedSongFallbackJson) {
         selectedSongFallbackJson?.let { runCatching { catalogSongJson.decodeFromString<CatalogSong>(it) }.getOrNull() }
@@ -140,7 +144,9 @@ fun MyPiuApp(
     }
 
     fun navigateBack() {
-        if (selectedSessionId != null) {
+        if (selectedSessionPlayId != null) {
+            selectedSessionPlayId = null
+        } else if (selectedSessionId != null) {
             selectedSessionId = null
         } else if (showingPumbility) {
             showingPumbility = false
@@ -163,6 +169,9 @@ fun MyPiuApp(
     }
     LaunchedEffect(showingPumbility, performanceDashboard) {
         if (showingPumbility && performanceDashboard == null) showingPumbility = false
+    }
+    LaunchedEffect(selectedPerformanceSession) {
+        if (selectedPerformanceSession == null) selectedSessionPlayId = null
     }
     LaunchedEffect(
         catalogAccountId,
@@ -220,6 +229,7 @@ fun MyPiuApp(
                         selectedChartToken = null
                         showingPumbility = false
                         selectedSessionId = null
+                        selectedSessionPlayId = null
                         selectedSongVersionName = null
                         selectedSongFallbackJson = null
                     },
@@ -245,6 +255,7 @@ fun MyPiuApp(
                 title = {
                     Text(
                         when {
+                            selectedSessionPlay != null -> selectedSessionPlay.songName
                             selectedPerformanceSession != null -> performanceSessionDayLabel(
                                 selectedPerformanceSession.summary.endedAt,
                             )
@@ -340,8 +351,14 @@ fun MyPiuApp(
                     onRefresh = ::refreshProgress,
                     onOpenPumbility = { showingPumbility = true },
                 )
+                destination == AppDestination.ACTIVITY && selectedSessionPlay != null -> {
+                    PerformancePlayDetailScreen(selectedSessionPlay)
+                }
                 destination == AppDestination.ACTIVITY && selectedPerformanceSession != null -> {
-                    PerformanceSessionScreen(selectedPerformanceSession)
+                    PerformanceSessionScreen(
+                        session = selectedPerformanceSession,
+                        onOpenPlay = { play -> selectedSessionPlayId = play.id },
+                    )
                 }
                 destination == AppDestination.ACTIVITY -> PerformanceSessionsScreen(
                     state = performanceState,
@@ -350,6 +367,10 @@ fun MyPiuApp(
                     onLoadMore = performanceViewModel::loadMoreSessions,
                     onOpenSession = { session ->
                         selectedSessionId = session.id.ifBlank { session.summary.endedAt }
+                    },
+                    onOpenPlay = { session, play ->
+                        selectedSessionId = session.id.ifBlank { session.summary.endedAt }
+                        selectedSessionPlayId = play.id
                     },
                 )
                 selectedSong == null -> CatalogScreen(

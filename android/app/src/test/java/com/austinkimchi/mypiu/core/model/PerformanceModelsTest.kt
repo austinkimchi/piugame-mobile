@@ -31,6 +31,10 @@ class PerformanceModelsTest {
         assertEquals(4, session.summary.playCount)
         assertEquals(75.0, session.summary.clearRate ?: 0.0, 0.001)
         assertEquals("S19", session.plays.single().displayChartToken)
+        assertEquals(
+            "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png",
+            session.plays.single().songImageUrl,
+        )
         assertEquals(73, session.summary.durationMinutes)
     }
 
@@ -117,6 +121,7 @@ class PerformanceModelsTest {
                   "plate": "rg",
                   "mode": "S",
                   "level": "19",
+                  "songImageUrl": "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png",
                   "playedAt": "2026-09-22T07:20:00.000Z",
                   "stageBreak": false
                 }],

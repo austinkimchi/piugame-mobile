@@ -318,6 +318,7 @@ final class PerformanceTests: XCTestCase {
                   "plate": null,
                   "mode": "S",
                   "level": "19",
+                  "songImageUrl": "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png",
                   "playedAt": "2026-09-22T08:00:00.000Z",
                   "stageBreak": true
                 },
@@ -347,6 +348,10 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(session.summary.clearRate), 200.0 / 3.0, accuracy: 0.0001)
         XCTAssertEqual(session.summary.durationMinutes, 60)
         XCTAssertEqual(session.plays.first?.displayChartToken, "S19")
+        XCTAssertEqual(
+            session.plays.first?.songImageURL?.absoluteString,
+            "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png"
+        )
         XCTAssertEqual(session.plays.first?.stageBreak, true)
         XCTAssertEqual(session.plays.map(\.id), ["play-2", "play-3"])
     }

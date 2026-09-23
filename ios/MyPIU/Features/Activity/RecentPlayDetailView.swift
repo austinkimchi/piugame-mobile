@@ -28,7 +28,7 @@ struct RecentPlayPresentation: Equatable, Identifiable {
     init(play: MyPIUPerformanceDashboard.Play, snapshotPlay: RecentPlay? = nil) {
         id = play.id
         songName = play.songName
-        songImageURL = snapshotPlay?.songImageURL
+        songImageURL = play.songImageURL ?? snapshotPlay?.songImageURL
         chartToken = play.displayChartToken
         score = play.score
         grade = play.grade
