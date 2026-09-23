@@ -62,10 +62,11 @@ struct PIUHTMLParser: Sendable {
     func parsePumbilityScore(html: String) throws -> Double? {
         let document = try SwiftSoup.parse(html)
         let selectors = [
-            ".pumbility_total_wrap .pumbility-point-sub",
+            ".pumbility_total_wrap .score",
             ".pumbility_total_wrap .t2",
             ".total_pumbility .t2",
             ".pumbility_total .t2",
+            ".pumbility_total_wrap .pumbility-point-sub",
             "[class*=pumbility] [class*=total] .num",
             "[class*=pumbility] [class*=score]"
         ]

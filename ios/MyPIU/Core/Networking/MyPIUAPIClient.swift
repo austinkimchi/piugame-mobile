@@ -119,6 +119,7 @@ actor MyPIUAPIClient {
         query: String,
         cursor: String? = nil,
         version: PIUGameVersion,
+        filters: CatalogFilters = .empty,
         limit: Int = 30,
         accessToken: String? = nil
     ) async throws -> CatalogSearchPage {
@@ -136,6 +137,11 @@ actor MyPIUAPIClient {
         if let cursor {
             queryItems.append(URLQueryItem(name: "cursor", value: cursor))
         }
+        queryItems.append(contentsOf: filters.folders.map { URLQueryItem(name: "folder", value: $0) })
+        queryItems.append(contentsOf: filters.series.map { URLQueryItem(name: "series", value: $0) })
+        queryItems.append(contentsOf: filters.levels.map { URLQueryItem(name: "level", value: $0) })
+        queryItems.append(contentsOf: filters.charts.map { URLQueryItem(name: "chart", value: $0) })
+        queryItems.append(URLQueryItem(name: "levelMode", value: filters.levelMode.rawValue))
         components.queryItems = queryItems
         guard let requestURL = components.url else {
             throw MyPIUAPIError.invalidResponse
