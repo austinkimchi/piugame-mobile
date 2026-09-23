@@ -105,7 +105,12 @@ jobs:
           verification=$(jarsigner -verify "$bundle" 2>&1)
           grep -Fq "jar verified." <<< "$verification"
           echo "Bundle signature verified."
-          sha256sum "$bundle" > app/build/outputs/bundle/release/app-release.aab.sha256
+          bundle_directory=$(dirname "$bundle")
+          bundle_name=$(basename "$bundle")
+          (
+            cd "$bundle_directory"
+            sha256sum "$bundle_name" > "$bundle_name.sha256"
+          )
       - name: Upload signed beta bundle
         uses: actions/upload-artifact@v4
         with:
