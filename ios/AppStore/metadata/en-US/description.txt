@@ -1,0 +1,14 @@
+Track your Pump It Up progress with a companion built around your own play history.
+
+Connect to PIUGAME from your iPhone or iPad to refresh profile and recent-play data directly on your device. Sign in to MyPIU to keep normalized scores synchronized across the web and mobile apps.
+
+- Search Phoenix and Phoenix 2 song catalogs and inspect every chart.
+- Review personal bests, recent attempts, judgments, and score history.
+- See Pumbility contributions, chart completion, momentum, and session summaries.
+- Discover chart recommendations based on your level and results.
+- Favorite songs and keep the catalog available offline.
+- Use the included Safari extension for a quick browser-initiated refresh.
+
+Your PIUGAME username and password stay in the device Keychain and are never sent to MyPIU. Raw PIUGAME pages are parsed on your device and are not uploaded. Only normalized profile and performance data is sent to the MyPIU account you choose to connect.
+
+MyPIU is an independent companion and is not affiliated with or endorsed by ANDAMIRO.

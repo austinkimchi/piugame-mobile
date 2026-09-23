@@ -1,0 +1,11 @@
+Please focus on the complete sync and progress workflow:
+
+1. Sign in to MyPIU with Google or Discord.
+2. Connect a PIUGAME Phoenix or Phoenix 2 account and run a foreground sync.
+3. Confirm the Home, Songs, Progress, and Activity views match the linked player's data.
+4. Search for songs, open chart history, favorite a song, and review recommendations.
+5. Relaunch without a network connection and confirm cached catalog data remains usable.
+6. Reconnect, sync again, then test both PIUGAME disconnect and MyPIU account deletion.
+7. Enable the included Safari extension, grant access only to MyPIU and the selected PIUGAME site, and trigger a browser sync.
+
+Please report the device model, iOS version, selected PIUGAME version, and the affected song or chart with any issue.
