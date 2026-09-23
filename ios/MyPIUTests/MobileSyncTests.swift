@@ -64,6 +64,13 @@ final class MobileSyncTests: XCTestCase {
         XCTAssertEqual(mobilePkceChallenge(verifier), "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
     }
 
+    func testAppleNonceUsesLowercaseSHA256Hex() {
+        XCTAssertEqual(
+            appleNonceHash("apple-nonce"),
+            "18720d3fd6296cd04d1ee76981969261a6ca5f34af0ca82a912cd0b38d5d2e8a"
+        )
+    }
+
     func testImportPayloadContainsNormalizedDataOnly() throws {
         let snapshot = PIUSnapshot(
             version: .phoenix2,

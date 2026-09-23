@@ -1,7 +1,9 @@
+import AuthenticationServices
 import SwiftUI
 
 struct AccountView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.colorScheme) private var colorScheme
     private let applicationInfo = ApplicationInfo()
     @Binding private var username: String
     @Binding private var password: String
@@ -37,6 +39,14 @@ struct AccountView: View {
                     }
                     .disabled(model.isMyPIUBusy)
                 } else {
+                    SignInWithAppleButton(.continue) { request in
+                        model.prepareMyPIUAppleRequest(request)
+                    } onCompletion: { result in
+                        Task { await model.connectMyPIUWithApple(result) }
+                    }
+                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                    .frame(height: 50)
+                    .disabled(model.isMyPIUBusy)
                     Button("Continue with Google", systemImage: "person.badge.key") {
                         Task { await model.connectMyPIU(provider: .google) }
                     }
