@@ -10,7 +10,6 @@ struct MyPIUApp: App {
             RootView()
                 .environmentObject(model)
                 .task {
-                    BackgroundRefreshScheduler.schedule()
                     await model.restore()
                 }
                 .onChange(of: scenePhase) { _, phase in
@@ -19,8 +18,7 @@ struct MyPIUApp: App {
                 }
         }
         .backgroundTask(.appRefresh(BackgroundRefreshScheduler.identifier)) {
-            await model.refresh()
-            BackgroundRefreshScheduler.schedule()
+            await model.performBackgroundRefresh()
         }
     }
 }

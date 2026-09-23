@@ -42,7 +42,7 @@ Every upload includes a schema version, PIUGAME release, source, generated times
 
 ## Background behavior
 
-Opening the app and pull-to-refresh always attempt a foreground sync. `BGAppRefreshTask` provides best-effort background refresh, but iOS decides when it runs; it is not an exact polling schedule. A failed background refresh never falls back to the mono-server.
+Opening the app and pull-to-refresh always attempt a foreground sync. Returning to an already-running app refreshes PIUGAME after 15 minutes without a sync attempt; overlapping triggers are coalesced instead of issuing duplicate logins. `BGAppRefreshTask` provides best-effort background refresh, but iOS decides when it runs; it is not an exact polling schedule. The app schedules background work only while PIUGAME credentials are connected and cancels pending work on disconnect. A failed background refresh never falls back to the mono-server.
 
 The initial full-history import is foreground-only, uses a low concurrency limit, and is explicitly initiated by the user. Routine refresh fetches only profile, Pumbility, and recent plays.
 

@@ -3,6 +3,12 @@ import Combine
 
 @MainActor
 final class AppModel: ObservableObject {
+    private struct RestorationOperation {
+        let id: UUID
+        let task: Task<Void, Never>
+        var observers: [UUID: AsyncStream<Void>.Continuation]
+    }
+
     struct FavoriteChange: Equatable, Identifiable, Sendable {
         let id: UUID
         let accountID: String
@@ -59,6 +65,9 @@ final class AppModel: ObservableObject {
     private var volatilePendingRevocations: [MyPIUAccessToken] = []
     private var performanceRequestID = UUID()
     private var hasRestored = false
+    private var restorationOperation: RestorationOperation?
+    private var isPIUGameSyncInFlight = false
+    private var lastPIUGameSyncAttemptAt: Date?
     private var isRetryingPendingRevocations = false
     private var shouldRetryPendingRevocations = false
 
@@ -98,9 +107,75 @@ final class AppModel: ObservableObject {
     }
 
     func restore() async {
-        guard !hasRestored else { return }
-        hasRestored = true
-        Task { await retryPendingMyPIURevocations() }
+        while !hasRestored && !Task.isCancelled {
+            await observeRestoration()
+        }
+    }
+
+    private func observeRestoration() async {
+        let operationID = startRestorationIfNeeded()
+        let observerID = UUID()
+        let updates = AsyncStream<Void> { continuation in
+            guard var operation = restorationOperation, operation.id == operationID else {
+                continuation.finish()
+                return
+            }
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.removeRestorationObserver(observerID, operationID: operationID)
+                }
+            }
+            operation.observers[observerID] = continuation
+            restorationOperation = operation
+        }
+
+        for await _ in updates {}
+    }
+
+    private func startRestorationIfNeeded() -> UUID {
+        if let restorationOperation {
+            return restorationOperation.id
+        }
+
+        let operationID = UUID()
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.restoreOnce()
+            self.finishRestoration(
+                operationID,
+                completed: !Task.isCancelled
+            )
+        }
+        restorationOperation = RestorationOperation(
+            id: operationID,
+            task: task,
+            observers: [:]
+        )
+        return operationID
+    }
+
+    private func finishRestoration(_ operationID: UUID, completed: Bool) {
+        guard let operation = restorationOperation, operation.id == operationID else { return }
+        restorationOperation = nil
+        if completed {
+            hasRestored = true
+        }
+        for observer in operation.observers.values {
+            observer.finish()
+        }
+    }
+
+    private func removeRestorationObserver(_ observerID: UUID, operationID: UUID) {
+        guard var operation = restorationOperation, operation.id == operationID else { return }
+        operation.observers[observerID] = nil
+        if operation.observers.isEmpty {
+            operation.task.cancel()
+        }
+        restorationOperation = operation
+    }
+
+    private func restoreOnce() async {
+        async let revocationRetry: Void = retryPendingMyPIURevocations()
 
         let savedCredentials: PIUCredentials?
         do {
@@ -108,18 +183,22 @@ final class AppModel: ObservableObject {
         } catch {
             state = .failed(error.localizedDescription)
             await restoreMyPIU()
+            await revocationRetry
             return
         }
 
         guard let savedCredentials else {
             state = .signedOut
+            BackgroundRefreshScheduler.cancel()
             await restoreMyPIU()
+            await revocationRetry
             return
         }
 
         credentials = savedCredentials
         selectedVersion = savedCredentials.version
         state = .restoring
+        BackgroundRefreshScheduler.schedule()
 
         async let myPIURestore: Void = restoreMyPIU()
         let didSync = await sync(
@@ -131,6 +210,7 @@ final class AppModel: ObservableObject {
         if didSync, let snapshot {
             await uploadToMyPIU(snapshot)
         }
+        await revocationRetry
     }
 
     func connectMyPIU(provider: MyPIUAuthProvider) async -> Bool {
@@ -249,8 +329,38 @@ final class AppModel: ObservableObject {
         await revocationRetry
     }
 
-    func handleAppActivation() async {
+    func performBackgroundRefresh() async {
+        await restore()
+        guard credentials != nil else {
+            BackgroundRefreshScheduler.cancel()
+            return
+        }
+        if BackgroundRefreshScheduler.shouldRefreshAfterActivation(
+            lastRefreshAt: latestPIUGameRefreshAt
+        ) {
+            await refresh()
+        }
+        if credentials != nil {
+            BackgroundRefreshScheduler.schedule()
+        } else {
+            BackgroundRefreshScheduler.cancel()
+        }
+    }
+
+    func handleAppActivation(now: Date = Date()) async {
         await retryPendingMyPIURevocations()
+        guard let credentials else { return }
+        guard BackgroundRefreshScheduler.shouldRefreshAfterActivation(
+            lastRefreshAt: latestPIUGameRefreshAt,
+            now: now
+        ) else { return }
+        _ = await sync(using: credentials, saveAfterSuccess: false)
+    }
+
+    private var latestPIUGameRefreshAt: Date? {
+        [lastPIUGameSyncAttemptAt, snapshot?.fetchedAt]
+            .compactMap { $0 }
+            .max()
     }
 
     func searchCatalog(
@@ -402,7 +512,9 @@ final class AppModel: ObservableObject {
             credentials = nil
             client = nil
             snapshot = nil
+            lastPIUGameSyncAttemptAt = nil
             state = .signedOut
+            BackgroundRefreshScheduler.cancel()
         } catch {
             state = .failed(error.localizedDescription)
         }
@@ -413,6 +525,11 @@ final class AppModel: ObservableObject {
         saveAfterSuccess: Bool,
         uploadAfterSuccess: Bool = true
     ) async -> Bool {
+        guard !isPIUGameSyncInFlight else { return false }
+        isPIUGameSyncInFlight = true
+        lastPIUGameSyncAttemptAt = Date()
+        defer { isPIUGameSyncInFlight = false }
+
         state = .syncing
         let client = PIUGameClient(version: credentials.version)
         self.client = client
