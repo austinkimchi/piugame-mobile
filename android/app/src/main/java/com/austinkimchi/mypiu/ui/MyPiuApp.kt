@@ -151,7 +151,6 @@ fun MyPiuApp(
         catalogAccountId,
         state.isMyPiuConnected,
         preferredCatalogVersion,
-        state.performanceRevision,
     ) {
         catalogViewModel.updateSession(
             accountId = catalogAccountId,
@@ -162,9 +161,6 @@ fun MyPiuApp(
             accountId = catalogAccountId,
             connected = state.isMyPiuConnected,
         )
-        if (state.isMyPiuConnected && state.performanceRevision > 0) {
-            performanceViewModel.refresh()
-        }
     }
     LaunchedEffect(selectedSongSlug, selectedSongVersion, catalogState.version) {
         if (selectedSongSlug != null && selectedSongVersion != null && catalogState.version != selectedSongVersion) {

@@ -7,21 +7,37 @@ import com.austinkimchi.mypiu.AppContainer
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.performance.PerformanceDataSource
+import com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class PerformanceViewModel(private val repository: PerformanceDataSource) : ViewModel() {
+class PerformanceViewModel(
+    private val repository: PerformanceDataSource,
+    refreshSignal: PerformanceRefreshSignal = PerformanceRefreshSignal(),
+) : ViewModel() {
     private val mutableState = MutableStateFlow(PerformanceUiState())
     val state: StateFlow<PerformanceUiState> = mutableState.asStateFlow()
 
     private var sessionGeneration = 0L
     private var loadJob: Job? = null
     private var started = false
+    private var observedRefreshRevision = refreshSignal.revision.value
+
+    init {
+        viewModelScope.launch {
+            refreshSignal.revision.collect { revision ->
+                if (revision == observedRefreshRevision) return@collect
+                observedRefreshRevision = revision
+                if (started) refresh()
+            }
+        }
+    }
 
     fun updateSession(accountId: String?, connected: Boolean) {
         val scope = accountId?.takeIf { connected }?.let { "account:$it" }
@@ -47,10 +63,6 @@ class PerformanceViewModel(private val repository: PerformanceDataSource) : View
     fun refresh() {
         if (!mutableState.value.isConnected) return
         reload()
-    }
-
-    fun onAppResumed() {
-        if (started) refresh()
     }
 
     fun acknowledgeSessionInvalidation() {
@@ -91,7 +103,7 @@ class PerformanceViewModel(private val repository: PerformanceDataSource) : View
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            PerformanceViewModel(container.performanceRepository) as T
+            PerformanceViewModel(container.performanceRepository, container.performanceRefreshSignal) as T
     }
 }
 

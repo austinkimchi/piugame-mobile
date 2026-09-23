@@ -3,6 +3,7 @@ package com.austinkimchi.mypiu.ui
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.performance.PerformanceDataSource
+import com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -49,17 +50,18 @@ class PerformanceViewModelTest {
     }
 
     @Test
-    fun appResumeReloadsOnlyAfterProgressHasStarted() = runTest {
+    fun successfulUploadSignalReloadsOnlyAfterProgressHasStarted() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         try {
             val source = FakePerformanceDataSource(
-                ArrayDeque(listOf(dashboard("First"), dashboard("Resumed"))),
+                ArrayDeque(listOf(dashboard("First"), dashboard("Uploaded"))),
             )
-            val viewModel = PerformanceViewModel(source)
+            val refreshSignal = PerformanceRefreshSignal()
+            val viewModel = PerformanceViewModel(source, refreshSignal)
             viewModel.updateSession("one", connected = true)
 
-            viewModel.onAppResumed()
+            refreshSignal.notifyUploadCompleted()
             advanceUntilIdle()
             assertEquals(0, source.requests)
 
@@ -67,10 +69,10 @@ class PerformanceViewModelTest {
             advanceUntilIdle()
             assertEquals("First", viewModel.state.value.dashboard?.profile?.displayName)
 
-            viewModel.onAppResumed()
+            refreshSignal.notifyUploadCompleted()
             advanceUntilIdle()
 
-            assertEquals("Resumed", viewModel.state.value.dashboard?.profile?.displayName)
+            assertEquals("Uploaded", viewModel.state.value.dashboard?.profile?.displayName)
             assertEquals(2, source.requests)
         } finally {
             Dispatchers.resetMain()
