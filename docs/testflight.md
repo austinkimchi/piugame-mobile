@@ -2,6 +2,8 @@
 
 MyPIU is configured for automatic signing with bundle ID `com.austinkimchi.mypiu`. The repository intentionally does not contain an Apple Developer Team ID, signing certificate, provisioning profile, or App Store Connect credential.
 
+CI creates an unsigned generic-device Release archive and verifies the built app and embedded Safari extension identities, matching versions, dSYMs, privacy manifest, app icon assets, extension runtime, URL callback, background mode, and export-compliance declaration. The retained archive is packaging evidence only: it is not installable, cannot be uploaded to App Store Connect, and does not replace Apple's signed archive validation.
+
 ## One-time App Store Connect setup
 
 1. Create the explicit App ID and App Store Connect app record for `com.austinkimchi.mypiu`.
@@ -22,6 +24,8 @@ open ios/MyPIU.xcodeproj
 In Xcode, select the MyPIU and MyPIUSafariExtension targets, choose the same development team for both, and confirm automatic signing succeeds. Select a generic iOS device, then use **Product > Archive**. In Organizer, validate the archive and choose **Distribute App > TestFlight & App Store**.
 
 For each upload, increment `CURRENT_PROJECT_VERSION` in `project.yml`. Keep `MARKETING_VERSION` unchanged for replacement beta builds of the same release.
+
+After changing either version, let the iOS CI archive gate pass before creating the signed archive. The CI artifact is named `mypiu-ios-unsigned-archive-<commit>` and is retained for seven days for comparison with the signed release candidate.
 
 ## Before inviting testers
 

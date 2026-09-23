@@ -11,6 +11,8 @@
 
 ## Stage 1: iOS vertical slice
 
+Current: the native iOS production baseline, mobile ingest contract, privacy manifest, account deletion/disconnect behavior, and an unsigned generic-device Release archive verifier are available. App Store Connect enrollment, signed archive validation/upload, and physical-device TestFlight qualification remain.
+
 - MyPIU mobile OAuth and revocable access tokens.
 - Versioned mobile ingest endpoint in `piugame-web`.
 - Foreground profile and recent-play sync end to end.
