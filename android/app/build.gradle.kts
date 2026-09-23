@@ -5,8 +5,8 @@ plugins {
 }
 
 val configuredVersionCode = providers.environmentVariable("MYPIU_VERSION_CODE").orNull?.trim()
-val releaseVersionCode = configuredVersionCode?.toIntOrNull()?.takeIf { it > 0 }
-    ?: if (configuredVersionCode == null) 1 else throw GradleException("MYPIU_VERSION_CODE must be a positive integer")
+val releaseVersionCode = configuredVersionCode?.toIntOrNull()?.takeIf { it in 1..2_100_000_000 }
+    ?: if (configuredVersionCode == null) 1 else throw GradleException("MYPIU_VERSION_CODE must be between 1 and 2100000000")
 val configuredVersionName = providers.environmentVariable("MYPIU_VERSION_NAME").orNull?.trim()
 val releaseVersionName = configuredVersionName?.takeIf { it.isNotEmpty() }
     ?: if (configuredVersionName == null) "0.1.0" else throw GradleException("MYPIU_VERSION_NAME must not be blank")

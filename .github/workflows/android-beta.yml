@@ -46,8 +46,9 @@ jobs:
             echo "version_name must be a semantic version such as 0.1.0" >&2
             exit 1
           }
-          [[ "$MYPIU_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || {
-            echo "version_code must be a positive integer" >&2
+          [[ "$MYPIU_VERSION_CODE" =~ ^[1-9][0-9]*$ && ${#MYPIU_VERSION_CODE} -le 10 ]] \
+            && (( 10#$MYPIU_VERSION_CODE <= 2100000000 )) || {
+            echo "version_code must be between 1 and 2100000000" >&2
             exit 1
           }
       - name: Restore and verify upload key
