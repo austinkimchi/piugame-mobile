@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum AppTheme {
     static let accent = Color(red: 0.16, green: 0.79, blue: 0.31)
@@ -33,5 +34,99 @@ enum AppTheme {
         Color(uiColor: UIColor { traits in
             traits.userInterfaceStyle == .dark ? dark : light
         })
+    }
+}
+
+@MainActor
+private final class RemoteImageCache {
+    static let shared = RemoteImageCache()
+
+    private let images = NSCache<NSURL, UIImage>()
+    private let responseCache: URLCache
+    private let session: URLSession
+
+    private init() {
+        images.countLimit = 400
+        images.totalCostLimit = 96 * 1_024 * 1_024
+
+        let configuration = URLSessionConfiguration.default
+        responseCache = URLCache(
+            memoryCapacity: 64 * 1_024 * 1_024,
+            diskCapacity: 512 * 1_024 * 1_024,
+            diskPath: "mypiu-artwork"
+        )
+        configuration.urlCache = responseCache
+        configuration.requestCachePolicy = .returnCacheDataElseLoad
+        session = URLSession(configuration: configuration)
+    }
+
+    func cachedImage(for url: URL) -> UIImage? {
+        images.object(forKey: url as NSURL)
+    }
+
+    func image(for url: URL) async -> UIImage? {
+        if let cached = cachedImage(for: url) {
+            return cached
+        }
+
+        let request = URLRequest(url: url)
+        if let cachedResponse = responseCache.cachedResponse(for: request),
+           let image = UIImage(data: cachedResponse.data) {
+            images.setObject(image, forKey: url as NSURL, cost: cachedResponse.data.count)
+            return image
+        }
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard
+                ((response as? HTTPURLResponse)?.statusCode ?? 200) < 400,
+                let image = UIImage(data: data)
+            else {
+                return nil
+            }
+            responseCache.storeCachedResponse(
+                CachedURLResponse(response: response, data: data),
+                for: request
+            )
+            images.setObject(image, forKey: url as NSURL, cost: data.count)
+            return image
+        } catch {
+            return nil
+        }
+    }
+}
+
+struct CachedRemoteImage<Content: View, Placeholder: View>: View {
+    let url: URL?
+    @ViewBuilder let content: (Image) -> Content
+    @ViewBuilder let placeholder: () -> Placeholder
+
+    @State private var loadedURL: URL?
+    @State private var loadedImage: UIImage?
+
+    var body: some View {
+        Group {
+            if let url, let image = displayedImage(for: url) {
+                content(Image(uiImage: image))
+            } else {
+                placeholder()
+            }
+        }
+        .task(id: url) {
+            loadedURL = nil
+            loadedImage = nil
+            guard let url else { return }
+            let image = await RemoteImageCache.shared.image(for: url)
+            guard !Task.isCancelled else { return }
+            loadedURL = url
+            loadedImage = image
+        }
+    }
+
+    private func displayedImage(for url: URL) -> UIImage? {
+        if loadedURL == url, let loadedImage {
+            return loadedImage
+        }
+        return RemoteImageCache.shared.cachedImage(for: url)
     }
 }

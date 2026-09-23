@@ -1,6 +1,8 @@
 import Foundation
 
-struct MyPIUPerformanceSession: Decodable, Equatable, Sendable {
+struct MyPIUPerformanceSession: Decodable, Equatable, Identifiable, Sendable {
+    let id: String
+    let arcadeName: String?
     let summary: Summary
     let plays: [MyPIUPerformanceDashboard.Play]
 

@@ -6,6 +6,7 @@ struct AccountView: View {
     @Binding private var username: String
     @Binding private var password: String
     @Binding private var showingAccountDeletion: Bool
+    @State private var pendingDisconnection: AccountDisconnection?
 
     init(
         username: Binding<String>,
@@ -106,12 +107,12 @@ struct AccountView: View {
                 Section("CONNECTED ACCOUNTS") {
                     if model.isConnected {
                         Button("Disconnect PIUGAME", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
-                            model.disconnect()
+                            pendingDisconnection = .piuGame
                         }
                     }
                     if model.isMyPIUConnected {
                         Button("Disconnect MyPIU", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
-                            Task { await model.disconnectMyPIU() }
+                            pendingDisconnection = .myPIU
                         }
                         .disabled(model.isMyPIUBusy)
 
@@ -141,6 +142,32 @@ struct AccountView: View {
                 "This permanently deletes your MyPIU profile, synced scores, saved songs, community posts, and linked Discord bot data. Your PIUGAME account and on-device PIUGAME login are not deleted."
             )
         }
+        .confirmationDialog(
+            pendingDisconnection?.title ?? "Disconnect account?",
+            isPresented: Binding(
+                get: { pendingDisconnection != nil },
+                set: { if !$0 { pendingDisconnection = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(pendingDisconnection?.buttonTitle ?? "Disconnect", role: .destructive) {
+                let action = pendingDisconnection
+                pendingDisconnection = nil
+                switch action {
+                case .piuGame:
+                    model.disconnect()
+                case .myPIU:
+                    Task { await model.disconnectMyPIU() }
+                case nil:
+                    break
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDisconnection = nil
+            }
+        } message: {
+            Text(pendingDisconnection?.message ?? "You can reconnect later.")
+        }
     }
 
     @ViewBuilder
@@ -161,6 +188,34 @@ struct AccountView: View {
         case .failed(let message):
             Label(message, systemImage: "exclamationmark.triangle")
                 .foregroundStyle(AppTheme.danger)
+        }
+    }
+}
+
+private enum AccountDisconnection {
+    case piuGame
+    case myPIU
+
+    var title: String {
+        switch self {
+        case .piuGame: "Disconnect PIUGAME?"
+        case .myPIU: "Disconnect MyPIU?"
+        }
+    }
+
+    var buttonTitle: String {
+        switch self {
+        case .piuGame: "Disconnect PIUGAME"
+        case .myPIU: "Disconnect MyPIU"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .piuGame:
+            "Saved PIUGAME credentials and on-device play data will be removed. Your PIUGAME account is not deleted."
+        case .myPIU:
+            "This signs MyPIU out on this device. Your synced data and MyPIU account remain available."
         }
     }
 }

@@ -3,6 +3,7 @@ import Foundation
 
 @MainActor
 final class SongCatalogModel: ObservableObject {
+    private static let completeCatalogFreshness: TimeInterval = 7 * 24 * 60 * 60
     private struct PendingFavoriteMutation {
         let id: UUID
         let previousValue: Bool
@@ -105,7 +106,8 @@ final class SongCatalogModel: ObservableObject {
             version: version,
             filters: filters,
             cacheScope: cacheScope,
-            debounce: debounce
+            debounce: debounce,
+            useFreshCompleteCache: true
         )
     }
 
@@ -115,6 +117,7 @@ final class SongCatalogModel: ObservableObject {
         filters: CatalogFilters = .empty,
         cacheScope: String? = "public",
         debounce: Bool = true,
+        useFreshCompleteCache: Bool = false,
         using searchCatalog: CatalogSearch? = nil,
         usingFiltered filteredSearchCatalog: FilteredCatalogSearch? = nil
     ) async {
@@ -160,14 +163,32 @@ final class SongCatalogModel: ObservableObject {
         guard !Task.isCancelled, self.requestID == requestID else { return }
         listing = listingApplyingCurrentFavorites(cached?.listing ?? CatalogListing())
         isShowingCachedData = cached != nil
+        if useFreshCompleteCache,
+           normalizedQuery.isEmpty,
+           filters.isEmpty,
+           let cached,
+           cached.listing.hasMore == false,
+           Date().timeIntervalSince(cached.cachedAt) < Self.completeCatalogFreshness {
+            listingRequestID = requestID
+            state = .loaded
+            return
+        }
         let startingFavoriteRevision = favoriteRevision
         do {
-            let page = try await performSearch(
-                query: normalizedQuery,
-                cursor: nil,
-                version: version,
-                filters: filters
-            )
+            let page = if normalizedQuery.isEmpty {
+                try await performCompleteSearch(
+                    query: normalizedQuery,
+                    version: version,
+                    filters: filters
+                )
+            } else {
+                try await performSearch(
+                    query: normalizedQuery,
+                    cursor: nil,
+                    version: version,
+                    filters: filters
+                )
+            }
             guard !Task.isCancelled, self.requestID == requestID else { return }
             listing.replace(with: pageApplyingFavorites(page, confirmedAfter: startingFavoriteRevision))
             listingRequestID = requestID
@@ -446,6 +467,41 @@ final class SongCatalogModel: ObservableObject {
             return try await searchCatalog(query, cursor, version)
         }
         return try await filteredSearchCatalog(query, cursor, version, filters)
+    }
+
+    private func performCompleteSearch(
+        query: String,
+        version: PIUGameVersion,
+        filters: CatalogFilters
+    ) async throws -> CatalogSearchPage {
+        let firstPage = try await performSearch(
+            query: query,
+            cursor: nil,
+            version: version,
+            filters: filters
+        )
+        var listing = CatalogListing()
+        listing.replace(with: firstPage)
+        var pageCount = 1
+
+        while let cursor = listing.nextCursor, pageCount < 200 {
+            try Task.checkCancellation()
+            let page = try await performSearch(
+                query: query,
+                cursor: cursor,
+                version: version,
+                filters: filters
+            )
+            listing.append(page, requestedCursor: cursor)
+            pageCount += 1
+        }
+
+        return CatalogSearchPage(
+            songs: listing.songs,
+            nextCursor: nil,
+            total: listing.total,
+            filterOptions: listing.filterOptions
+        )
     }
 
     private func listingForCache() -> CatalogListing {

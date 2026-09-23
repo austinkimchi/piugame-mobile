@@ -1,102 +1,108 @@
 import SwiftUI
 
-struct PerformanceSessionView: View {
+struct PerformanceSessionsView: View {
     @EnvironmentObject private var appModel: AppModel
     @State private var state: LoadState = .idle
-    @State private var session: MyPIUPerformanceSession?
-    @State private var loadedRequest: Request?
-    @State private var refreshID = UUID()
+    @State private var sessions: [MyPIUPerformanceSession] = []
 
     var body: some View {
         Group {
-            if request.accountScope?.hasPrefix("account:") != true {
+            if appModel.catalogCacheScope?.hasPrefix("account:") != true {
                 ContentUnavailableView(
                     "Connect MyPIU",
-                    systemImage: "person.crop.circle.badge.plus"
+                    systemImage: "person.crop.circle.badge.plus",
+                    description: Text("Session history is available after you connect your MyPIU account.")
                 )
-            } else if loadedRequest != request {
-                ProgressView("Loading session")
             } else {
                 loadedContent
             }
         }
-        .navigationTitle("Recent Session")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if appModel.isMyPIUConnected {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        refreshID = UUID()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .disabled(state == .loading)
-                    .accessibilityLabel("Refresh recent session")
-                }
-            }
-        }
-        .task(id: request) {
-            await load(request)
+        .navigationTitle("Sessions")
+        .task(id: appModel.catalogCacheScope) {
+            await load()
         }
     }
 
     @ViewBuilder
     private var loadedContent: some View {
         switch state {
-        case .idle, .loading:
-            ProgressView("Loading session")
-        case .failed(let message):
+        case .idle where sessions.isEmpty,
+             .loading where sessions.isEmpty:
+            ProgressView("Loading sessions")
+        case .failed(let message) where sessions.isEmpty:
             ContentUnavailableView {
-                Label("Session unavailable", systemImage: "wifi.exclamationmark")
+                Label("Sessions unavailable", systemImage: "wifi.exclamationmark")
             } description: {
                 Text(message)
             } actions: {
                 Button("Try Again", systemImage: "arrow.clockwise") {
-                    refreshID = UUID()
+                    Task { await load() }
                 }
             }
-        case .loaded:
-            if let session {
-                sessionList(session)
+        default:
+            if sessions.isEmpty {
+                ContentUnavailableView("No sessions yet", systemImage: "clock.arrow.circlepath")
             } else {
-                ContentUnavailableView(
-                    "No recent session",
-                    systemImage: "clock.arrow.circlepath"
-                )
+                List(sessions) { session in
+                    NavigationLink {
+                        PerformanceSessionView(session: session)
+                    } label: {
+                        SessionRow(session: session)
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(AppTheme.pageBackground)
+                .refreshable { await load() }
             }
         }
     }
 
-    private func sessionList(_ session: MyPIUPerformanceSession) -> some View {
+    @MainActor
+    private func load() async {
+        guard let scope = appModel.catalogCacheScope, scope.hasPrefix("account:") else {
+            sessions = []
+            state = .idle
+            return
+        }
+
+        state = .loading
+        do {
+            let sessions = try await appModel.performanceSessions()
+            try Task.checkCancellation()
+            guard appModel.catalogCacheScope == scope else { return }
+            self.sessions = sessions
+            state = .loaded
+        } catch is CancellationError {
+            return
+        } catch {
+            guard appModel.catalogCacheScope == scope else { return }
+            state = .failed(error.localizedDescription)
+        }
+    }
+}
+
+struct PerformanceSessionView: View {
+    @EnvironmentObject private var appModel: AppModel
+    let session: MyPIUPerformanceSession
+
+    var body: some View {
         List {
-            Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(appModel.myPIUAccount?.name ?? "MyPIU")
-                        .font(.headline)
-                    Text(sessionRange(session.summary))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            if let arcadeName = session.arcadeName, !arcadeName.isEmpty {
+                Section {
+                    Label(arcadeName, systemImage: "mappin.and.ellipse")
                 }
-                .padding(.vertical, 4)
-                .accessibilityElement(children: .combine)
             }
 
             Section("Summary") {
-                summaryRow("Plays", value: session.summary.playCount.formatted())
-                summaryRow("Clears", value: session.summary.clearCount.formatted())
-                summaryRow(
-                    "Clear rate",
-                    value: percentLabel(session.summary.clearRate),
-                    tint: clearRateTint(session.summary.clearRate)
-                )
-                summaryRow("Failures", value: session.summary.failedCount.formatted())
-                summaryRow("Average clear", value: scoreLabel(session.summary.averageScore))
+                clearSummaryRow
+                summaryRow("Average score", value: scoreLabel(session.summary.averageScore))
                 summaryRow("Best score", value: scoreLabel(session.summary.bestScore))
                 summaryRow("Unique charts", value: session.summary.distinctCharts.formatted())
                 summaryRow("Duration", value: durationLabel(session.summary.durationMinutes))
             }
 
-            Section("Plays") {
+            Section("Plays (\(playModeSummary(session.plays)))") {
                 ForEach(session.plays) { play in
                     let snapshotPlay = matchingRecentPlay(
                         for: play,
@@ -113,99 +119,128 @@ struct PerformanceSessionView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .refreshable {
-            refreshID = UUID()
-        }
+        .navigationTitle(sessionDayLabel(session.summary.endedAt))
+        .navigationBarTitleDisplayMode(.inline)
     }
 
-    @ViewBuilder
-    private func summaryRow(_ title: String, value: String, tint: Color? = nil) -> some View {
-        LabeledContent(title) {
-            if let tint {
-                Text(value)
-                    .font(.body.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(tint)
-            } else {
-                Text(value)
-                    .font(.body.weight(.semibold).monospacedDigit())
+    private var clearSummaryRow: some View {
+        LabeledContent("Clear") {
+            HStack(spacing: 0) {
+                Text("\(session.summary.clearCount.formatted())/\(session.summary.playCount.formatted()) (")
+                Text(percentLabel(session.summary.clearRate))
+                    .foregroundStyle(clearRateTint(session.summary.clearRate))
+                Text(")")
             }
+            .font(.body.weight(.semibold).monospacedDigit())
         }
     }
 
-    private func scoreLabel(_ score: Int?) -> String {
-        score?.formatted() ?? "-"
-    }
-
-    private func percentLabel(_ percent: Double?) -> String {
-        guard let percent else { return "-" }
-        return percent.formatted(.number.precision(.fractionLength(0))) + "%"
-    }
-
-    private func clearRateTint(_ percent: Double?) -> Color? {
-        guard let percent else { return nil }
-        return percent >= 80 ? AppTheme.positive : (percent < 50 ? AppTheme.danger : nil)
-    }
-
-    private func durationLabel(_ minutes: Int) -> String {
-        let safeMinutes = max(0, minutes)
-        let hours = safeMinutes / 60
-        let remainingMinutes = safeMinutes % 60
-        if hours == 0 {
-            return "\(remainingMinutes) min"
+    private func summaryRow(_ title: String, value: String) -> some View {
+        LabeledContent(title) {
+            Text(value)
+                .font(.body.weight(.semibold).monospacedDigit())
         }
-        if remainingMinutes == 0 {
-            return "\(hours) hr"
-        }
-        return "\(hours) hr \(remainingMinutes) min"
-    }
-
-    private func sessionRange(_ summary: MyPIUPerformanceSession.Summary) -> String {
-        "\(performanceDateLabel(summary.startedAt)) - \(performanceDateLabel(summary.endedAt))"
-    }
-
-    @MainActor
-    private func load(_ request: Request) async {
-        guard request.accountScope?.hasPrefix("account:") == true else {
-            session = nil
-            state = .idle
-            loadedRequest = request
-            return
-        }
-
-        session = nil
-        state = .loading
-        do {
-            let session = try await appModel.performanceSession()
-            try Task.checkCancellation()
-            guard self.request == request else { return }
-            self.session = session
-            state = .loaded
-            loadedRequest = request
-        } catch is CancellationError {
-            return
-        } catch {
-            guard self.request == request else { return }
-            session = nil
-            state = .failed(error.localizedDescription)
-            loadedRequest = request
-        }
-    }
-
-    private var request: Request {
-        Request(accountScope: appModel.catalogCacheScope, refreshID: refreshID)
     }
 }
 
-private extension PerformanceSessionView {
-    enum LoadState: Equatable {
-        case idle
-        case loading
-        case loaded
-        case failed(String)
+private struct SessionRow: View {
+    let session: MyPIUPerformanceSession
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(sessionTimestampLabel(session.summary.endedAt))
+                .font(.headline)
+            if let arcadeName = session.arcadeName, !arcadeName.isEmpty {
+                Label(arcadeName, systemImage: "mappin.and.ellipse")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            HStack(spacing: 4) {
+                Text("Clear \(session.summary.clearCount.formatted())/\(session.summary.playCount.formatted())")
+                Text("(\(percentLabel(session.summary.clearRate)))")
+                    .foregroundStyle(clearRateTint(session.summary.clearRate))
+                Text("· \(playModeSummary(session.plays))")
+            }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 3)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private enum LoadState: Equatable {
+    case idle
+    case loading
+    case loaded
+    case failed(String)
+}
+
+private func scoreLabel(_ score: Int?) -> String {
+    score?.formatted() ?? "-"
+}
+
+private func percentLabel(_ percent: Double?) -> String {
+    guard let percent else { return "-" }
+    return percent.formatted(.number.precision(.fractionLength(0))) + "%"
+}
+
+private func clearRateTint(_ percent: Double?) -> Color {
+    guard let percent else { return .secondary }
+    return percent >= 80 ? AppTheme.positive : (percent < 50 ? AppTheme.danger : AppTheme.warning)
+}
+
+private func durationLabel(_ minutes: Int) -> String {
+    let safeMinutes = max(0, minutes)
+    let hours = safeMinutes / 60
+    let remainingMinutes = safeMinutes % 60
+    if hours == 0 { return "\(remainingMinutes) min" }
+    if remainingMinutes == 0 { return "\(hours) hr" }
+    return "\(hours) hr \(remainingMinutes) min"
+}
+
+private func playModeSummary(_ plays: [MyPIUPerformanceDashboard.Play]) -> String {
+    var singles = 0
+    var doubles = 0
+    var coops = 0
+    var other = 0
+
+    for play in plays {
+        switch play.mode?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().first {
+        case "s": singles += 1
+        case "d": doubles += 1
+        case "c": coops += 1
+        default: other += 1
+        }
     }
 
-    struct Request: Hashable {
-        let accountScope: String?
-        let refreshID: UUID
-    }
+    let parts = [
+        modeCount(singles, singular: "single", plural: "singles"),
+        modeCount(doubles, singular: "double", plural: "doubles"),
+        modeCount(coops, singular: "co-op", plural: "co-op"),
+        modeCount(other, singular: "other", plural: "other"),
+    ].compactMap { $0 }
+    return parts.isEmpty ? "0 plays" : parts.joined(separator: ", ")
+}
+
+private func modeCount(_ count: Int, singular: String, plural: String) -> String? {
+    guard count > 0 else { return nil }
+    return "\(count.formatted()) \(count == 1 ? singular : plural)"
+}
+
+private func sessionDate(_ value: String) -> Date? {
+    let fractionalFormatter = ISO8601DateFormatter()
+    fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return fractionalFormatter.date(from: value) ?? ISO8601DateFormatter().date(from: value)
+}
+
+private func sessionDayLabel(_ value: String) -> String {
+    guard let date = sessionDate(value) else { return "Session" }
+    return date.formatted(.dateTime.month(.abbreviated).day().year())
+}
+
+private func sessionTimestampLabel(_ value: String) -> String {
+    guard let date = sessionDate(value) else { return "Session" }
+    return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
 }

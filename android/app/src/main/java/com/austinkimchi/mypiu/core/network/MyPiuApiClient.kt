@@ -15,6 +15,7 @@ import com.austinkimchi.mypiu.core.model.MyPiuPerformanceSession
 import com.austinkimchi.mypiu.core.model.MyPiuSyncResult
 import com.austinkimchi.mypiu.core.model.PerformanceResponse
 import com.austinkimchi.mypiu.core.model.PerformanceSessionResponse
+import com.austinkimchi.mypiu.core.model.PerformanceSessionsResponse
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.PiuSnapshot
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
@@ -139,6 +140,11 @@ class MyPiuApiClient(
     suspend fun performanceSession(accessToken: String): MyPiuPerformanceSession? {
         val request = authenticatedRequest("api/mobile/v1/performance/session", accessToken).get().build()
         return send<PerformanceSessionResponse>(request).session
+    }
+
+    suspend fun performanceSessions(accessToken: String): List<MyPiuPerformanceSession> {
+        val request = authenticatedRequest("api/mobile/v1/performance/sessions", accessToken).get().build()
+        return send<PerformanceSessionsResponse>(request).sessions
     }
 
     suspend fun searchCatalog(

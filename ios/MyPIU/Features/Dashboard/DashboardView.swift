@@ -94,7 +94,7 @@ struct DashboardView: View {
                     )
 
                     NavigationLink {
-                        PerformanceSessionView()
+                        PerformanceSessionsView()
                     } label: {
                         MetricTile(
                             title: "Recent session",
@@ -105,10 +105,10 @@ struct DashboardView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityHint("Shows the latest play session summary")
+                    .accessibilityHint("Shows play session history")
                 }
 
-                dashboardSection(title: "RECENT PLAYS", detail: "View all in Activity") {
+                dashboardSection(title: "RECENT PLAYS", detail: "View all in Sessions") {
                     let recentPlays = Array(performance.recentPlays.prefix(5))
                     if recentPlays.isEmpty {
                         Text("No recent plays yet.")

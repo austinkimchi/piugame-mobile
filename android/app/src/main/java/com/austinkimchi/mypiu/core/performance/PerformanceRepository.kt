@@ -9,6 +9,7 @@ import com.austinkimchi.mypiu.core.security.SessionStore
 interface PerformanceDataSource {
     suspend fun dashboard(): MyPiuPerformanceDashboard
     suspend fun session(): MyPiuPerformanceSession?
+    suspend fun sessions(): List<MyPiuPerformanceSession> = session()?.let(::listOf) ?: emptyList()
 }
 
 class PerformanceRepository(
@@ -18,6 +19,8 @@ class PerformanceRepository(
     override suspend fun dashboard(): MyPiuPerformanceDashboard = withSession(apiClient::performance)
 
     override suspend fun session(): MyPiuPerformanceSession? = withSession(apiClient::performanceSession)
+
+    override suspend fun sessions(): List<MyPiuPerformanceSession> = withSession(apiClient::performanceSessions)
 
     private suspend fun <Value> withSession(operation: suspend (String) -> Value): Value {
         val storedToken = sessionStore.accessToken()

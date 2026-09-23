@@ -115,6 +115,16 @@ actor MyPIUAPIClient {
         return response.session
     }
 
+    func performanceSessions(accessToken: String) async throws -> [MyPIUPerformanceSession] {
+        var request = authenticatedRequest(
+            path: "/api/mobile/v1/performance/sessions",
+            accessToken: accessToken
+        )
+        request.httpMethod = "GET"
+        let response: PerformanceSessionsResponse = try await send(request)
+        return response.sessions
+    }
+
     func searchCatalog(
         query: String,
         cursor: String? = nil,
@@ -321,6 +331,10 @@ private struct PerformanceResponse: Decodable {
 
 private struct PerformanceSessionResponse: Decodable {
     let session: MyPIUPerformanceSession?
+}
+
+private struct PerformanceSessionsResponse: Decodable {
+    let sessions: [MyPIUPerformanceSession]
 }
 
 private struct FavoriteUpdatePayload: Encodable {

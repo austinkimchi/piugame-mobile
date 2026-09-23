@@ -51,6 +51,8 @@ data class MyPiuPerformanceDashboard(
         val level: String? = null,
         val playedAt: String? = null,
         val stageBreak: Boolean = false,
+        val arcadeName: String? = null,
+        val judgments: JudgmentCounts? = null,
     ) {
         val displayChartToken: String
             get() = if (mode != null && level != null) "${mode.uppercase()}$level" else chartToken
@@ -81,6 +83,8 @@ data class PerformanceResponse(val performance: MyPiuPerformanceDashboard)
 
 @Serializable
 data class MyPiuPerformanceSession(
+    val id: String = "",
+    val arcadeName: String? = null,
     val summary: Summary,
     val plays: List<MyPiuPerformanceDashboard.Play> = emptyList(),
 ) {
@@ -108,6 +112,9 @@ data class MyPiuPerformanceSession(
 
 @Serializable
 data class PerformanceSessionResponse(val session: MyPiuPerformanceSession? = null)
+
+@Serializable
+data class PerformanceSessionsResponse(val sessions: List<MyPiuPerformanceSession> = emptyList())
 
 data class PerformanceProgressSummary(
     val clearedCharts: Int?,

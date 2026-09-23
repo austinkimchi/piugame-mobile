@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -157,43 +158,54 @@ private fun LocalActivityList(plays: List<RecentPlay>, error: String?) {
 }
 
 @Composable
-fun PerformanceSessionScreen(
+fun PerformanceSessionsScreen(
     state: PerformanceUiState,
-    accountName: String?,
     onLoad: () -> Unit,
     onRefresh: () -> Unit,
+    onOpenSession: (MyPiuPerformanceSession) -> Unit,
 ) {
     LaunchedEffect(state.accountScope) { onLoad() }
 
     when {
         !state.isConnected -> ActivityUnavailable(connected = false, message = null, onRefresh = onRefresh)
         state.isSessionLoading || !state.isSessionLoaded && state.sessionError == null -> {
-            CenteredActivityProgress("Loading session")
+            CenteredActivityProgress("Loading sessions")
         }
         state.sessionError != null -> ActivityUnavailable(
             connected = true,
             message = state.sessionError,
             onRefresh = onRefresh,
-            title = "Session unavailable",
+            title = "Sessions unavailable",
         )
-        state.session == null -> EmptyActivity("No recent session", Modifier.fillMaxSize())
-        else -> PerformanceSessionList(state.session, accountName)
+        state.sessions.isEmpty() -> EmptyActivity("No sessions yet", Modifier.fillMaxSize())
+        else -> LazyColumn(
+            modifier = Modifier.fillMaxSize().widthIn(max = 860.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            itemsIndexed(
+                state.sessions,
+                key = { index, session -> session.id.ifBlank { "${session.summary.endedAt}:$index" } },
+            ) { index, session ->
+                SessionRow(session, onClick = { onOpenSession(session) })
+                if (index < state.sessions.lastIndex) HorizontalDivider()
+            }
+        }
     }
 }
 
 @Composable
-private fun PerformanceSessionList(session: MyPiuPerformanceSession, accountName: String?) {
+fun PerformanceSessionScreen(session: MyPiuPerformanceSession) {
     val summary = session.summary
     LazyColumn(
         modifier = Modifier.fillMaxSize().widthIn(max = 860.dp),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        item {
-            Column(Modifier.padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(accountName ?: "MyPIU", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        session.arcadeName?.takeIf(String::isNotBlank)?.let { arcadeName ->
+            item {
                 Text(
-                    "${performanceDateLabel(summary.startedAt)} - ${performanceDateLabel(summary.endedAt)}",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Location · $arcadeName",
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -206,18 +218,14 @@ private fun PerformanceSessionList(session: MyPiuPerformanceSession, accountName
                 modifier = Modifier.padding(top = 16.dp, bottom = 6.dp),
             )
         }
-        item { SessionSummaryRow("Plays", formatActivityInteger(summary.playCount)) }
-        item { SessionSummaryRow("Clears", formatActivityInteger(summary.clearCount)) }
-        item { SessionSummaryRow("Clear rate", formatPercent(summary.clearRate), clearRateColor(summary.clearRate)) }
-        item { SessionSummaryRow("Failures", formatActivityInteger(summary.failedCount)) }
-        item { SessionSummaryRow("Stage breaks", formatActivityInteger(summary.stageBreakCount)) }
-        item { SessionSummaryRow("Average clear", formatActivityInteger(summary.averageScore)) }
+        item { SessionClearSummaryRow(summary) }
+        item { SessionSummaryRow("Average score", formatActivityInteger(summary.averageScore)) }
         item { SessionSummaryRow("Best score", formatActivityInteger(summary.bestScore)) }
         item { SessionSummaryRow("Unique charts", formatActivityInteger(summary.distinctCharts)) }
         item { SessionSummaryRow("Duration", durationLabel(summary.durationMinutes)) }
         item {
             Text(
-                "Plays",
+                "Plays (${sessionModeSummary(session.plays)})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 22.dp, bottom = 6.dp),
@@ -232,6 +240,55 @@ private fun PerformanceSessionList(session: MyPiuPerformanceSession, accountName
             }
         }
     }
+}
+
+@Composable
+private fun SessionRow(session: MyPiuPerformanceSession, onClick: () -> Unit) {
+    val summary = session.summary
+    Column(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(sessionTimestampLabel(summary.endedAt), fontWeight = FontWeight.Bold)
+        session.arcadeName?.takeIf(String::isNotBlank)?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                "Clear ${summary.clearCount}/${summary.playCount}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                "(${formatPercent(summary.clearRate)})",
+                style = MaterialTheme.typography.bodySmall,
+                color = clearRateColor(summary.clearRate) ?: MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                "· ${sessionModeSummary(session.plays)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SessionClearSummaryRow(summary: MyPiuPerformanceSession.Summary) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Clear", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("${summary.clearCount}/${summary.playCount} (", fontWeight = FontWeight.Bold)
+        Text(
+            formatPercent(summary.clearRate),
+            fontWeight = FontWeight.Bold,
+            color = clearRateColor(summary.clearRate) ?: MaterialTheme.colorScheme.onSurface,
+        )
+        Text(")", fontWeight = FontWeight.Bold)
+    }
+    HorizontalDivider()
 }
 
 @Composable
@@ -491,6 +548,38 @@ internal fun performanceDateLabel(value: String?): String {
     }.getOrDefault(value)
 }
 
+internal fun performanceSessionDayLabel(value: String): String = runCatching {
+    DateTimeFormatter.ofPattern("MMM d, yyyy")
+        .format(Instant.parse(value).atZone(ZoneId.systemDefault()))
+}.getOrDefault("Session")
+
+private fun sessionTimestampLabel(value: String): String = runCatching {
+    DateTimeFormatter.ofPattern("MMM d, h:mm a")
+        .format(Instant.parse(value).atZone(ZoneId.systemDefault()))
+}.getOrDefault(value)
+
+private fun sessionModeSummary(plays: List<MyPiuPerformanceDashboard.Play>): String {
+    val counts = plays.groupingBy { play ->
+        when (play.mode?.trim()?.lowercase()?.firstOrNull()) {
+            's' -> "single"
+            'd' -> "double"
+            'c' -> "co-op"
+            else -> "other"
+        }
+    }.eachCount()
+    val order = listOf("single", "double", "co-op", "other")
+    return order.mapNotNull { mode ->
+        counts[mode]?.takeIf { it > 0 }?.let { count ->
+            val label = when {
+                mode == "co-op" || mode == "other" -> mode
+                count == 1 -> mode
+                else -> "${mode}s"
+            }
+            "$count $label"
+        }
+    }.joinToString().ifEmpty { "0 plays" }
+}
+
 private fun formatActivityInteger(value: Int?): String = value?.let(NumberFormat.getIntegerInstance()::format) ?: "-"
 
 private fun formatPercent(value: Double?): String = value?.let {
@@ -513,5 +602,5 @@ private fun clearRateColor(value: Double?): Color? = when {
     value == null -> null
     value >= 80 -> MaterialTheme.colorScheme.primary
     value < 50 -> MaterialTheme.colorScheme.error
-    else -> null
+    else -> MaterialTheme.colorScheme.tertiary
 }

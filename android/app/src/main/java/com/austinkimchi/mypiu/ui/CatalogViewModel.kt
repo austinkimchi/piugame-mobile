@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.austinkimchi.mypiu.AppContainer
 import com.austinkimchi.mypiu.core.catalog.CatalogDataSource
 import com.austinkimchi.mypiu.core.model.CatalogListing
+import com.austinkimchi.mypiu.core.model.CatalogSearchPage
 import com.austinkimchi.mypiu.core.model.CatalogSong
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
@@ -121,7 +122,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         reload(debounce = query.isNotBlank())
     }
 
-    fun refresh() = reload(debounce = false)
+    fun refresh() = reload(debounce = false, useFreshCompleteCache = false)
 
     fun loadMore() {
         val snapshot = mutableState.value
@@ -339,7 +340,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         mutableState.update { it.copy(sessionInvalidated = false) }
     }
 
-    private fun reload(debounce: Boolean) {
+    private fun reload(debounce: Boolean, useFreshCompleteCache: Boolean = true) {
         loadJob?.cancel()
         paginationJob?.cancel()
         val generation = ++requestGeneration
@@ -369,10 +370,23 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                         isShowingCachedData = true,
                     )
                 }
+                val cacheIsFresh = System.currentTimeMillis() - cached.cachedAtEpochMillis < COMPLETE_CATALOG_FRESHNESS_MILLIS
+                if (
+                    useFreshCompleteCache && snapshot.feed == CatalogFeed.CATALOG && query.isBlank() &&
+                    cached.listing.nextCursor == null && cacheIsFresh
+                ) {
+                    mutableState.update { it.copy(isLoading = false) }
+                    return@launch
+                }
             }
             val requestId = ++latestSearchRequestId
             try {
-                val page = repository.search(query, null, version, authenticated)
+                val firstPage = repository.search(query, null, version, authenticated)
+                val page = if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank()) {
+                    completeCatalogPage(firstPage, query, version, authenticated)
+                } else {
+                    firstPage
+                }
                 if (generation != requestGeneration) return@launch
                 val listing = applyFavoriteOverrides(
                     CatalogListing(page.songs, page.nextCursor, page.total),
@@ -403,6 +417,27 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 }
             }
         }
+    }
+
+    private suspend fun completeCatalogPage(
+        firstPage: CatalogSearchPage,
+        query: String,
+        version: PiuGameVersion,
+        authenticated: Boolean,
+    ): CatalogSearchPage {
+        var listing = CatalogListing(firstPage.songs, firstPage.nextCursor, firstPage.total)
+        var pageCount = 1
+        while (listing.nextCursor != null && pageCount < 200) {
+            val cursor = listing.nextCursor ?: break
+            val page = repository.search(query, cursor, version, authenticated)
+            listing = listing.append(page, cursor)
+            pageCount += 1
+        }
+        return CatalogSearchPage(
+            songs = listing.songs,
+            nextCursor = null,
+            total = listing.total,
+        )
     }
 
     private fun applyFavoriteOverrides(
@@ -491,6 +526,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         const val PUBLIC_SCOPE = "public"
         const val SEARCH_DEBOUNCE_MILLIS = 300L
         const val SIGN_IN_FOR_HISTORY_MESSAGE = "Sign in to MyPIU to view chart history."
+        const val COMPLETE_CATALOG_FRESHNESS_MILLIS = 7L * 24 * 60 * 60 * 1_000
     }
 }
 

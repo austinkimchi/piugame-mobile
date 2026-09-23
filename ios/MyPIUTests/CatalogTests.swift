@@ -221,6 +221,77 @@ final class CatalogTests: XCTestCase {
     }
 
     @MainActor
+    func testEmptyCatalogDownloadsEveryPageAndReusesFreshCompleteCache() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let fixturePage = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let firstSong = try XCTUnwrap(fixturePage.songs.first)
+        let secondSong = CatalogSong(
+            slug: "second-song",
+            title: "Second Song",
+            artist: firstSong.artist,
+            supportedVersions: firstSong.supportedVersions,
+            imagePath: firstSong.imagePath,
+            bpm: firstSong.bpm,
+            chartSummary: firstSong.chartSummary,
+            folder: firstSong.folder,
+            series: firstSong.series,
+            tags: firstSong.tags,
+            isPremium: firstSong.isPremium,
+            isFavorite: false,
+            recommendedChartToken: nil
+        )
+        let catalog = SongCatalogModel(cache: cache)
+        var requestedCursors: [String?] = []
+
+        await catalog.loadIfNeeded(
+            query: "",
+            version: .phoenix2,
+            cacheScope: "public",
+            debounce: false,
+            using: { _, cursor, _ in
+                requestedCursors.append(cursor)
+                if cursor == nil {
+                    return CatalogSearchPage(
+                        songs: [firstSong],
+                        nextCursor: "page-2",
+                        total: 2,
+                        filterOptions: fixturePage.filterOptions
+                    )
+                }
+                return CatalogSearchPage(
+                    songs: [secondSong],
+                    nextCursor: nil,
+                    total: 2,
+                    filterOptions: fixturePage.filterOptions
+                )
+            }
+        )
+
+        XCTAssertEqual(requestedCursors, [nil, "page-2"])
+        XCTAssertEqual(catalog.listing.songs.map(\.slug), ["battle-no-1", "second-song"])
+        XCTAssertFalse(catalog.listing.hasMore)
+
+        let restoredCatalog = SongCatalogModel(cache: cache)
+        var restoredRequestCount = 0
+        await restoredCatalog.loadIfNeeded(
+            query: "",
+            version: .phoenix2,
+            cacheScope: "public",
+            debounce: false,
+            using: { _, _, _ in
+                restoredRequestCount += 1
+                return CatalogSearchPage(songs: [], nextCursor: nil, total: 0)
+            }
+        )
+
+        XCTAssertEqual(restoredRequestCount, 0)
+        XCTAssertEqual(restoredCatalog.listing.songs.map(\.slug), ["battle-no-1", "second-song"])
+        XCTAssertEqual(restoredCatalog.listing.filterOptions, fixturePage.filterOptions)
+    }
+
+    @MainActor
     func testCatalogForwardsWebsiteStyleFilters() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }

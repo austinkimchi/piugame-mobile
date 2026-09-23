@@ -195,6 +195,28 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(presentation.judgmentValues.reduce(0) { $0 + $1.value }, 926)
     }
 
+    func testStoredPerformancePlayPrefersServerJudgments() {
+        let serverJudgments = JudgmentCounts(perfect: 850, great: 30, good: 4, bad: 2, miss: 1)
+        let serverPlay = MyPIUPerformanceDashboard.Play(
+            id: "stored-play",
+            songName: "BATTLE NO.1",
+            chartToken: "battle-no-1:s:19",
+            score: 940_000,
+            grade: "s",
+            plate: "fg",
+            mode: "S",
+            level: "19",
+            playedAt: "2026-09-20T07:20:00.000Z",
+            stageBreak: false,
+            judgments: serverJudgments
+        )
+
+        let presentation = RecentPlayPresentation(play: serverPlay)
+
+        XCTAssertEqual(presentation.judgments, serverJudgments)
+        XCTAssertEqual(presentation.judgmentValues.reduce(0) { $0 + $1.value }, 887)
+    }
+
     func testDecodesSongChartHistoryNewestFirst() throws {
         let data = Data(
             #"""
@@ -258,6 +280,8 @@ final class PerformanceTests: XCTestCase {
         let data = Data(
             #"""
             {
+              "id": "session-1",
+              "arcadeName": "Round1 Eastridge",
               "summary": {
                 "playCount": 3,
                 "clearCount": 2,
@@ -303,6 +327,8 @@ final class PerformanceTests: XCTestCase {
         let session = try JSONDecoder().decode(MyPIUPerformanceSession.self, from: data)
 
         XCTAssertEqual(session.summary.playCount, 3)
+        XCTAssertEqual(session.id, "session-1")
+        XCTAssertEqual(session.arcadeName, "Round1 Eastridge")
         XCTAssertEqual(session.summary.failedCount, 1)
         XCTAssertEqual(try XCTUnwrap(session.summary.clearRate), 200.0 / 3.0, accuracy: 0.0001)
         XCTAssertEqual(session.summary.durationMinutes, 60)
