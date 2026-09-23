@@ -51,10 +51,10 @@ class AppViewModel(
         viewModelScope.launch { runOperation { repository.connectPiu(username, password, version) } }
     }
 
-    fun refresh(onSuccess: (() -> Unit)? = null) {
-        viewModelScope.launch {
-            if (runOperation { repository.sync() } == null) onSuccess?.invoke()
-        }
+    fun refresh() {
+        if (mutableState.value.isBusy) return
+        mutableState.update { it.copy(isBusy = true, message = null) }
+        viewModelScope.launch { runOperation { repository.sync() } }
     }
 
     fun reconcileConnectionState() {
@@ -165,33 +165,7 @@ class AppViewModel(
     }
 
     private fun apply(snapshot: RepositorySnapshot) {
-        mutableState.update { current ->
-            current.copy(
-                isPiuConnected = snapshot.isPiuConnected,
-                isMyPiuConnected = snapshot.isMyPiuConnected,
-                account = if (snapshot.isMyPiuConnected) snapshot.account ?: current.account else null,
-                accountId = if (snapshot.isMyPiuConnected) {
-                    snapshot.account?.id ?: current.accountId ?: current.account?.id
-                } else {
-                    null
-                },
-                accountPiuGameVersion = if (snapshot.isMyPiuConnected) {
-                    snapshot.account?.piuGameVersion ?: current.accountPiuGameVersion ?: current.account?.piuGameVersion
-                } else {
-                    null
-                },
-                profile = if (snapshot.isPiuConnected) snapshot.piuSnapshot?.profile ?: current.profile else null,
-                recentPlays = if (snapshot.isPiuConnected) {
-                    snapshot.piuSnapshot?.recentPlays ?: current.recentPlays
-                } else {
-                    emptyList()
-                },
-                piuVersion = if (snapshot.isPiuConnected) snapshot.piuSnapshot?.version ?: current.piuVersion else null,
-                message = snapshot.syncResult?.let { result ->
-                    "Synced ${result.importedRecentPlays} new plays; ${result.duplicateRecentPlays} already current."
-                },
-            )
-        }
+        mutableState.update { it.applying(snapshot) }
         if (snapshot.isPiuConnected && snapshot.isMyPiuConnected) scheduler.schedule() else scheduler.cancel()
     }
 
@@ -219,5 +193,29 @@ data class AppUiState(
     val profile: PiuProfile? = null,
     val recentPlays: List<RecentPlay> = emptyList(),
     val piuVersion: PiuGameVersion? = null,
+    val performanceRevision: Long = 0,
     val message: String? = null,
+)
+
+internal fun AppUiState.applying(snapshot: RepositorySnapshot): AppUiState = copy(
+    isPiuConnected = snapshot.isPiuConnected,
+    isMyPiuConnected = snapshot.isMyPiuConnected,
+    account = if (snapshot.isMyPiuConnected) snapshot.account ?: account else null,
+    accountId = if (snapshot.isMyPiuConnected) {
+        snapshot.account?.id ?: accountId ?: account?.id
+    } else {
+        null
+    },
+    accountPiuGameVersion = if (snapshot.isMyPiuConnected) {
+        snapshot.account?.piuGameVersion ?: accountPiuGameVersion ?: account?.piuGameVersion
+    } else {
+        null
+    },
+    profile = if (snapshot.isPiuConnected) snapshot.piuSnapshot?.profile ?: profile else null,
+    recentPlays = if (snapshot.isPiuConnected) snapshot.piuSnapshot?.recentPlays ?: recentPlays else emptyList(),
+    piuVersion = if (snapshot.isPiuConnected) snapshot.piuSnapshot?.version ?: piuVersion else null,
+    performanceRevision = performanceRevision + if (snapshot.syncResult != null) 1L else 0L,
+    message = snapshot.syncResult?.let { result ->
+        "Synced ${result.importedRecentPlays} new plays; ${result.duplicateRecentPlays} already current."
+    },
 )

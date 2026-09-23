@@ -120,8 +120,9 @@ fun MyPiuApp(
     val preferredCatalogVersion = state.account?.piuGameVersion ?: state.accountPiuGameVersion ?: state.piuVersion
 
     fun refreshProgress() {
+        if (state.isBusy || performanceState.isLoading) return
         when {
-            state.isPiuConnected -> viewModel.refresh(performanceViewModel::refresh)
+            state.isPiuConnected -> viewModel.refresh()
             performanceState.isConnected -> performanceViewModel.refresh()
         }
     }
@@ -150,6 +151,7 @@ fun MyPiuApp(
         catalogAccountId,
         state.isMyPiuConnected,
         preferredCatalogVersion,
+        state.performanceRevision,
     ) {
         catalogViewModel.updateSession(
             accountId = catalogAccountId,
@@ -160,6 +162,9 @@ fun MyPiuApp(
             accountId = catalogAccountId,
             connected = state.isMyPiuConnected,
         )
+        if (state.isMyPiuConnected && state.performanceRevision > 0) {
+            performanceViewModel.refresh()
+        }
     }
     LaunchedEffect(selectedSongSlug, selectedSongVersion, catalogState.version) {
         if (selectedSongSlug != null && selectedSongVersion != null && catalogState.version != selectedSongVersion) {
@@ -239,9 +244,9 @@ fun MyPiuApp(
                                     !isRestoringSelectedVersion && !catalogState.chartHistory.orDefaultLoading
                                 }
                                 destination == AppDestination.SONGS -> !catalogState.isLoading
-                                destination == AppDestination.PROGRESS -> when {
+                                destination == AppDestination.PROGRESS -> !state.isBusy && when {
                                     performanceState.isConnected -> !performanceState.isLoading
-                                    else -> state.isPiuConnected && !state.isBusy
+                                    else -> state.isPiuConnected
                                 }
                                 else -> state.isPiuConnected && !state.isBusy
                             },
