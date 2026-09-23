@@ -39,8 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -50,6 +48,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -199,8 +198,38 @@ fun MyPiuApp(
         }
     }
 
-    Scaffold(
-        topBar = {
+    NavigationSuiteScaffold(
+        navigationSuiteItems = {
+            AppDestination.entries.forEach { item ->
+                item(
+                    selected = destination == item,
+                    onClick = {
+                        destination = item
+                        selectedSongSlug = null
+                        selectedChartToken = null
+                        showingPumbility = false
+                        showingPerformanceSession = false
+                        selectedSongVersionName = null
+                        selectedSongFallbackJson = null
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = when (item) {
+                                AppDestination.HOME -> Icons.Default.Home
+                                AppDestination.PROGRESS -> Icons.Default.PieChart
+                                AppDestination.ACTIVITY -> Icons.Default.History
+                                AppDestination.SONGS -> Icons.Default.MusicNote
+                            },
+                            contentDescription = item.label,
+                        )
+                    },
+                    label = { Text(item.label) },
+                )
+            }
+        },
+    ) {
+        Scaffold(
+            topBar = {
             TopAppBar(
                 title = {
                     Text(
@@ -274,43 +303,13 @@ fun MyPiuApp(
                     }
                 },
             )
-        },
-        bottomBar = {
-            NavigationBar {
-                AppDestination.entries.forEach { item ->
-                    NavigationBarItem(
-                        selected = destination == item,
-                        onClick = {
-                            destination = item
-                            selectedSongSlug = null
-                            selectedChartToken = null
-                            showingPumbility = false
-                            showingPerformanceSession = false
-                            selectedSongVersionName = null
-                            selectedSongFallbackJson = null
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = when (item) {
-                                    AppDestination.HOME -> Icons.Default.Home
-                                    AppDestination.PROGRESS -> Icons.Default.PieChart
-                                    AppDestination.ACTIVITY -> Icons.Default.History
-                                    AppDestination.SONGS -> Icons.Default.MusicNote
-                                },
-                                contentDescription = null,
-                            )
-                        },
-                        label = { Text(item.label) },
-                    )
-                }
-            }
-        },
-    ) { contentPadding ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(contentPadding),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            when {
+            },
+        ) { contentPadding ->
+            Box(
+                modifier = Modifier.fillMaxSize().padding(contentPadding),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                when {
                 destination == AppDestination.HOME -> HomeContent(
                     state = state,
                     viewModel = viewModel,
@@ -373,9 +372,10 @@ fun MyPiuApp(
                         catalogViewModel.loadChartHistory(selectedSong, selectedChartToken.orEmpty(), force = true)
                     },
                 )
-            }
-            if (state.isBusy) {
-                LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                }
+                if (state.isBusy) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                }
             }
         }
     }
