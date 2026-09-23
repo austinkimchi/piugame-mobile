@@ -200,7 +200,13 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(presentation.songImageURL, snapshotPlay.songImageURL)
         XCTAssertEqual(presentation.plate, "rg")
         XCTAssertEqual(presentation.judgments.perfect, 900)
-        XCTAssertEqual(presentation.judgmentValues.reduce(0) { $0 + $1.value }, 926)
+        XCTAssertEqual(presentation.judgmentTotal, 926)
+        XCTAssertEqual(
+            presentation.judgmentValues.map(\.label),
+            ["Perfect", "Great", "Good", "Bad", "Miss"]
+        )
+        XCTAssertEqual(presentation.judgmentValues[0].tint, AppTheme.info)
+        XCTAssertEqual(presentation.judgmentValues[1].tint, AppTheme.accent)
     }
 
     func testStoredPerformancePlayPrefersServerJudgments() {
@@ -222,7 +228,7 @@ final class PerformanceTests: XCTestCase {
         let presentation = RecentPlayPresentation(play: serverPlay)
 
         XCTAssertEqual(presentation.judgments, serverJudgments)
-        XCTAssertEqual(presentation.judgmentValues.reduce(0) { $0 + $1.value }, 887)
+        XCTAssertEqual(presentation.judgmentTotal, 887)
     }
 
     func testDecodesSongChartHistoryNewestFirst() throws {
