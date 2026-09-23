@@ -347,6 +347,7 @@ fun MyPiuApp(
                     state = performanceState,
                     onLoad = performanceViewModel::loadSession,
                     onRefresh = { performanceViewModel.loadSession(force = true) },
+                    onLoadMore = performanceViewModel::loadMoreSessions,
                     onOpenSession = { session ->
                         selectedSessionId = session.id.ifBlank { session.summary.endedAt }
                     },
@@ -355,6 +356,7 @@ fun MyPiuApp(
                     state = catalogState,
                     imageUrl = catalogViewModel::imageUrl,
                     onQueryChange = catalogViewModel::setQuery,
+                    onSortChange = catalogViewModel::setSort,
                     onFeedChange = catalogViewModel::setFeed,
                     onVersionChange = catalogViewModel::setVersion,
                     onRefresh = catalogViewModel::refresh,
@@ -465,8 +467,8 @@ private fun HomeContent(
 
 private enum class AppDestination(val label: String) {
     HOME("Home"),
-    PROGRESS("Progress"),
     ACTIVITY("Sessions"),
+    PROGRESS("Progress"),
     SONGS("Songs"),
 }
 

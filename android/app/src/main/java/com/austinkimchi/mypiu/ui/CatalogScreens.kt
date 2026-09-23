@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,6 +75,8 @@ import coil3.compose.SubcomposeAsyncImage
 import com.austinkimchi.mypiu.BuildConfig
 import com.austinkimchi.mypiu.core.model.CatalogChartMode
 import com.austinkimchi.mypiu.core.model.CatalogSong
+import com.austinkimchi.mypiu.core.model.CatalogSortDirection
+import com.austinkimchi.mypiu.core.model.CatalogSortOption
 import com.austinkimchi.mypiu.core.model.JudgmentCounts
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
@@ -88,6 +91,7 @@ fun CatalogScreen(
     state: CatalogUiState,
     imageUrl: (CatalogSong) -> String?,
     onQueryChange: (String) -> Unit,
+    onSortChange: (CatalogSortOption, CatalogSortDirection) -> Unit,
     onFeedChange: (CatalogFeed) -> Unit,
     onVersionChange: (PiuGameVersion) -> Unit,
     onRefresh: () -> Unit,
@@ -142,6 +146,26 @@ fun CatalogScreen(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                 )
+                Text("Sort by", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CatalogSortOption.entries.forEach { option ->
+                        FilterChip(
+                            selected = state.sortBy == option,
+                            onClick = { onSortChange(option, state.sortDirection) },
+                            label = { Text(option.title) },
+                        )
+                    }
+                }
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    CatalogSortDirection.entries.forEachIndexed { index, direction ->
+                        SegmentedButton(
+                            selected = state.sortDirection == direction,
+                            onClick = { onSortChange(state.sortBy, direction) },
+                            shape = SegmentedButtonDefaults.itemShape(index, CatalogSortDirection.entries.size),
+                            label = { Text(direction.title) },
+                        )
+                    }
+                }
             }
         }
 

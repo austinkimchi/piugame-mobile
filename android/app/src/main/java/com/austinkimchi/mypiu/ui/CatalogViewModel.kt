@@ -8,6 +8,8 @@ import com.austinkimchi.mypiu.core.catalog.CatalogDataSource
 import com.austinkimchi.mypiu.core.model.CatalogListing
 import com.austinkimchi.mypiu.core.model.CatalogSearchPage
 import com.austinkimchi.mypiu.core.model.CatalogSong
+import com.austinkimchi.mypiu.core.model.CatalogSortDirection
+import com.austinkimchi.mypiu.core.model.CatalogSortOption
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
@@ -122,6 +124,15 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         reload(debounce = query.isNotBlank())
     }
 
+    fun setSort(sortBy: CatalogSortOption, sortDirection: CatalogSortDirection) {
+        val current = mutableState.value
+        if (current.feed != CatalogFeed.CATALOG ||
+            current.sortBy == sortBy && current.sortDirection == sortDirection
+        ) return
+        mutableState.update { it.copy(sortBy = sortBy, sortDirection = sortDirection) }
+        reload(debounce = false)
+    }
+
     fun refresh() = reload(debounce = false, useFreshCompleteCache = false)
 
     fun loadMore() {
@@ -133,11 +144,13 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         val version = snapshot.version
         val scope = snapshot.cacheScope
         val authenticated = snapshot.isMyPiuConnected
+        val sortBy = snapshot.sortBy
+        val sortDirection = snapshot.sortDirection
         val requestId = ++latestSearchRequestId
         paginationJob = viewModelScope.launch {
             mutableState.update { it.copy(isLoadingMore = true, paginationError = null) }
             try {
-                val page = repository.search(query, cursor, version, authenticated)
+                val page = repository.search(query, cursor, version, authenticated, sortBy, sortDirection)
                 if (generation != requestGeneration) return@launch
                 val listing = applyFavoriteOverrides(
                     mutableState.value.listing.append(page, cursor),
@@ -147,7 +160,11 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 )
                 retireFavoriteOverrides(requestId)
                 mutableState.update { it.copy(listing = listing, isLoadingMore = false) }
-                scope?.let { runCatching { repository.cache(listingForCache(listing, it, version), query, version, it) } }
+                scope?.let {
+                    runCatching {
+                        repository.cache(listingForCache(listing, it, version), query, version, it, sortBy, sortDirection)
+                    }
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -351,6 +368,8 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             val version = snapshot.version
             val scope = snapshot.cacheScope
             val authenticated = snapshot.isMyPiuConnected
+            val sortBy = snapshot.sortBy
+            val sortDirection = snapshot.sortDirection
             mutableState.update {
                 it.copy(
                     listing = CatalogListing(),
@@ -361,7 +380,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                     paginationError = null,
                 )
             }
-            val cached = scope?.let { repository.cached(query, version, it) }
+            val cached = scope?.let { repository.cached(query, version, it, sortBy, sortDirection) }
             if (generation != requestGeneration) return@launch
             if (cached != null) {
                 mutableState.update {
@@ -381,9 +400,9 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             }
             val requestId = ++latestSearchRequestId
             try {
-                val firstPage = repository.search(query, null, version, authenticated)
+                val firstPage = repository.search(query, null, version, authenticated, sortBy, sortDirection)
                 val page = if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank()) {
-                    completeCatalogPage(firstPage, query, version, authenticated)
+                    completeCatalogPage(firstPage, query, version, authenticated, sortBy, sortDirection)
                 } else {
                     firstPage
                 }
@@ -403,7 +422,11 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                         error = null,
                     )
                 }
-                scope?.let { runCatching { repository.cache(listingForCache(listing, it, version), query, version, it) } }
+                scope?.let {
+                    runCatching {
+                        repository.cache(listingForCache(listing, it, version), query, version, it, sortBy, sortDirection)
+                    }
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -424,12 +447,14 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         query: String,
         version: PiuGameVersion,
         authenticated: Boolean,
+        sortBy: CatalogSortOption,
+        sortDirection: CatalogSortDirection,
     ): CatalogSearchPage {
         var listing = CatalogListing(firstPage.songs, firstPage.nextCursor, firstPage.total)
         var pageCount = 1
         while (listing.nextCursor != null && pageCount < 200) {
             val cursor = listing.nextCursor ?: break
-            val page = repository.search(query, cursor, version, authenticated)
+            val page = repository.search(query, cursor, version, authenticated, sortBy, sortDirection)
             listing = listing.append(page, cursor)
             pageCount += 1
         }
@@ -540,6 +565,8 @@ data class CatalogUiState(
     val feed: CatalogFeed = CatalogFeed.CATALOG,
     val query: String = "",
     val version: PiuGameVersion = PiuGameVersion.PHOENIX_2,
+    val sortBy: CatalogSortOption = CatalogSortOption.SERIES,
+    val sortDirection: CatalogSortDirection = CatalogSortDirection.DESCENDING,
     val cacheScope: String? = "public",
     val isMyPiuConnected: Boolean = false,
     val listing: CatalogListing = CatalogListing(),

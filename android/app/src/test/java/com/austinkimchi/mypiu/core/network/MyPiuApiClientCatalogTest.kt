@@ -53,6 +53,8 @@ class MyPiuApiClientCatalogTest {
         assertEquals("battle", search.url.queryParameter("q"))
         assertEquals("Mg", search.url.queryParameter("cursor"))
         assertEquals("phoenix2", search.url.queryParameter("supportedVersion"))
+        assertEquals("series", search.url.queryParameter("sortBy"))
+        assertEquals("desc", search.url.queryParameter("sortDirection"))
         assertEquals("Bearer token", search.header("Authorization"))
 
         val favorite = requests[1]

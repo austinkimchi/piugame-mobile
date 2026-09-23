@@ -11,6 +11,20 @@ enum class CatalogChartMode(val title: String, private val prefix: Char) {
 }
 
 @Serializable
+enum class CatalogSortOption(val wireValue: String, val title: String) {
+    SERIES("series", "Series"),
+    TITLE("title", "Title"),
+    ARTIST("artist", "Artist"),
+    FOLDER("folder", "Folder"),
+}
+
+@Serializable
+enum class CatalogSortDirection(val wireValue: String, val title: String) {
+    ASCENDING("asc", "Ascending"),
+    DESCENDING("desc", "Descending"),
+}
+
+@Serializable
 data class CatalogSong(
     val slug: String,
     val title: String,

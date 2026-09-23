@@ -129,7 +129,10 @@ data class MyPiuPerformanceSession(
 data class PerformanceSessionResponse(val session: MyPiuPerformanceSession? = null)
 
 @Serializable
-data class PerformanceSessionsResponse(val sessions: List<MyPiuPerformanceSession> = emptyList())
+data class PerformanceSessionsResponse(
+    val sessions: List<MyPiuPerformanceSession> = emptyList(),
+    val nextOffset: Int? = null,
+)
 
 data class PerformanceProgressSummary(
     val clearedCharts: Int?,

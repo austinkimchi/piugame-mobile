@@ -162,6 +162,7 @@ fun PerformanceSessionsScreen(
     state: PerformanceUiState,
     onLoad: () -> Unit,
     onRefresh: () -> Unit,
+    onLoadMore: () -> Unit,
     onOpenSession: (MyPiuPerformanceSession) -> Unit,
 ) {
     LaunchedEffect(state.accountScope) { onLoad() }
@@ -188,6 +189,29 @@ fun PerformanceSessionsScreen(
             ) { index, session ->
                 SessionRow(session, onClick = { onOpenSession(session) })
                 if (index < state.sessions.lastIndex) HorizontalDivider()
+                if (index >= state.sessions.lastIndex - 3 && state.nextSessionOffset != null) {
+                    LaunchedEffect(state.nextSessionOffset, state.isSessionLoadingMore) {
+                        if (!state.isSessionLoadingMore) onLoadMore()
+                    }
+                }
+            }
+            if (state.isSessionLoadingMore) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            } else if (state.sessionPaginationError != null) {
+                item {
+                    Button(onClick = onLoadMore, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Retry loading more")
+                    }
+                }
             }
         }
     }
