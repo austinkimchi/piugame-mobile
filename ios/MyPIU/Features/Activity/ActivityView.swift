@@ -37,9 +37,15 @@ struct ActivityView: View {
                 }
             } else if let plays = model.snapshot?.recentPlays, !plays.isEmpty {
                 List(plays) { play in
-                    RecentPlayRow(play: play)
+                    NavigationLink {
+                        RecentPlayDetailView(play: RecentPlayPresentation(play: play))
+                    } label: {
+                        RecentPlayRow(play: play)
+                    }
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(AppTheme.pageBackground)
                 .refreshable { await model.refresh() }
             } else {
                 ContentUnavailableView("No recent plays", systemImage: "clock")
@@ -67,9 +73,21 @@ struct ActivityView: View {
             ContentUnavailableView("No recent plays", systemImage: "clock")
         } else {
             List(plays) { play in
-                PerformanceRecentPlayRow(play: play)
+                let snapshotPlay = matchingRecentPlay(
+                    for: play,
+                    in: model.snapshot?.recentPlays ?? []
+                )
+                NavigationLink {
+                    RecentPlayDetailView(
+                        play: RecentPlayPresentation(play: play, snapshotPlay: snapshotPlay)
+                    )
+                } label: {
+                    PerformanceRecentPlayRow(play: play, snapshotPlay: snapshotPlay)
+                }
             }
             .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.pageBackground)
             .refreshable { await model.refresh() }
         }
     }
@@ -83,6 +101,8 @@ struct ActivityView: View {
                 PerformanceChartRow(chart: chart)
             }
             .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.pageBackground)
             .refreshable { await model.refresh() }
         }
     }

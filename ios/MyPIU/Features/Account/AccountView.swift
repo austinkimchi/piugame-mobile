@@ -108,7 +108,7 @@ struct AccountView: View {
             if case .failed(let message) = model.state {
                 Section {
                     Label(message, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(AppTheme.accent)
+                        .foregroundStyle(AppTheme.danger)
                 }
             }
 
@@ -159,7 +159,7 @@ struct AccountView: View {
             LabeledContent("Last sync", value: imported > 0 ? "\(imported) new" : "\(duplicates) already saved")
         case .failed(let message):
             Label(message, systemImage: "exclamationmark.triangle")
-                .foregroundStyle(AppTheme.accent)
+                .foregroundStyle(AppTheme.danger)
         }
     }
 }

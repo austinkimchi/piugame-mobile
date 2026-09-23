@@ -14,7 +14,12 @@ enum PIUParsingError: LocalizedError {
 }
 
 struct PIUHTMLParser: Sendable {
-    func parseProfile(html: String, username: String, pumbilityScore: Double? = nil) throws -> PIUProfile {
+    func parseProfile(
+        html: String,
+        username: String,
+        pumbilityScore: Double? = nil,
+        baseURL: URL? = nil
+    ) throws -> PIUProfile {
         let document = try SwiftSoup.parse(html)
         guard !(try document.select(".subProfile_wrap, .play_data_wrap")).isEmpty() else {
             throw PIUParsingError.missingProfile
@@ -37,7 +42,10 @@ struct PIUHTMLParser: Sendable {
             username: username,
             titleName: try text(document, ".profile_name .name_w .t1"),
             gameIDTag: gameIDTag,
-            avatarURL: try backgroundImageURL(document.select(".profile_img .re").first()?.attr("style")),
+            avatarURL: try backgroundImageURL(
+                document.select(".profile_img .re").first()?.attr("style"),
+                baseURL: baseURL
+            ),
             pp: decimal(try text(document, ".profile_etc .tt")),
             pumbilityScore: pumbilityScore,
             playCount: integer(try text(document, ".board_search .total .t2, .board_search .total_wrap .t2")),
@@ -53,11 +61,41 @@ struct PIUHTMLParser: Sendable {
 
     func parsePumbilityScore(html: String) throws -> Double? {
         let document = try SwiftSoup.parse(html)
-        let value = try text(document, ".pumbility_total_wrap .t2, .total_pumbility .t2, .pumbility_total .t2")
-        return decimal(value)
+        let selectors = [
+            ".pumbility_total_wrap .pumbility-point-sub",
+            ".pumbility_total_wrap .t2",
+            ".total_pumbility .t2",
+            ".pumbility_total .t2",
+            "[class*=pumbility] [class*=total] .num",
+            "[class*=pumbility] [class*=score]"
+        ]
+        for selector in selectors {
+            if let value = decimal(try text(document, selector)) {
+                return value
+            }
+        }
+
+        // PIUGAME has changed this summary's class names between releases. Keep
+        // the visible label as the stable anchor and inspect its nearest card.
+        for element in try document.getAllElements().array() {
+            let label = element.ownText().trimmingCharacters(in: .whitespacesAndNewlines)
+            guard label.caseInsensitiveCompare("Pumbility") == .orderedSame else { continue }
+
+            var ancestor = element.parent()
+            for _ in 0..<3 {
+                guard let context = ancestor else { break }
+                for candidate in try context.select(".t2, .num, [class*=score], strong, b, dd, span").array() {
+                    guard candidate !== element,
+                          let value = decimal(candidate.ownText()) else { continue }
+                    return value
+                }
+                ancestor = context.parent()
+            }
+        }
+        return nil
     }
 
-    func parseRecentPlays(html: String) throws -> [RecentPlay] {
+    func parseRecentPlays(html: String, baseURL: URL? = nil) throws -> [RecentPlay] {
         let document = try SwiftSoup.parse(html)
         let containers = try document.select(".recently_playeList")
         guard !containers.isEmpty() else {
@@ -76,7 +114,10 @@ struct PIUHTMLParser: Sendable {
 
             return RecentPlay(
                 songName: songName,
-                songImageURL: try backgroundImageURL(item.select(".wrap_in .in").first()?.attr("style")),
+                songImageURL: try backgroundImageURL(
+                    item.select(".wrap_in .in").first()?.attr("style"),
+                    baseURL: baseURL
+                ),
                 mode: try chartMode(item),
                 level: try chartLevel(item),
                 score: stageBreak ? nil : integer(scoreText),
@@ -159,11 +200,12 @@ struct PIUHTMLParser: Sendable {
         return normalized.isEmpty ? nil : Double(normalized)
     }
 
-    private func backgroundImageURL(_ style: String?) -> URL? {
+    private func backgroundImageURL(_ style: String?, baseURL: URL?) -> URL? {
         guard let style,
               let range = style.range(of: #"url\(['\"]?([^'\")]+)"#, options: .regularExpression) else { return nil }
         let match = String(style[range])
             .replacingOccurrences(of: #"^url\(['\"]?"#, with: "", options: .regularExpression)
-        return URL(string: match)
+        return URL(string: match, relativeTo: baseURL)?.absoluteURL
     }
+
 }
