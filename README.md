@@ -30,6 +30,8 @@ The first vertical slice connects directly to PIUGAME PHOENIX 2, stores credenti
 
 For signing, privacy, and beta-distribution steps, see [the TestFlight checklist](docs/testflight.md). The companion macOS wrapper has a separate [Safari release checklist](docs/macos-release.md).
 
+Android upload-key signing and Play internal-test preparation are documented in the [Android beta checklist](docs/android-beta.md).
+
 ## Status
 
-This repository is pre-release and private. See [the delivery milestones](docs/milestones.md) for remaining distribution work and Android parity slices.
+This repository is pre-release and private. See [the delivery milestones](docs/milestones.md) for remaining distribution and physical-device qualification work.

@@ -4,6 +4,26 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val configuredVersionCode = providers.environmentVariable("MYPIU_VERSION_CODE").orNull?.trim()
+val releaseVersionCode = configuredVersionCode?.toIntOrNull()?.takeIf { it > 0 }
+    ?: if (configuredVersionCode == null) 1 else throw GradleException("MYPIU_VERSION_CODE must be a positive integer")
+val configuredVersionName = providers.environmentVariable("MYPIU_VERSION_NAME").orNull?.trim()
+val releaseVersionName = configuredVersionName?.takeIf { it.isNotEmpty() }
+    ?: if (configuredVersionName == null) "0.1.0" else throw GradleException("MYPIU_VERSION_NAME must not be blank")
+
+val uploadStoreFile = providers.environmentVariable("MYPIU_UPLOAD_STORE_FILE").orNull?.trim()
+val uploadStorePassword = providers.environmentVariable("MYPIU_UPLOAD_STORE_PASSWORD").orNull
+val uploadKeyAlias = providers.environmentVariable("MYPIU_UPLOAD_KEY_ALIAS").orNull?.trim()
+val uploadKeyPassword = providers.environmentVariable("MYPIU_UPLOAD_KEY_PASSWORD").orNull
+val uploadSigningValues = listOf(uploadStoreFile, uploadStorePassword, uploadKeyAlias, uploadKeyPassword)
+val configuredUploadSigningValues = uploadSigningValues.count { !it.isNullOrBlank() }
+
+if (configuredUploadSigningValues !in listOf(0, uploadSigningValues.size)) {
+    throw GradleException("Release signing requires all MYPIU_UPLOAD_* environment variables")
+}
+
+val hasUploadSigning = configuredUploadSigningValues == uploadSigningValues.size
+
 android {
     namespace = "com.austinkimchi.mypiu"
     compileSdk = 37
@@ -12,8 +32,8 @@ android {
         applicationId = "com.austinkimchi.mypiu"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
 
         buildConfigField("String", "MYPIU_BASE_URL", "\"https://mypiu.austin.kim\"")
     }
@@ -21,6 +41,25 @@ android {
     buildFeatures {
         buildConfig = true
         compose = true
+    }
+
+    signingConfigs {
+        if (hasUploadSigning) {
+            create("upload") {
+                storeFile = file(uploadStoreFile!!)
+                storePassword = uploadStorePassword
+                keyAlias = uploadKeyAlias
+                keyPassword = uploadKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            if (hasUploadSigning) {
+                signingConfig = signingConfigs.getByName("upload")
+            }
+        }
     }
 
     compileOptions {

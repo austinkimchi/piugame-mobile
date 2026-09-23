@@ -7,6 +7,8 @@ ios/MyPIUSafariExtension/Resources/
 android/.gradle/
 android/local.properties
 android/**/build/
+*.jks
+*.keystore
 **/xcuserdata/
 *.xcuserstate
 browser-extension/node_modules/
