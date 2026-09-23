@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AccountView: View {
     @EnvironmentObject private var model: AppModel
+    private let applicationInfo = ApplicationInfo()
     @Binding private var username: String
     @Binding private var password: String
     @Binding private var showingAccountDeletion: Bool
@@ -108,6 +109,16 @@ struct AccountView: View {
                     Label(message, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(AppTheme.accent)
                 }
+            }
+
+            Section("ABOUT & SUPPORT") {
+                Link(destination: ApplicationInfo.supportURL) {
+                    Label("Support", systemImage: "questionmark.circle")
+                }
+                Link(destination: ApplicationInfo.privacyPolicyURL) {
+                    Label("Privacy Policy", systemImage: "hand.raised")
+                }
+                LabeledContent("Version", value: applicationInfo.displayVersion)
             }
         }
         .navigationTitle("Account")
