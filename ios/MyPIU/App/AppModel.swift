@@ -175,7 +175,7 @@ final class AppModel: ObservableObject {
     }
 
     private func restoreOnce() async {
-        Task { await retryPendingMyPIURevocations() }
+        async let revocationRetry: Void = retryPendingMyPIURevocations()
 
         let savedCredentials: PIUCredentials?
         do {
@@ -183,6 +183,7 @@ final class AppModel: ObservableObject {
         } catch {
             state = .failed(error.localizedDescription)
             await restoreMyPIU()
+            await revocationRetry
             return
         }
 
@@ -190,6 +191,7 @@ final class AppModel: ObservableObject {
             state = .signedOut
             BackgroundRefreshScheduler.cancel()
             await restoreMyPIU()
+            await revocationRetry
             return
         }
 
@@ -208,6 +210,7 @@ final class AppModel: ObservableObject {
         if didSync, let snapshot {
             await uploadToMyPIU(snapshot)
         }
+        await revocationRetry
     }
 
     func connectMyPIU(provider: MyPIUAuthProvider) async -> Bool {
