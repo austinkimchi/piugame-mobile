@@ -23,6 +23,8 @@ jobs:
         run: brew install xcodegen
       - name: Generate project and Safari resources
         run: ./scripts/generate-ios-project.sh
+      - name: Verify checked-in Xcode artifacts are current
+        run: git diff --exit-code -- ios/MyPIU.xcodeproj ios/MyPIUSafariExtension/Resources
       - name: Build for simulator
         working-directory: ios
         run: >-

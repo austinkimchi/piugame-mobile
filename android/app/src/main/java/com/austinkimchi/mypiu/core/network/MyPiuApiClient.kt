@@ -16,6 +16,8 @@ import com.austinkimchi.mypiu.core.model.MyPiuSyncResult
 import com.austinkimchi.mypiu.core.model.PerformanceResponse
 import com.austinkimchi.mypiu.core.model.PerformanceSessionResponse
 import com.austinkimchi.mypiu.core.model.PerformanceSessionsResponse
+import com.austinkimchi.mypiu.core.model.CatalogSortDirection
+import com.austinkimchi.mypiu.core.model.CatalogSortOption
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.PiuSnapshot
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
@@ -142,9 +144,25 @@ class MyPiuApiClient(
         return send<PerformanceSessionResponse>(request).session
     }
 
-    suspend fun performanceSessions(accessToken: String): List<MyPiuPerformanceSession> {
-        val request = authenticatedRequest("api/mobile/v1/performance/sessions", accessToken).get().build()
-        return send<PerformanceSessionsResponse>(request).sessions
+    suspend fun performanceSessions(accessToken: String): List<MyPiuPerformanceSession> =
+        performanceSessionsPage(accessToken = accessToken).sessions
+
+    suspend fun performanceSessionsPage(
+        offset: Int = 0,
+        limit: Int = 20,
+        accessToken: String,
+    ): PerformanceSessionsResponse {
+        val requestUrl = url("api/mobile/v1/performance/sessions").newBuilder()
+            .addQueryParameter("offset", offset.coerceAtLeast(0).toString())
+            .addQueryParameter("limit", limit.coerceIn(1, 50).toString())
+            .build()
+        val request = Request.Builder()
+            .url(requestUrl)
+            .header("Authorization", "Bearer $accessToken")
+            .header("Accept", "application/json")
+            .get()
+            .build()
+        return send(request)
     }
 
     suspend fun searchCatalog(
@@ -152,12 +170,14 @@ class MyPiuApiClient(
         cursor: String?,
         version: PiuGameVersion,
         accessToken: String?,
+        sortBy: CatalogSortOption = CatalogSortOption.SERIES,
+        sortDirection: CatalogSortDirection = CatalogSortDirection.DESCENDING,
     ): CatalogSearchPage {
         val requestUrl = url("api/songs/search").newBuilder()
             .addQueryParameter("q", query)
             .addQueryParameter("limit", "30")
-            .addQueryParameter("sortBy", "title")
-            .addQueryParameter("sortDirection", "asc")
+            .addQueryParameter("sortBy", sortBy.wireValue)
+            .addQueryParameter("sortDirection", sortDirection.wireValue)
             .addQueryParameter("supportedVersion", version.serialName)
             .apply { cursor?.let { addQueryParameter("cursor", it) } }
             .build()

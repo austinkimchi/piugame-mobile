@@ -28,6 +28,7 @@ class PerformanceViewModel(
     private var sessionGeneration = 0L
     private var loadJob: Job? = null
     private var sessionJob: Job? = null
+    private var sessionPaginationJob: Job? = null
     private var started = false
     private var observedRefreshRevision = refreshSignal.revision.value
 
@@ -50,6 +51,7 @@ class PerformanceViewModel(
         sessionGeneration += 1
         loadJob?.cancel()
         sessionJob?.cancel()
+        sessionPaginationJob?.cancel()
         mutableState.value = PerformanceUiState(
             accountScope = scope,
             isConnected = isConnected,
@@ -75,6 +77,40 @@ class PerformanceViewModel(
         if (!snapshot.isConnected || snapshot.accountScope == null) return
         if (!force && (snapshot.isSessionLoading || snapshot.isSessionLoaded)) return
         reloadSession()
+    }
+
+    fun loadMoreSessions() {
+        val snapshot = mutableState.value
+        val offset = snapshot.nextSessionOffset ?: return
+        val scope = snapshot.accountScope ?: return
+        if (!snapshot.isConnected || snapshot.isSessionLoadingMore || sessionPaginationJob?.isActive == true) return
+        val generation = sessionGeneration
+        sessionPaginationJob = viewModelScope.launch {
+            mutableState.update { it.copy(isSessionLoadingMore = true, sessionPaginationError = null) }
+            try {
+                val page = repository.sessionPage(offset)
+                if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
+                mutableState.update { state ->
+                    val knownIds = state.sessions.mapTo(mutableSetOf()) { it.id }
+                    state.copy(
+                        sessions = state.sessions + page.sessions.filter { knownIds.add(it.id) },
+                        nextSessionOffset = page.nextOffset.takeUnless { it == offset },
+                        isSessionLoadingMore = false,
+                        sessionPaginationError = null,
+                    )
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
+                mutableState.update {
+                    it.copy(
+                        isSessionLoadingMore = false,
+                        sessionPaginationError = error.message ?: "More sessions could not be loaded.",
+                    )
+                }
+            }
+        }
     }
 
     fun acknowledgeSessionInvalidation() {
@@ -125,26 +161,31 @@ class PerformanceViewModel(
         if (!snapshot.isConnected || snapshot.accountScope == null) return
         val generation = sessionGeneration
         val scope = snapshot.accountScope
+        sessionPaginationJob?.cancel()
         sessionJob?.cancel()
         sessionJob = viewModelScope.launch {
             mutableState.update {
                 it.copy(
                     session = null,
                     isSessionLoading = true,
+                    isSessionLoadingMore = false,
                     isSessionLoaded = false,
                     sessionError = null,
+                    sessionPaginationError = null,
                 )
             }
             try {
-                val sessions = repository.sessions()
+                val page = repository.sessionPage()
                 if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
                 mutableState.update {
                     it.copy(
-                        session = sessions.firstOrNull(),
-                        sessions = sessions,
+                        session = page.sessions.firstOrNull(),
+                        sessions = page.sessions,
+                        nextSessionOffset = page.nextOffset,
                         isSessionLoading = false,
                         isSessionLoaded = true,
                         sessionError = null,
+                        sessionPaginationError = null,
                     )
                 }
             } catch (error: CancellationException) {
@@ -162,6 +203,7 @@ class PerformanceViewModel(
                         dashboard = if (sessionInvalidated) null else it.dashboard,
                         session = null,
                         sessions = emptyList(),
+                        nextSessionOffset = null,
                         isConnected = if (sessionInvalidated) false else it.isConnected,
                         isSessionLoading = false,
                         isSessionLoaded = false,
@@ -189,6 +231,9 @@ data class PerformanceUiState(
     val isLoading: Boolean = false,
     val isSessionLoading: Boolean = false,
     val isSessionLoaded: Boolean = false,
+    val nextSessionOffset: Int? = null,
+    val isSessionLoadingMore: Boolean = false,
+    val sessionPaginationError: String? = null,
     val sessionError: String? = null,
     val error: String? = null,
     val sessionInvalidated: Boolean = false,

@@ -2,6 +2,8 @@ package com.austinkimchi.mypiu.core.catalog
 
 import com.austinkimchi.mypiu.core.model.CatalogListing
 import com.austinkimchi.mypiu.core.model.CatalogSong
+import com.austinkimchi.mypiu.core.model.CatalogSortDirection
+import com.austinkimchi.mypiu.core.model.CatalogSortOption
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import java.io.File
 import java.nio.file.AtomicMoveNotSupportedException
@@ -29,6 +31,8 @@ class CatalogCache(
         val scope: String,
         val query: String,
         val version: PiuGameVersion,
+        val sortBy: CatalogSortOption,
+        val sortDirection: CatalogSortDirection,
         val songs: List<CatalogSong>,
         val nextCursor: String? = null,
         val total: Int,
@@ -38,10 +42,17 @@ class CatalogCache(
     private val mutex = Mutex()
     private val cacheFile = File(directory, "catalog-v$SCHEMA_VERSION.json")
 
-    suspend fun load(query: String, version: PiuGameVersion, scope: String): CachedListing? = mutex.withLock {
+    suspend fun load(
+        query: String,
+        version: PiuGameVersion,
+        scope: String,
+        sortBy: CatalogSortOption = CatalogSortOption.SERIES,
+        sortDirection: CatalogSortDirection = CatalogSortDirection.DESCENDING,
+    ): CachedListing? = mutex.withLock {
         withContext(Dispatchers.IO) {
             readStore().entries.firstOrNull {
-                it.scope == scope && it.query == normalize(query) && it.version == version
+                it.scope == scope && it.query == normalize(query) && it.version == version &&
+                    it.sortBy == sortBy && it.sortDirection == sortDirection
             }?.let { entry ->
                 CachedListing(
                     CatalogListing(entry.songs, entry.nextCursor, entry.total),
@@ -57,6 +68,8 @@ class CatalogCache(
         version: PiuGameVersion,
         scope: String,
         nowEpochMillis: Long = System.currentTimeMillis(),
+        sortBy: CatalogSortOption = CatalogSortOption.SERIES,
+        sortDirection: CatalogSortDirection = CatalogSortDirection.DESCENDING,
     ) = mutex.withLock {
         withContext(Dispatchers.IO) {
             val normalizedQuery = normalize(query)
@@ -64,13 +77,16 @@ class CatalogCache(
                 scope = scope,
                 query = normalizedQuery,
                 version = version,
+                sortBy = sortBy,
+                sortDirection = sortDirection,
                 songs = listing.songs,
                 nextCursor = listing.nextCursor,
                 total = listing.total,
                 cachedAtEpochMillis = nowEpochMillis,
             )
             val entries = (readStore().entries.filterNot {
-                it.scope == scope && it.query == normalizedQuery && it.version == version
+                it.scope == scope && it.query == normalizedQuery && it.version == version &&
+                    it.sortBy == sortBy && it.sortDirection == sortDirection
             } + replacement).sortedByDescending(Entry::cachedAtEpochMillis).take(MAXIMUM_ENTRIES)
             writeStore(Store(entries = entries))
         }
@@ -126,7 +142,7 @@ class CatalogCache(
     private fun normalize(value: String): String = value.trim().lowercase(Locale.ROOT)
 
     private companion object {
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
         const val MAXIMUM_ENTRIES = 12
         const val FAVORITES_QUERY = "favorites"
     }

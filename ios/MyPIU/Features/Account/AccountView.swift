@@ -22,7 +22,10 @@ struct AccountView: View {
         Form {
             Section("MYPIU") {
                 if let account = model.myPIUAccount {
-                    LabeledContent("Account", value: account.name)
+                    LabeledContent(
+                        "Username",
+                        value: account.displayUsername ?? "Not set"
+                    )
                     if let player = account.piuProfile {
                         LabeledContent("Linked player", value: player.displayName)
                     }

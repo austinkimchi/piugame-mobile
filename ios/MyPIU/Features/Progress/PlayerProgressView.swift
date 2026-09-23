@@ -25,19 +25,6 @@ struct PlayerProgressView: View {
             }
         }
         .navigationTitle("Progress")
-        .toolbar {
-            if model.isConnected || model.isMyPIUConnected {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task { await model.refresh() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .disabled(model.state == .syncing || model.performanceState == .loading)
-                    .accessibilityLabel("Refresh progress")
-                }
-            }
-        }
     }
 
     private func performanceContent(

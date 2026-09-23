@@ -27,19 +27,6 @@ struct DashboardView: View {
             }
         }
         .navigationTitle("MyPIU")
-        .toolbar {
-            if model.isConnected {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task { await model.refresh() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .disabled(model.state == .syncing)
-                    .accessibilityLabel("Refresh performance")
-                }
-            }
-        }
     }
 
     private func dashboard(_ performance: MyPIUPerformanceDashboard) -> some View {
@@ -49,7 +36,7 @@ struct DashboardView: View {
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
                 dashboardHeader(
-                    displayName: performance.profile?.displayName ?? model.myPIUAccount?.name ?? "MyPIU",
+                    displayName: performance.profile?.displayName ?? model.myPIUAccount?.displayUsername ?? "MyPIU",
                     version: model.myPIUAccount?.piuGameVersion.displayName ?? model.selectedVersion.displayName
                 )
 
@@ -285,25 +272,35 @@ private struct MetricTile: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.headline.bold())
-                .foregroundStyle(tint)
-            Text(value)
-                .font(.title2.bold().monospacedDigit())
-                .foregroundStyle(AppTheme.ink)
-            Text(title.uppercased())
-                .font(.caption.bold())
-                .tracking(0.8)
-                .foregroundStyle(AppTheme.mutedInk)
-            if let detail {
-                Text(detail)
-                    .font(.caption2.weight(.semibold).monospacedDigit())
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.headline.bold())
+                    .foregroundStyle(tint)
+                Text(value)
+                    .font(.title2.bold().monospacedDigit())
+                    .foregroundStyle(AppTheme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(title.uppercased())
+                    .font(.caption.bold())
+                    .tracking(0.8)
                     .foregroundStyle(AppTheme.mutedInk)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                if let detail {
+                    Text(detail)
+                        .font(.caption2.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .lineLimit(1)
+                }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
-        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .websiteCard()
         .accessibilityElement(children: .combine)
     }

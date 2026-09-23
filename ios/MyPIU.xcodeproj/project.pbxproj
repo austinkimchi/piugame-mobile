@@ -1,0 +1,862 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		08D371B2E66865A594D6A898 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F083A9F8C3C6F7D35E148D44 /* Assets.xcassets */; };
+		0C75B4963C0849C02C365B0E /* SongChartPerformance.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA51101ABEED0BBAE7A00F1D /* SongChartPerformance.swift */; };
+		164FC7D22967F83D63294F5B /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D63B5D74E06EFCFFFF47B8E7 /* AccountView.swift */; };
+		207CBCE3CEC2D7D1D56F4133 /* MyPIUOAuthCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0178D7D940058808BDECA9 /* MyPIUOAuthCoordinator.swift */; };
+		2D359B8FF48DE1FA83F0DAEC /* MyPIUSafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B6348BBD56B15849965ED611 /* MyPIUSafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		30BBA5AA3E8C46CEC830063E /* BackgroundRefreshScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED545ED632F235A4C3E4D722 /* BackgroundRefreshScheduler.swift */; };
+		33A9D7EBBC60D86DF9BF2CE2 /* KeychainCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECD849372AAD815E4A75343 /* KeychainCredentialStore.swift */; };
+		4B4416010A4A1C4D8D42D3B5 /* PerformanceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9DC3E1D3546740CE933255 /* PerformanceModels.swift */; };
+		512558457622871B9897CE4C /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B7D5C8D383EAEF50B35C49 /* ActivityView.swift */; };
+		615EAD497A9582BE13C9AF64 /* src in Resources */ = {isa = PBXBuildFile; fileRef = FD46C1391A1F1EE31ECB6F17 /* src */; };
+		665BAE9AA3F04B1DB07C147C /* CatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C6B0F65770D601A3572838 /* CatalogTests.swift */; };
+		671638399C9A5F3E591F9455 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD6147A2453AC65580D8F77F /* RootView.swift */; };
+		6DA59ABB2F95A97E0E469FC7 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB698BF79F8A8EA2BF773865 /* PerformanceTests.swift */; };
+		6F3156C3E9AD7C874A3E42A2 /* PerformanceSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04577B2370D1BB0FD94A771B /* PerformanceSessionView.swift */; };
+		702C887D2006BB8816BC8E42 /* PIUGameClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00BD51E6E0A95977EB7ABDE7 /* PIUGameClient.swift */; };
+		73035DAB1119D5EAD73F35DF /* ApplicationInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2BB045593436C1AAFB1A96B /* ApplicationInfo.swift */; };
+		7686EE0DC48AD68BBB84135C /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1560C7931D256F67F857EE9B /* DashboardView.swift */; };
+		77F0F3969667A097047A8983 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = D9A178C94033FE3F8C417CFC /* assets */; };
+		797E16FC6C6E85B31E47C9B9 /* SongChartHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1BF6272B8AE31C96241D7EA /* SongChartHistoryView.swift */; };
+		821C8BA0854D14AC12504C09 /* CatalogModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B67C96AB5B8741854AB3133 /* CatalogModels.swift */; };
+		85B9B2DA3AB0802E4DBDF6D9 /* ApplicationInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584771ED77930A8C83189D75 /* ApplicationInfoTests.swift */; };
+		8C91E5DF0415D925B933E8E1 /* PIUGameClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60C7C2786874680F6E136DA7 /* PIUGameClientTests.swift */; };
+		8F83E2A8C63D0CC8DF8AF69D /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 7B4800AC28F6ACD06E194BE5 /* manifest.json */; };
+		92147823D9BFB2D5734E3561 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 152D26B2D531B0A3414CCF5E /* SafariWebExtensionHandler.swift */; };
+		94DFAD7BF781BC3A1F7DB009 /* CatalogCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E733E3EFB171AE02B3FA4E7 /* CatalogCache.swift */; };
+		9576CAD50B59C047B77B3CC9 /* CatalogSongDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD459FC724F3E051B78545E /* CatalogSongDetailView.swift */; };
+		972E250518EA41800FA666FB /* SongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 332AAF4C49320D34591C3A86 /* SongsView.swift */; };
+		9B3F141B5342CA4B0431BB4C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D1D8AFB1C0858D11520419BC /* PrivacyInfo.xcprivacy */; };
+		B38A0BA1C52C765A2F613BB8 /* PIUModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F1C14F19FFD641C50E8A489 /* PIUModels.swift */; };
+		BB0A613CC4DB08A79BD3B4A9 /* SongCatalogModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F5C14A1100CEB94F3BD2E7 /* SongCatalogModel.swift */; };
+		C1FF918C7714948F4DCFFEFE /* RecentPlayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04CB8F684F01B570D0340B5B /* RecentPlayDetailView.swift */; };
+		C584BA78962B4E1843083ECF /* MobileSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24107F978E8A8690DD6E622A /* MobileSyncTests.swift */; };
+		C6AF54993823A1A812850D28 /* PlayerProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED92743583E82B65C35A11EB /* PlayerProgressView.swift */; };
+		C94E5FAEB30D75BB5707F552 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = F7A1AE1F659F73953E4D9C9C /* SwiftSoup */; };
+		CF9722369DC32C540D028430 /* InstallationIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CBA136B393D9C2D121AA68A /* InstallationIdentity.swift */; };
+		D3EE9E86E439ED67C780C938 /* PIUHTMLParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39328F6CC046B1D91E5C225 /* PIUHTMLParserTests.swift */; };
+		D8D8AFC5658B33BE6982C818 /* MyPIUApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0466958E2CE15FE121EABE68 /* MyPIUApp.swift */; };
+		DD1AEC87B1BBF3BC15719C82 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A09895888A319485912D66 /* AppModel.swift */; };
+		E60AB033C8B844D8C0E7188C /* MobilePerformanceImportPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAD29DF449DB8C9A64485184 /* MobilePerformanceImportPayload.swift */; };
+		E88D5F7E44C0A13C93EC58AB /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43EB695E7D4CB654D1474518 /* AppTheme.swift */; };
+		EDFF23FC4A4C3B2E0A1DA000 /* PerformanceSessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ACB11FD2A23B7BBBCC86954 /* PerformanceSessionModels.swift */; };
+		EE05A51EBB956DEB2BD1959E /* KeychainTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C31B4EF72D06DFA714032DFD /* KeychainTokenStore.swift */; };
+		F1128E1D831066D1BD67B0B0 /* MyPIUAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD56B419659854CC1F1D214 /* MyPIUAPIClient.swift */; };
+		F5F5965FF9E44F7D54A0E091 /* MyPIUModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 279AA41B8253E04E607A00EA /* MyPIUModels.swift */; };
+		F9C814DE231829E3BEC7FFCC /* PIUHTMLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4CC56CB8FDEC320D081648 /* PIUHTMLParser.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2A75D5DDD7F52B30F6E8871D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FD08BA2840AA25A0BAD890A6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E33A1CCDF463D6A783C1AB87;
+			remoteInfo = MyPIU;
+		};
+		8694FCC9AC38122DDBDC5BE6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FD08BA2840AA25A0BAD890A6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2D779323854BCEC7CB8C2BF0;
+			remoteInfo = MyPIUSafariExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		065F63B9418D464851A64BD0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2D359B8FF48DE1FA83F0DAEC /* MyPIUSafariExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		00BD51E6E0A95977EB7ABDE7 /* PIUGameClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIUGameClient.swift; sourceTree = "<group>"; };
+		04577B2370D1BB0FD94A771B /* PerformanceSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceSessionView.swift; sourceTree = "<group>"; };
+		0466958E2CE15FE121EABE68 /* MyPIUApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPIUApp.swift; sourceTree = "<group>"; };
+		04CB8F684F01B570D0340B5B /* RecentPlayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentPlayDetailView.swift; sourceTree = "<group>"; };
+		152D26B2D531B0A3414CCF5E /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		1560C7931D256F67F857EE9B /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		1DD56B419659854CC1F1D214 /* MyPIUAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPIUAPIClient.swift; sourceTree = "<group>"; };
+		24107F978E8A8690DD6E622A /* MobileSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSyncTests.swift; sourceTree = "<group>"; };
+		279AA41B8253E04E607A00EA /* MyPIUModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPIUModels.swift; sourceTree = "<group>"; };
+		332AAF4C49320D34591C3A86 /* SongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongsView.swift; sourceTree = "<group>"; };
+		43EB695E7D4CB654D1474518 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		44A09895888A319485912D66 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		45C6B0F65770D601A3572838 /* CatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogTests.swift; sourceTree = "<group>"; };
+		4B67C96AB5B8741854AB3133 /* CatalogModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogModels.swift; sourceTree = "<group>"; };
+		4F1C14F19FFD641C50E8A489 /* PIUModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIUModels.swift; sourceTree = "<group>"; };
+		5360BB00B9899BF19D054236 /* MyPIUTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MyPIUTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		584771ED77930A8C83189D75 /* ApplicationInfoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationInfoTests.swift; sourceTree = "<group>"; };
+		60C7C2786874680F6E136DA7 /* PIUGameClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIUGameClientTests.swift; sourceTree = "<group>"; };
+		6CBA136B393D9C2D121AA68A /* InstallationIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallationIdentity.swift; sourceTree = "<group>"; };
+		6E733E3EFB171AE02B3FA4E7 /* CatalogCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogCache.swift; sourceTree = "<group>"; };
+		7B4800AC28F6ACD06E194BE5 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
+		7ECD849372AAD815E4A75343 /* KeychainCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainCredentialStore.swift; sourceTree = "<group>"; };
+		85B7D5C8D383EAEF50B35C49 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		9ACB11FD2A23B7BBBCC86954 /* PerformanceSessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceSessionModels.swift; sourceTree = "<group>"; };
+		9FD459FC724F3E051B78545E /* CatalogSongDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogSongDetailView.swift; sourceTree = "<group>"; };
+		A079318A1DE5D35F4C0870CA /* MyPIU.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MyPIU.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2BB045593436C1AAFB1A96B /* ApplicationInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationInfo.swift; sourceTree = "<group>"; };
+		AD6147A2453AC65580D8F77F /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		B6348BBD56B15849965ED611 /* MyPIUSafariExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = MyPIUSafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C31B4EF72D06DFA714032DFD /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
+		CA51101ABEED0BBAE7A00F1D /* SongChartPerformance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongChartPerformance.swift; sourceTree = "<group>"; };
+		CAD29DF449DB8C9A64485184 /* MobilePerformanceImportPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobilePerformanceImportPayload.swift; sourceTree = "<group>"; };
+		CB698BF79F8A8EA2BF773865 /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
+		CC4CC56CB8FDEC320D081648 /* PIUHTMLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIUHTMLParser.swift; sourceTree = "<group>"; };
+		CD9DC3E1D3546740CE933255 /* PerformanceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceModels.swift; sourceTree = "<group>"; };
+		CE0178D7D940058808BDECA9 /* MyPIUOAuthCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPIUOAuthCoordinator.swift; sourceTree = "<group>"; };
+		D1D8AFB1C0858D11520419BC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D63B5D74E06EFCFFFF47B8E7 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
+		D9A178C94033FE3F8C417CFC /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; name = assets; path = MyPIUSafariExtension/Resources/assets; sourceTree = SOURCE_ROOT; };
+		E1BF6272B8AE31C96241D7EA /* SongChartHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongChartHistoryView.swift; sourceTree = "<group>"; };
+		E1F5C14A1100CEB94F3BD2E7 /* SongCatalogModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongCatalogModel.swift; sourceTree = "<group>"; };
+		ED545ED632F235A4C3E4D722 /* BackgroundRefreshScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshScheduler.swift; sourceTree = "<group>"; };
+		ED92743583E82B65C35A11EB /* PlayerProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProgressView.swift; sourceTree = "<group>"; };
+		EF5BB7AA8C3E6A02083C2A56 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F083A9F8C3C6F7D35E148D44 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F39328F6CC046B1D91E5C225 /* PIUHTMLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIUHTMLParserTests.swift; sourceTree = "<group>"; };
+		FD46C1391A1F1EE31ECB6F17 /* src */ = {isa = PBXFileReference; lastKnownFileType = folder; name = src; path = MyPIUSafariExtension/Resources/src; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		084289FF9CE05C78E34EDE70 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C94E5FAEB30D75BB5707F552 /* SwiftSoup in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		00211DFEBB3EFFBFA233BBFA /* MyPIUSafariExtension */ = {
+			isa = PBXGroup;
+			children = (
+				152D26B2D531B0A3414CCF5E /* SafariWebExtensionHandler.swift */,
+			);
+			path = MyPIUSafariExtension;
+			sourceTree = "<group>";
+		};
+		023CFDFF5E0A12819F34D834 /* MyPIU */ = {
+			isa = PBXGroup;
+			children = (
+				AD722DF045F715D269A804ED /* App */,
+				B5C19A39159CC5036D7EA332 /* Core */,
+				E558EE92F65610B8F6690D29 /* Design */,
+				B5A036C3B7FF0A3103749F1A /* Features */,
+				B26E1760C61C941EC9030787 /* Resources */,
+			);
+			path = MyPIU;
+			sourceTree = "<group>";
+		};
+		230656E0B4E251A7FA5AF119 = {
+			isa = PBXGroup;
+			children = (
+				D9A178C94033FE3F8C417CFC /* assets */,
+				FD46C1391A1F1EE31ECB6F17 /* src */,
+				023CFDFF5E0A12819F34D834 /* MyPIU */,
+				00211DFEBB3EFFBFA233BBFA /* MyPIUSafariExtension */,
+				87B6CA98368286E4ED46B656 /* MyPIUTests */,
+				C59BE8444A8D2A29E55C939D /* Resources */,
+				3C4D09EF9438DA4BC2192848 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2E9AE5957EB19B3B7FD3AEF9 /* Persistence */ = {
+			isa = PBXGroup;
+			children = (
+				6E733E3EFB171AE02B3FA4E7 /* CatalogCache.swift */,
+			);
+			path = Persistence;
+			sourceTree = "<group>";
+		};
+		3C4D09EF9438DA4BC2192848 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A079318A1DE5D35F4C0870CA /* MyPIU.app */,
+				B6348BBD56B15849965ED611 /* MyPIUSafariExtension.appex */,
+				5360BB00B9899BF19D054236 /* MyPIUTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5DEE798F1D69EDE16377FCB1 /* Account */ = {
+			isa = PBXGroup;
+			children = (
+				D63B5D74E06EFCFFFF47B8E7 /* AccountView.swift */,
+			);
+			path = Account;
+			sourceTree = "<group>";
+		};
+		6D9BFB8DBA97A14A3D2BFDD5 /* Activity */ = {
+			isa = PBXGroup;
+			children = (
+				85B7D5C8D383EAEF50B35C49 /* ActivityView.swift */,
+				04577B2370D1BB0FD94A771B /* PerformanceSessionView.swift */,
+				04CB8F684F01B570D0340B5B /* RecentPlayDetailView.swift */,
+			);
+			path = Activity;
+			sourceTree = "<group>";
+		};
+		84FE14CB77EB4710D07CB688 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				1DD56B419659854CC1F1D214 /* MyPIUAPIClient.swift */,
+				CE0178D7D940058808BDECA9 /* MyPIUOAuthCoordinator.swift */,
+				00BD51E6E0A95977EB7ABDE7 /* PIUGameClient.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		87B6CA98368286E4ED46B656 /* MyPIUTests */ = {
+			isa = PBXGroup;
+			children = (
+				584771ED77930A8C83189D75 /* ApplicationInfoTests.swift */,
+				45C6B0F65770D601A3572838 /* CatalogTests.swift */,
+				24107F978E8A8690DD6E622A /* MobileSyncTests.swift */,
+				CB698BF79F8A8EA2BF773865 /* PerformanceTests.swift */,
+				60C7C2786874680F6E136DA7 /* PIUGameClientTests.swift */,
+				F39328F6CC046B1D91E5C225 /* PIUHTMLParserTests.swift */,
+			);
+			path = MyPIUTests;
+			sourceTree = "<group>";
+		};
+		96DC0C6692E9773A40F16D2C /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A2BB045593436C1AAFB1A96B /* ApplicationInfo.swift */,
+				4B67C96AB5B8741854AB3133 /* CatalogModels.swift */,
+				CAD29DF449DB8C9A64485184 /* MobilePerformanceImportPayload.swift */,
+				279AA41B8253E04E607A00EA /* MyPIUModels.swift */,
+				CD9DC3E1D3546740CE933255 /* PerformanceModels.swift */,
+				9ACB11FD2A23B7BBBCC86954 /* PerformanceSessionModels.swift */,
+				4F1C14F19FFD641C50E8A489 /* PIUModels.swift */,
+				CA51101ABEED0BBAE7A00F1D /* SongChartPerformance.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		AD722DF045F715D269A804ED /* App */ = {
+			isa = PBXGroup;
+			children = (
+				44A09895888A319485912D66 /* AppModel.swift */,
+				ED545ED632F235A4C3E4D722 /* BackgroundRefreshScheduler.swift */,
+				0466958E2CE15FE121EABE68 /* MyPIUApp.swift */,
+				AD6147A2453AC65580D8F77F /* RootView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B26E1760C61C941EC9030787 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F083A9F8C3C6F7D35E148D44 /* Assets.xcassets */,
+				EF5BB7AA8C3E6A02083C2A56 /* Info.plist */,
+				D1D8AFB1C0858D11520419BC /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		B5A036C3B7FF0A3103749F1A /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				5DEE798F1D69EDE16377FCB1 /* Account */,
+				6D9BFB8DBA97A14A3D2BFDD5 /* Activity */,
+				C2D6236444D379DA2E5E3DFF /* Dashboard */,
+				D588009115A32A0691A1FF3C /* Progress */,
+				CD77F7523DC7462F730E807B /* Songs */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		B5C19A39159CC5036D7EA332 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				96DC0C6692E9773A40F16D2C /* Models */,
+				84FE14CB77EB4710D07CB688 /* Networking */,
+				DA5FC06BF3F4E865EF427EB4 /* Parsing */,
+				2E9AE5957EB19B3B7FD3AEF9 /* Persistence */,
+				D5D16DBAA90FBED4FBE022BD /* Security */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		C2D6236444D379DA2E5E3DFF /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				1560C7931D256F67F857EE9B /* DashboardView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		C59BE8444A8D2A29E55C939D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7B4800AC28F6ACD06E194BE5 /* manifest.json */,
+			);
+			name = Resources;
+			path = MyPIUSafariExtension/Resources;
+			sourceTree = "<group>";
+		};
+		CD77F7523DC7462F730E807B /* Songs */ = {
+			isa = PBXGroup;
+			children = (
+				9FD459FC724F3E051B78545E /* CatalogSongDetailView.swift */,
+				E1F5C14A1100CEB94F3BD2E7 /* SongCatalogModel.swift */,
+				E1BF6272B8AE31C96241D7EA /* SongChartHistoryView.swift */,
+				332AAF4C49320D34591C3A86 /* SongsView.swift */,
+			);
+			path = Songs;
+			sourceTree = "<group>";
+		};
+		D588009115A32A0691A1FF3C /* Progress */ = {
+			isa = PBXGroup;
+			children = (
+				ED92743583E82B65C35A11EB /* PlayerProgressView.swift */,
+			);
+			path = Progress;
+			sourceTree = "<group>";
+		};
+		D5D16DBAA90FBED4FBE022BD /* Security */ = {
+			isa = PBXGroup;
+			children = (
+				6CBA136B393D9C2D121AA68A /* InstallationIdentity.swift */,
+				7ECD849372AAD815E4A75343 /* KeychainCredentialStore.swift */,
+				C31B4EF72D06DFA714032DFD /* KeychainTokenStore.swift */,
+			);
+			path = Security;
+			sourceTree = "<group>";
+		};
+		DA5FC06BF3F4E865EF427EB4 /* Parsing */ = {
+			isa = PBXGroup;
+			children = (
+				CC4CC56CB8FDEC320D081648 /* PIUHTMLParser.swift */,
+			);
+			path = Parsing;
+			sourceTree = "<group>";
+		};
+		E558EE92F65610B8F6690D29 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				43EB695E7D4CB654D1474518 /* AppTheme.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2D779323854BCEC7CB8C2BF0 /* MyPIUSafariExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A53FB0051B6777601B1977BA /* Build configuration list for PBXNativeTarget "MyPIUSafariExtension" */;
+			buildPhases = (
+				79A7E09F43659BECB53E9B93 /* Sources */,
+				212C257B4A6A338CE42F0162 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MyPIUSafariExtension;
+			packageProductDependencies = (
+			);
+			productName = MyPIUSafariExtension;
+			productReference = B6348BBD56B15849965ED611 /* MyPIUSafariExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		385227A74F8459CB16262E44 /* MyPIUTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 172A3C0B88443C87463B7C67 /* Build configuration list for PBXNativeTarget "MyPIUTests" */;
+			buildPhases = (
+				11982AE9B5D1BEF834FFEA51 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6451AE9A621D17896D61FAE0 /* PBXTargetDependency */,
+			);
+			name = MyPIUTests;
+			packageProductDependencies = (
+			);
+			productName = MyPIUTests;
+			productReference = 5360BB00B9899BF19D054236 /* MyPIUTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		E33A1CCDF463D6A783C1AB87 /* MyPIU */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DB8177AB7DC885F5C9813686 /* Build configuration list for PBXNativeTarget "MyPIU" */;
+			buildPhases = (
+				CB02DCBBA1FB586BC851CE78 /* Sources */,
+				FB45B3C895155DD352594942 /* Resources */,
+				084289FF9CE05C78E34EDE70 /* Frameworks */,
+				065F63B9418D464851A64BD0 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B7AADCC7E2D12E9970B77F4F /* PBXTargetDependency */,
+			);
+			name = MyPIU;
+			packageProductDependencies = (
+				F7A1AE1F659F73953E4D9C9C /* SwiftSoup */,
+			);
+			productName = MyPIU;
+			productReference = A079318A1DE5D35F4C0870CA /* MyPIU.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FD08BA2840AA25A0BAD890A6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					2D779323854BCEC7CB8C2BF0 = {
+						ProvisioningStyle = Automatic;
+					};
+					E33A1CCDF463D6A783C1AB87 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = DC717EC2A109113D42D6FAE4 /* Build configuration list for PBXProject "MyPIU" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 230656E0B4E251A7FA5AF119;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E575BC7AEC33D853084FE89F /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 3C4D09EF9438DA4BC2192848 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E33A1CCDF463D6A783C1AB87 /* MyPIU */,
+				385227A74F8459CB16262E44 /* MyPIUTests */,
+				2D779323854BCEC7CB8C2BF0 /* MyPIUSafariExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		212C257B4A6A338CE42F0162 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				77F0F3969667A097047A8983 /* assets in Resources */,
+				8F83E2A8C63D0CC8DF8AF69D /* manifest.json in Resources */,
+				615EAD497A9582BE13C9AF64 /* src in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB45B3C895155DD352594942 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				08D371B2E66865A594D6A898 /* Assets.xcassets in Resources */,
+				9B3F141B5342CA4B0431BB4C /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		11982AE9B5D1BEF834FFEA51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85B9B2DA3AB0802E4DBDF6D9 /* ApplicationInfoTests.swift in Sources */,
+				665BAE9AA3F04B1DB07C147C /* CatalogTests.swift in Sources */,
+				C584BA78962B4E1843083ECF /* MobileSyncTests.swift in Sources */,
+				8C91E5DF0415D925B933E8E1 /* PIUGameClientTests.swift in Sources */,
+				D3EE9E86E439ED67C780C938 /* PIUHTMLParserTests.swift in Sources */,
+				6DA59ABB2F95A97E0E469FC7 /* PerformanceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		79A7E09F43659BECB53E9B93 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				92147823D9BFB2D5734E3561 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CB02DCBBA1FB586BC851CE78 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				164FC7D22967F83D63294F5B /* AccountView.swift in Sources */,
+				512558457622871B9897CE4C /* ActivityView.swift in Sources */,
+				DD1AEC87B1BBF3BC15719C82 /* AppModel.swift in Sources */,
+				E88D5F7E44C0A13C93EC58AB /* AppTheme.swift in Sources */,
+				73035DAB1119D5EAD73F35DF /* ApplicationInfo.swift in Sources */,
+				30BBA5AA3E8C46CEC830063E /* BackgroundRefreshScheduler.swift in Sources */,
+				94DFAD7BF781BC3A1F7DB009 /* CatalogCache.swift in Sources */,
+				821C8BA0854D14AC12504C09 /* CatalogModels.swift in Sources */,
+				9576CAD50B59C047B77B3CC9 /* CatalogSongDetailView.swift in Sources */,
+				7686EE0DC48AD68BBB84135C /* DashboardView.swift in Sources */,
+				CF9722369DC32C540D028430 /* InstallationIdentity.swift in Sources */,
+				33A9D7EBBC60D86DF9BF2CE2 /* KeychainCredentialStore.swift in Sources */,
+				EE05A51EBB956DEB2BD1959E /* KeychainTokenStore.swift in Sources */,
+				E60AB033C8B844D8C0E7188C /* MobilePerformanceImportPayload.swift in Sources */,
+				F1128E1D831066D1BD67B0B0 /* MyPIUAPIClient.swift in Sources */,
+				D8D8AFC5658B33BE6982C818 /* MyPIUApp.swift in Sources */,
+				F5F5965FF9E44F7D54A0E091 /* MyPIUModels.swift in Sources */,
+				207CBCE3CEC2D7D1D56F4133 /* MyPIUOAuthCoordinator.swift in Sources */,
+				702C887D2006BB8816BC8E42 /* PIUGameClient.swift in Sources */,
+				F9C814DE231829E3BEC7FFCC /* PIUHTMLParser.swift in Sources */,
+				B38A0BA1C52C765A2F613BB8 /* PIUModels.swift in Sources */,
+				4B4416010A4A1C4D8D42D3B5 /* PerformanceModels.swift in Sources */,
+				EDFF23FC4A4C3B2E0A1DA000 /* PerformanceSessionModels.swift in Sources */,
+				6F3156C3E9AD7C874A3E42A2 /* PerformanceSessionView.swift in Sources */,
+				C6AF54993823A1A812850D28 /* PlayerProgressView.swift in Sources */,
+				C1FF918C7714948F4DCFFEFE /* RecentPlayDetailView.swift in Sources */,
+				671638399C9A5F3E591F9455 /* RootView.swift in Sources */,
+				BB0A613CC4DB08A79BD3B4A9 /* SongCatalogModel.swift in Sources */,
+				797E16FC6C6E85B31E47C9B9 /* SongChartHistoryView.swift in Sources */,
+				0C75B4963C0849C02C365B0E /* SongChartPerformance.swift in Sources */,
+				972E250518EA41800FA666FB /* SongsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6451AE9A621D17896D61FAE0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E33A1CCDF463D6A783C1AB87 /* MyPIU */;
+			targetProxy = 2A75D5DDD7F52B30F6E8871D /* PBXContainerItemProxy */;
+		};
+		B7AADCC7E2D12E9970B77F4F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2D779323854BCEC7CB8C2BF0 /* MyPIUSafariExtension */;
+			targetProxy = 8694FCC9AC38122DDBDC5BE6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		5B4CADF6D26A18C5E97A5376 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MyPIU/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.austinkimchi.mypiu;
+				PRODUCT_NAME = MyPIU;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		74D44B9263872EF333D7ABBB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.austinkimchi.mypiu.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MyPIU.app/MyPIU";
+			};
+			name = Debug;
+		};
+		8180E8442D7D0996F1F434F8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		92CE0504BD9FB8241679C5F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		94DB33FCB9771EE14E3E961E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MyPIU/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.austinkimchi.mypiu;
+				PRODUCT_NAME = MyPIU;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		96D1468E8523D82D75D2D82E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MyPIUSafariExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.austinkimchi.mypiu.safari;
+				PRODUCT_NAME = "MyPIU Sync Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D0D105F560AF2C485CA09B17 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MyPIUSafariExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.austinkimchi.mypiu.safari;
+				PRODUCT_NAME = "MyPIU Sync Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D8F61ADC0942B99900E43BC5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.austinkimchi.mypiu.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MyPIU.app/MyPIU";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		172A3C0B88443C87463B7C67 /* Build configuration list for PBXNativeTarget "MyPIUTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				74D44B9263872EF333D7ABBB /* Debug */,
+				D8F61ADC0942B99900E43BC5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A53FB0051B6777601B1977BA /* Build configuration list for PBXNativeTarget "MyPIUSafariExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				96D1468E8523D82D75D2D82E /* Debug */,
+				D0D105F560AF2C485CA09B17 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DB8177AB7DC885F5C9813686 /* Build configuration list for PBXNativeTarget "MyPIU" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5B4CADF6D26A18C5E97A5376 /* Debug */,
+				94DB33FCB9771EE14E3E961E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DC717EC2A109113D42D6FAE4 /* Build configuration list for PBXProject "MyPIU" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8180E8442D7D0996F1F434F8 /* Debug */,
+				92CE0504BD9FB8241679C5F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E575BC7AEC33D853084FE89F /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.13.9;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F7A1AE1F659F73953E4D9C9C /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E575BC7AEC33D853084FE89F /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = FD08BA2840AA25A0BAD890A6 /* Project object */;
+}

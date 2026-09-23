@@ -105,8 +105,8 @@ struct SongsView: View {
                     }
                     .accessibilityLabel(
                         filters.selectionCount == 0
-                            ? "Filter songs"
-                            : "Filter songs, \(filters.selectionCount) selected"
+                            ? "Sort and filter songs"
+                            : "Sort and filter songs, \(filters.selectionCount) filters selected"
                     )
                 }
             }
@@ -123,8 +123,9 @@ struct SongsView: View {
         }
         .sheet(isPresented: $showingFilters) {
             SongFilterSheet(
-                filters: $filters,
-                options: catalog.listing.filterOptions
+                filters: filters,
+                options: catalog.listing.filterOptions,
+                onApply: { filters = $0 }
             )
         }
         .alert(
@@ -189,20 +190,22 @@ struct SongsView: View {
         List {
             Section {
                 ForEach(catalog.listing.songs) { song in
-                    HStack(spacing: 8) {
-                        NavigationLink(value: song) {
-                            CatalogSongRow(song: song)
-                        }
-                        .buttonStyle(.plain)
-
+                    NavigationLink(value: song) {
+                        CatalogSongRow(song: song)
+                    }
+                    .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         if canUpdateFavorites {
-                            FavoriteButton(
-                                isFavorite: song.isFavorite,
-                                isUpdating: isUpdatingFavorite(song.slug)
-                            ) {
+                            Button {
                                 updateFavorite(for: song)
+                            } label: {
+                                Label(
+                                    song.isFavorite ? "Unfavorite" : "Favorite",
+                                    systemImage: song.isFavorite ? "star.slash.fill" : "star.fill"
+                                )
                             }
-                            .buttonStyle(.borderless)
+                            .tint(song.isFavorite ? .gray : AppTheme.warning)
+                            .disabled(isUpdatingFavorite(song.slug))
                         }
                     }
                     .task(id: catalog.paginationGeneration) {
@@ -358,14 +361,38 @@ private struct CatalogRequest: Hashable {
 
 private struct SongFilterSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Binding var filters: CatalogFilters
+    @State private var filters: CatalogFilters
     let options: CatalogFilterOptions
+    let onApply: (CatalogFilters) -> Void
 
     private let levelColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
+
+    init(
+        filters: CatalogFilters,
+        options: CatalogFilterOptions,
+        onApply: @escaping (CatalogFilters) -> Void
+    ) {
+        _filters = State(initialValue: filters)
+        self.options = options
+        self.onApply = onApply
+    }
 
     var body: some View {
         NavigationStack {
             Form {
+                Section("SORT BY") {
+                    Picker("Sort by", selection: $filters.sortBy) {
+                        ForEach(CatalogSortOption.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    Picker("Direction", selection: $filters.sortDirection) {
+                        ForEach(CatalogSortDirection.allCases) { direction in
+                            Text(direction.title).tag(direction)
+                        }
+                    }
+                }
+
                 Section("LEVEL MATCHING") {
                     Picker("Match selected levels", selection: $filters.levelMode) {
                         Text("All").tag(CatalogLevelMode.and)
@@ -431,17 +458,20 @@ private struct SongFilterSheet: View {
                     }
                 }
             }
-            .navigationTitle("Filter songs")
+            .navigationTitle("Sort and filter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Reset") {
-                        filters = .empty
+                        filters.clearSelections()
                     }
                     .disabled(filters.isEmpty)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Apply") {
+                        onApply(filters)
+                        dismiss()
+                    }
                 }
             }
         }
@@ -574,20 +604,25 @@ private struct CatalogSongRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
 
-                if let recommendedChartToken = song.recommendedChartToken {
-                    Label(recommendedChartToken, systemImage: "sparkles")
-                        .font(.caption.bold().monospaced())
-                        .foregroundStyle(AppTheme.accent)
-                        .lineLimit(2)
-                        .accessibilityLabel("Recommended chart \(recommendedChartToken)")
+                HStack(spacing: 5) {
+                    ForEach(Array(song.chartSummary.prefix(6)), id: \.self) { token in
+                        let recommended = song.recommendedChartToken?.caseInsensitiveCompare(token) == .orderedSame
+                        Text(token)
+                            .font(.caption.weight(.semibold).monospaced())
+                            .foregroundStyle(recommended ? AppTheme.positive : .secondary)
+                            .padding(.horizontal, recommended ? 5 : 0)
+                            .padding(.vertical, recommended ? 2 : 0)
+                            .background(
+                                recommended ? AppTheme.positive.opacity(0.14) : .clear,
+                                in: RoundedRectangle(cornerRadius: 4)
+                            )
+                            .accessibilityLabel(recommended ? "\(token), recommended" : token)
+                    }
                 }
-                Text(song.chartSummary.prefix(6).joined(separator: "  "))
-                    .font(.caption.weight(.semibold).monospaced())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
 
-                if let folder = song.folder ?? song.series {
-                    Text(folder)
+                if let folderLabel = song.folderLabel {
+                    Text(folderLabel)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)

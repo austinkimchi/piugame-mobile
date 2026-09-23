@@ -2,6 +2,8 @@ package com.austinkimchi.mypiu.core.catalog
 
 import com.austinkimchi.mypiu.core.model.CatalogListing
 import com.austinkimchi.mypiu.core.model.CatalogSearchPage
+import com.austinkimchi.mypiu.core.model.CatalogSortDirection
+import com.austinkimchi.mypiu.core.model.CatalogSortOption
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
 import com.austinkimchi.mypiu.core.network.MyPiuApiClient
@@ -14,11 +16,13 @@ interface CatalogDataSource {
         cursor: String?,
         version: PiuGameVersion,
         authenticated: Boolean,
+        sortBy: CatalogSortOption = CatalogSortOption.SERIES,
+        sortDirection: CatalogSortDirection = CatalogSortDirection.DESCENDING,
     ): CatalogSearchPage
     suspend fun setFavorite(slug: String, saved: Boolean, version: PiuGameVersion): Boolean
     suspend fun chartPerformance(slug: String, chart: String, version: PiuGameVersion): SongChartPerformance?
-    suspend fun cached(query: String, version: PiuGameVersion, scope: String): CatalogCache.CachedListing?
-    suspend fun cache(listing: CatalogListing, query: String, version: PiuGameVersion, scope: String)
+    suspend fun cached(query: String, version: PiuGameVersion, scope: String, sortBy: CatalogSortOption, sortDirection: CatalogSortDirection): CatalogCache.CachedListing?
+    suspend fun cache(listing: CatalogListing, query: String, version: PiuGameVersion, scope: String, sortBy: CatalogSortOption, sortDirection: CatalogSortDirection)
     suspend fun cacheFavorite(saved: Boolean, slug: String, version: PiuGameVersion, scope: String)
     fun resolveUrl(value: String?): String?
 }
@@ -33,10 +37,12 @@ class CatalogRepository(
         cursor: String?,
         version: PiuGameVersion,
         authenticated: Boolean,
+        sortBy: CatalogSortOption,
+        sortDirection: CatalogSortDirection,
     ): CatalogSearchPage {
-        if (!authenticated) return apiClient.searchCatalog(query, cursor, version, null)
+        if (!authenticated) return apiClient.searchCatalog(query, cursor, version, null, sortBy, sortDirection)
         return withSession { token ->
-            apiClient.searchCatalog(query, cursor, version, token)
+            apiClient.searchCatalog(query, cursor, version, token, sortBy, sortDirection)
         }
     }
 
@@ -60,14 +66,25 @@ class CatalogRepository(
         query: String,
         version: PiuGameVersion,
         scope: String,
-    ): CatalogCache.CachedListing? = cache.load(query, version, scope)
+        sortBy: CatalogSortOption,
+        sortDirection: CatalogSortDirection,
+    ): CatalogCache.CachedListing? = cache.load(query, version, scope, sortBy, sortDirection)
 
     override suspend fun cache(
         listing: CatalogListing,
         query: String,
         version: PiuGameVersion,
         scope: String,
-    ) = cache.save(listing, query, version, scope)
+        sortBy: CatalogSortOption,
+        sortDirection: CatalogSortDirection,
+    ) = cache.save(
+        listing = listing,
+        query = query,
+        version = version,
+        scope = scope,
+        sortBy = sortBy,
+        sortDirection = sortDirection,
+    )
 
     override suspend fun cacheFavorite(
         saved: Boolean,

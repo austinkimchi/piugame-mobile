@@ -19,6 +19,7 @@ final class PerformanceTests: XCTestCase {
                   "name": "[S] ADVANCED LV.5",
                   "metric": "single_pumbility",
                   "current": 15828.94,
+                  "previousTarget": 15750,
                   "target": 16000
                 },
                 "recentArcade": "ROUND1",
@@ -76,6 +77,7 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(dashboard.profile?.progressPercent, 16)
         XCTAssertEqual(dashboard.profile?.nextTitle?.name, "[S] ADVANCED LV.5")
         XCTAssertEqual(dashboard.profile?.nextTitle?.remaining ?? 0, 171.06, accuracy: 0.001)
+        XCTAssertEqual(dashboard.profile?.nextTitle?.progressFraction ?? 0, 0.31576, accuracy: 0.00001)
         XCTAssertEqual(dashboard.totals.averageBestScore, 954_848)
         XCTAssertEqual(dashboard.recentPlays.first?.id, "play-1")
         XCTAssertEqual(dashboard.recentPlays.first?.score, 954_848)
@@ -200,7 +202,13 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(presentation.songImageURL, snapshotPlay.songImageURL)
         XCTAssertEqual(presentation.plate, "rg")
         XCTAssertEqual(presentation.judgments.perfect, 900)
-        XCTAssertEqual(presentation.judgmentValues.reduce(0) { $0 + $1.value }, 926)
+        XCTAssertEqual(presentation.judgmentTotal, 926)
+        XCTAssertEqual(
+            presentation.judgmentValues.map(\.label),
+            ["Perfect", "Great", "Good", "Bad", "Miss"]
+        )
+        XCTAssertEqual(presentation.judgmentValues[0].tint, AppTheme.info)
+        XCTAssertEqual(presentation.judgmentValues[1].tint, AppTheme.accent)
     }
 
     func testStoredPerformancePlayPrefersServerJudgments() {
@@ -222,7 +230,7 @@ final class PerformanceTests: XCTestCase {
         let presentation = RecentPlayPresentation(play: serverPlay)
 
         XCTAssertEqual(presentation.judgments, serverJudgments)
-        XCTAssertEqual(presentation.judgmentValues.reduce(0) { $0 + $1.value }, 887)
+        XCTAssertEqual(presentation.judgmentTotal, 887)
     }
 
     func testDecodesSongChartHistoryNewestFirst() throws {
@@ -312,6 +320,7 @@ final class PerformanceTests: XCTestCase {
                   "plate": null,
                   "mode": "S",
                   "level": "19",
+                  "songImageUrl": "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png",
                   "playedAt": "2026-09-22T08:00:00.000Z",
                   "stageBreak": true
                 },
@@ -341,6 +350,10 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(session.summary.clearRate), 200.0 / 3.0, accuracy: 0.0001)
         XCTAssertEqual(session.summary.durationMinutes, 60)
         XCTAssertEqual(session.plays.first?.displayChartToken, "S19")
+        XCTAssertEqual(
+            session.plays.first?.songImageURL?.absoluteString,
+            "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png"
+        )
         XCTAssertEqual(session.plays.first?.stageBreak, true)
         XCTAssertEqual(session.plays.map(\.id), ["play-2", "play-3"])
     }

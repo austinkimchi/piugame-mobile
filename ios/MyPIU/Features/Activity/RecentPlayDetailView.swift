@@ -25,10 +25,14 @@ struct RecentPlayPresentation: Equatable, Identifiable {
         playedAt = play.playedAt
     }
 
-    init(play: MyPIUPerformanceDashboard.Play, snapshotPlay: RecentPlay? = nil) {
+    init(
+        play: MyPIUPerformanceDashboard.Play,
+        snapshotPlay: RecentPlay? = nil,
+        catalogImageURL: URL? = nil
+    ) {
         id = play.id
         songName = play.songName
-        songImageURL = snapshotPlay?.songImageURL
+        songImageURL = play.songImageURL ?? snapshotPlay?.songImageURL ?? catalogImageURL
         chartToken = play.displayChartToken
         score = play.score
         grade = play.grade
@@ -54,12 +58,16 @@ struct RecentPlayPresentation: Equatable, Identifiable {
 
     var judgmentValues: [PlayJudgmentValue] {
         [
-            judgments.perfect.map { PlayJudgmentValue(label: "Perfect", value: $0, tint: AppTheme.accent) },
-            judgments.great.map { PlayJudgmentValue(label: "Great", value: $0, tint: AppTheme.info) },
+            judgments.perfect.map { PlayJudgmentValue(label: "Perfect", value: $0, tint: AppTheme.judgmentPerfect) },
+            judgments.great.map { PlayJudgmentValue(label: "Great", value: $0, tint: AppTheme.judgmentGreat) },
             judgments.good.map { PlayJudgmentValue(label: "Good", value: $0, tint: AppTheme.warning) },
             judgments.bad.map { PlayJudgmentValue(label: "Bad", value: $0, tint: AppTheme.judgmentBad) },
             judgments.miss.map { PlayJudgmentValue(label: "Miss", value: $0, tint: AppTheme.danger) }
         ].compactMap { $0 }
+    }
+
+    var judgmentTotal: Int {
+        judgmentValues.reduce(0) { $0 + max(0, $1.value) }
     }
 }
 
@@ -170,22 +178,28 @@ struct RecentPlayDetailView: View {
             WebsiteSectionTitle(title: "JUDGMENTS", detail: judgmentTotalLabel)
 
             if play.hasJudgments {
-                LazyVGrid(columns: judgmentColumns, spacing: 10) {
+                JudgmentDistributionBar(judgments: play.judgmentValues)
+
+                LazyVGrid(columns: judgmentColumns, spacing: 8) {
                     ForEach(play.judgmentValues) { judgment in
-                        VStack(alignment: .leading, spacing: 7) {
-                            Rectangle()
-                                .fill(judgment.tint)
-                                .frame(height: 4)
+                        VStack(spacing: 4) {
+                            HStack(spacing: 5) {
+                                Circle()
+                                    .fill(judgment.tint)
+                                    .frame(width: 7, height: 7)
+                                Text(judgment.label.uppercased())
+                                    .font(.caption2.bold())
+                                    .tracking(0.5)
+                                    .foregroundStyle(AppTheme.mutedInk)
+                                    .lineLimit(1)
+                            }
                             Text(judgment.value.formatted())
-                                .font(.title3.bold().monospacedDigit())
+                                .font(.subheadline.bold().monospacedDigit())
                                 .foregroundStyle(AppTheme.ink)
-                            Text(judgment.label.uppercased())
-                                .font(.caption2.bold())
-                                .tracking(0.8)
-                                .foregroundStyle(AppTheme.mutedInk)
                         }
-                        .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
-                        .padding(12)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 7)
                         .background(AppTheme.pageBackground)
                         .overlay(Rectangle().stroke(AppTheme.border, lineWidth: 1))
                         .accessibilityElement(children: .combine)
@@ -203,14 +217,14 @@ struct RecentPlayDetailView: View {
 
     private var judgmentColumns: [GridItem] {
         Array(
-            repeating: GridItem(.flexible(), spacing: 10),
-            count: dynamicTypeSize.isAccessibilitySize ? 1 : 2
+            repeating: GridItem(.flexible(), spacing: 8),
+            count: dynamicTypeSize.isAccessibilitySize ? 1 : 3
         )
     }
 
     private var judgmentTotalLabel: String? {
         guard play.hasJudgments else { return nil }
-        return play.judgmentValues.reduce(0) { $0 + $1.value }.formatted() + " steps"
+        return play.judgmentTotal.formatted() + " steps"
     }
 
     private func resultChip(_ label: String) -> some View {
@@ -226,6 +240,40 @@ struct RecentPlayDetailView: View {
     private func displayAssetName(_ value: String?) -> String? {
         guard let value, value.isEmpty == false else { return nil }
         return value.replacingOccurrences(of: "_", with: " ").uppercased()
+    }
+}
+
+private struct JudgmentDistributionBar: View {
+    let judgments: [PlayJudgmentValue]
+
+    private var total: Int {
+        judgments.reduce(0) { $0 + max(0, $1.value) }
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            HStack(spacing: 0) {
+                if total > 0 {
+                    ForEach(judgments.filter { $0.value > 0 }) { judgment in
+                        Rectangle()
+                            .fill(judgment.tint)
+                            .frame(
+                                width: proxy.size.width * CGFloat(judgment.value) / CGFloat(total)
+                            )
+                    }
+                } else {
+                    Rectangle().fill(AppTheme.pageBackground)
+                }
+            }
+        }
+        .frame(height: 14)
+        .overlay(Rectangle().stroke(AppTheme.border, lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            judgments
+                .map { "\($0.label) \($0.value.formatted())" }
+                .joined(separator: ", ")
+        )
     }
 }
 

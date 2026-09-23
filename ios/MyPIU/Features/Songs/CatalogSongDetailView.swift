@@ -71,9 +71,9 @@ struct CatalogSongDetailView: View {
             if let bpm = song.bpm {
                 metadataRow("BPM", value: bpm, systemImage: "metronome")
             }
-            if let folder = song.folder {
+            if song.folder != nil, let folderLabel = song.folderLabel {
                 Divider()
-                metadataRow("Folder", value: folder, systemImage: "folder")
+                metadataRow("Folder", value: folderLabel, systemImage: "folder")
             }
             if let series = song.series {
                 Divider()

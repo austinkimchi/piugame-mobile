@@ -8,6 +8,8 @@ enum AppTheme {
     static let judgmentBad = Color(red: 0.55, green: 0.28, blue: 0.76)
     static let danger = Color(red: 0.83, green: 0.19, blue: 0.20)
     static let info = Color(red: 0.08, green: 0.48, blue: 0.85)
+    static let judgmentPerfect = info
+    static let judgmentGreat = accent
     static let levelBadgeBackground = Color(red: 0.09, green: 0.10, blue: 0.09)
     static let ink = adaptive(
         light: UIColor(red: 0.09, green: 0.10, blue: 0.09, alpha: 1),
