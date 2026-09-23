@@ -105,8 +105,8 @@ struct SongsView: View {
                     }
                     .accessibilityLabel(
                         filters.selectionCount == 0
-                            ? "Filter songs"
-                            : "Filter songs, \(filters.selectionCount) selected"
+                            ? "Sort and filter songs"
+                            : "Sort and filter songs, \(filters.selectionCount) filters selected"
                     )
                 }
             }
@@ -123,8 +123,9 @@ struct SongsView: View {
         }
         .sheet(isPresented: $showingFilters) {
             SongFilterSheet(
-                filters: $filters,
-                options: catalog.listing.filterOptions
+                filters: filters,
+                options: catalog.listing.filterOptions,
+                onApply: { filters = $0 }
             )
         }
         .alert(
@@ -358,14 +359,38 @@ private struct CatalogRequest: Hashable {
 
 private struct SongFilterSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Binding var filters: CatalogFilters
+    @State private var filters: CatalogFilters
     let options: CatalogFilterOptions
+    let onApply: (CatalogFilters) -> Void
 
     private let levelColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
+
+    init(
+        filters: CatalogFilters,
+        options: CatalogFilterOptions,
+        onApply: @escaping (CatalogFilters) -> Void
+    ) {
+        _filters = State(initialValue: filters)
+        self.options = options
+        self.onApply = onApply
+    }
 
     var body: some View {
         NavigationStack {
             Form {
+                Section("SORT BY") {
+                    Picker("Sort by", selection: $filters.sortBy) {
+                        ForEach(CatalogSortOption.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    Picker("Direction", selection: $filters.sortDirection) {
+                        ForEach(CatalogSortDirection.allCases) { direction in
+                            Text(direction.title).tag(direction)
+                        }
+                    }
+                }
+
                 Section("LEVEL MATCHING") {
                     Picker("Match selected levels", selection: $filters.levelMode) {
                         Text("All").tag(CatalogLevelMode.and)
@@ -431,17 +456,20 @@ private struct SongFilterSheet: View {
                     }
                 }
             }
-            .navigationTitle("Filter songs")
+            .navigationTitle("Sort and filter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Reset") {
-                        filters = .empty
+                        filters.clearSelections()
                     }
                     .disabled(filters.isEmpty)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Apply") {
+                        onApply(filters)
+                        dismiss()
+                    }
                 }
             }
         }

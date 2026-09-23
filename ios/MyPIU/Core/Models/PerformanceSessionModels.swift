@@ -24,3 +24,8 @@ struct MyPIUPerformanceSession: Decodable, Equatable, Identifiable, Sendable {
         }
     }
 }
+
+struct MyPIUPerformanceSessionsPage: Decodable, Equatable, Sendable {
+    let sessions: [MyPIUPerformanceSession]
+    let nextOffset: Int?
+}

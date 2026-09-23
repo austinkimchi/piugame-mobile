@@ -156,7 +156,13 @@ final class SongCatalogModel: ObservableObject {
 
         let cached: CatalogCache.CachedListing?
         if let cacheScope, filters.isEmpty {
-            cached = await cache.load(query: normalizedQuery, version: version, scope: cacheScope)
+            cached = await cache.load(
+                query: normalizedQuery,
+                version: version,
+                scope: cacheScope,
+                sortBy: filters.sortBy,
+                sortDirection: filters.sortDirection
+            )
         } else {
             cached = nil
         }
@@ -200,7 +206,9 @@ final class SongCatalogModel: ObservableObject {
                     listingForCache(),
                     query: normalizedQuery,
                     version: version,
-                    scope: cacheScope
+                    scope: cacheScope,
+                    sortBy: filters.sortBy,
+                    sortDirection: filters.sortDirection
                 )
             }
             guard self.requestID == requestID,
@@ -360,7 +368,9 @@ final class SongCatalogModel: ObservableObject {
                 listingForCache(),
                 query: currentQuery,
                 version: version,
-                scope: cacheScope
+                scope: cacheScope,
+                sortBy: currentFilters.sortBy,
+                sortDirection: currentFilters.sortDirection
             )
         }
     }
@@ -398,7 +408,9 @@ final class SongCatalogModel: ObservableObject {
                     listingForCache(),
                     query: currentQuery,
                     version: currentVersion,
-                    scope: currentCacheScope
+                    scope: currentCacheScope,
+                    sortBy: currentFilters.sortBy,
+                    sortDirection: currentFilters.sortDirection
                 )
             }
             guard self.requestID == requestID else { return }
@@ -463,7 +475,7 @@ final class SongCatalogModel: ObservableObject {
         version: PIUGameVersion,
         filters: CatalogFilters
     ) async throws -> CatalogSearchPage {
-        if filters.isEmpty {
+        if filters.isEmpty && filters.usesDefaultSort {
             return try await searchCatalog(query, cursor, version)
         }
         return try await filteredSearchCatalog(query, cursor, version, filters)

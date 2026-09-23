@@ -120,12 +120,46 @@ enum CatalogLevelMode: String, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
 }
 
+enum CatalogSortOption: String, CaseIterable, Codable, Identifiable, Sendable {
+    case series
+    case title
+    case artist
+    case folder
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .series: "Series"
+        case .title: "Title"
+        case .artist: "Artist"
+        case .folder: "Folder"
+        }
+    }
+}
+
+enum CatalogSortDirection: String, CaseIterable, Codable, Identifiable, Sendable {
+    case ascending = "asc"
+    case descending = "desc"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .ascending: "Ascending"
+        case .descending: "Descending"
+        }
+    }
+}
+
 struct CatalogFilters: Equatable, Hashable, Sendable {
     var folders: [String] = []
     var series: [String] = []
     var levels: [String] = []
     var charts: [String] = []
     var levelMode: CatalogLevelMode = .and
+    var sortBy: CatalogSortOption = .series
+    var sortDirection: CatalogSortDirection = .descending
 
     static let empty = CatalogFilters()
 
@@ -135,6 +169,18 @@ struct CatalogFilters: Equatable, Hashable, Sendable {
 
     var selectionCount: Int {
         folders.count + series.count + levels.count + charts.count
+    }
+
+    var usesDefaultSort: Bool {
+        sortBy == .series && sortDirection == .descending
+    }
+
+    mutating func clearSelections() {
+        folders = []
+        series = []
+        levels = []
+        charts = []
+        levelMode = .and
     }
 }
 

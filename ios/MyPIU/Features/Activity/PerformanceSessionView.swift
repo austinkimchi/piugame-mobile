@@ -4,6 +4,9 @@ struct PerformanceSessionsView: View {
     @EnvironmentObject private var appModel: AppModel
     @State private var state: LoadState = .idle
     @State private var sessions: [MyPIUPerformanceSession] = []
+    @State private var nextOffset: Int?
+    @State private var isLoadingMore = false
+    @State private var paginationError: String?
 
     var body: some View {
         Group {
@@ -43,11 +46,30 @@ struct PerformanceSessionsView: View {
             if sessions.isEmpty {
                 ContentUnavailableView("No sessions yet", systemImage: "clock.arrow.circlepath")
             } else {
-                List(sessions) { session in
-                    NavigationLink {
-                        PerformanceSessionView(session: session)
-                    } label: {
-                        SessionRow(session: session)
+                List {
+                    ForEach(sessions) { session in
+                        NavigationLink {
+                            PerformanceSessionView(session: session)
+                        } label: {
+                            SessionRow(session: session)
+                        }
+                        .task {
+                            await loadMoreIfNeeded(after: session)
+                        }
+                    }
+
+                    if isLoadingMore {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                        .listRowSeparator(.hidden)
+                    } else if paginationError != nil {
+                        Button("Retry loading more", systemImage: "arrow.clockwise") {
+                            Task { await loadMore() }
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                 }
                 .listStyle(.plain)
@@ -62,22 +84,59 @@ struct PerformanceSessionsView: View {
     private func load() async {
         guard let scope = appModel.catalogCacheScope, scope.hasPrefix("account:") else {
             sessions = []
+            nextOffset = nil
+            paginationError = nil
             state = .idle
             return
         }
 
         state = .loading
         do {
-            let sessions = try await appModel.performanceSessions()
+            let page = try await appModel.performanceSessions()
             try Task.checkCancellation()
             guard appModel.catalogCacheScope == scope else { return }
-            self.sessions = sessions
+            sessions = page.sessions
+            nextOffset = page.nextOffset
+            paginationError = nil
             state = .loaded
         } catch is CancellationError {
             return
         } catch {
             guard appModel.catalogCacheScope == scope else { return }
             state = .failed(error.localizedDescription)
+        }
+    }
+
+    @MainActor
+    private func loadMoreIfNeeded(after session: MyPIUPerformanceSession) async {
+        guard let index = sessions.firstIndex(where: { $0.id == session.id }),
+              index >= max(0, sessions.count - 4) else { return }
+        await loadMore()
+    }
+
+    @MainActor
+    private func loadMore() async {
+        guard !isLoadingMore,
+              let offset = nextOffset,
+              let scope = appModel.catalogCacheScope,
+              scope.hasPrefix("account:") else { return }
+
+        isLoadingMore = true
+        paginationError = nil
+        defer { isLoadingMore = false }
+
+        do {
+            let page = try await appModel.performanceSessions(offset: offset)
+            try Task.checkCancellation()
+            guard appModel.catalogCacheScope == scope else { return }
+            var knownIDs = Set(sessions.map(\.id))
+            sessions.append(contentsOf: page.sessions.filter { knownIDs.insert($0.id).inserted })
+            nextOffset = page.nextOffset == offset ? nil : page.nextOffset
+        } catch is CancellationError {
+            return
+        } catch {
+            guard appModel.catalogCacheScope == scope else { return }
+            paginationError = error.localizedDescription
         }
     }
 }

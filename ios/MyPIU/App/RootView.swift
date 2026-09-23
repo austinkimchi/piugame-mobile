@@ -54,7 +54,7 @@ struct RootView: View {
 
     private var compactLayout: some View {
         TabView(selection: $selectedDestination) {
-            ForEach(Destination.allCases) { destination in
+            ForEach(Destination.compactOrder) { destination in
                 navigationStack(for: destination)
                 .tabItem {
                     Label(destination.title, systemImage: destination.compactSystemImage)
@@ -151,6 +151,8 @@ private enum Destination: String, CaseIterable, Identifiable {
     case progress
     case activity
     case account
+
+    static let compactOrder: [Destination] = [.home, .activity, .progress, .songs, .account]
 
     var id: String { rawValue }
 

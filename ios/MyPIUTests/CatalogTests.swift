@@ -125,6 +125,36 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(newest?.listing.songs.first?.slug, "battle-no-1")
     }
 
+    func testCatalogCacheSeparatesSortOrders() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        var listing = CatalogListing()
+        listing.replace(with: page)
+
+        try await cache.save(
+            listing,
+            query: "",
+            version: .phoenix2,
+            scope: "public",
+            sortBy: .artist,
+            sortDirection: .ascending
+        )
+
+        let artistSort = await cache.load(
+            query: "",
+            version: .phoenix2,
+            scope: "public",
+            sortBy: .artist,
+            sortDirection: .ascending
+        )
+        let defaultSort = await cache.load(query: "", version: .phoenix2, scope: "public")
+
+        XCTAssertEqual(artistSort?.listing, listing)
+        XCTAssertNil(defaultSort)
+    }
+
     func testCatalogCachePropagatesFavoriteWithinAccountAndVersion() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
