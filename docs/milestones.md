@@ -11,7 +11,7 @@
 
 ## Stage 1: iOS vertical slice
 
-Current: the native iOS production baseline, mobile ingest contract, privacy manifest, account deletion/disconnect behavior, unsigned generic-device archive gate, and protected signed IPA/TestFlight upload workflow are available. App Store Connect enrollment, release-environment credentials, and physical-device TestFlight qualification remain.
+Current: the private mobile repository, native iOS production baseline, mobile ingest contract, privacy manifest, account deletion/disconnect behavior, unsigned generic-device archive gate, protected signed IPA/TestFlight upload workflow, and `main`-only release environments are available. App Store Connect enrollment, release-environment credentials, and physical-device TestFlight qualification remain.
 
 - MyPIU mobile OAuth and revocable access tokens.
 - Versioned mobile ingest endpoint in `piugame-web`.
