@@ -13,6 +13,8 @@ import com.austinkimchi.mypiu.core.model.CatalogSortOption
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
+import java.text.Normalizer
+import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -292,6 +294,9 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
 
     fun imageUrl(song: CatalogSong): String? = repository.resolveUrl(song.imageUrl)
 
+    fun artworkUrl(songTitle: String): String? =
+        mutableState.value.artworkByTitle[artworkKey(songTitle)]
+
     fun loadChartHistory(song: CatalogSong, chartToken: String, force: Boolean = false) {
         val current = mutableState.value
         val existing = current.chartHistory
@@ -386,6 +391,13 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 mutableState.update {
                     it.copy(
                         listing = applyFavoriteOverrides(cached.listing, scope = scope, version = version),
+                        artworkByTitle = if (
+                            snapshot.feed == CatalogFeed.CATALOG && query.isBlank() && cached.listing.nextCursor == null
+                        ) {
+                            it.artworkByTitle + artworkIndex(cached.listing.songs)
+                        } else {
+                            it.artworkByTitle
+                        },
                         isShowingCachedData = true,
                     )
                 }
@@ -417,6 +429,11 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 mutableState.update {
                     it.copy(
                         listing = listing,
+                        artworkByTitle = if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank()) {
+                            it.artworkByTitle + artworkIndex(listing.songs)
+                        } else {
+                            it.artworkByTitle
+                        },
                         isLoading = false,
                         isShowingCachedData = false,
                         error = null,
@@ -541,6 +558,11 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         }
     }
 
+    private fun artworkIndex(songs: List<CatalogSong>): Map<String, String> =
+        songs.mapNotNull { song ->
+            repository.resolveUrl(song.imageUrl)?.let { artworkKey(song.title) to it }
+        }.toMap()
+
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -554,6 +576,12 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         const val COMPLETE_CATALOG_FRESHNESS_MILLIS = 7L * 24 * 60 * 60 * 1_000
     }
 }
+
+private fun artworkKey(value: String): String =
+    Normalizer.normalize(value, Normalizer.Form.NFKC)
+        .trim()
+        .replace(Regex("\\s+"), " ")
+        .lowercase(Locale.ROOT)
 
 enum class CatalogFeed(val label: String, val query: String, val requiresAccount: Boolean) {
     CATALOG("Catalog", "", false),
@@ -570,6 +598,7 @@ data class CatalogUiState(
     val cacheScope: String? = "public",
     val isMyPiuConnected: Boolean = false,
     val listing: CatalogListing = CatalogListing(),
+    val artworkByTitle: Map<String, String> = emptyMap(),
     val isLoading: Boolean = false,
     val isLoadingMore: Boolean = false,
     val isShowingCachedData: Boolean = false,

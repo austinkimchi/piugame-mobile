@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PerformanceSessionsView: View {
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var songCatalog: SongCatalogModel
     @State private var state: LoadState = .idle
     @State private var sessions: [MyPIUPerformanceSession] = []
     @State private var nextOffset: Int?
@@ -50,7 +51,8 @@ struct PerformanceSessionsView: View {
                     ForEach(sessions) { session in
                         SessionRow(
                             session: session,
-                            snapshotPlays: appModel.snapshot?.recentPlays ?? []
+                            snapshotPlays: appModel.snapshot?.recentPlays ?? [],
+                            catalogArtworkURL: songCatalog.artworkURL
                         )
                         .task {
                             await loadMoreIfNeeded(after: session)
@@ -142,6 +144,7 @@ struct PerformanceSessionsView: View {
 
 struct PerformanceSessionView: View {
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var songCatalog: SongCatalogModel
     let session: MyPIUPerformanceSession
     private let initiallyPresentedPlayID: String?
     @State private var presentedPlayID: String?
@@ -177,7 +180,11 @@ struct PerformanceSessionView: View {
                     )
                     NavigationLink {
                         RecentPlayDetailView(
-                            play: RecentPlayPresentation(play: play, snapshotPlay: snapshotPlay)
+                            play: RecentPlayPresentation(
+                                play: play,
+                                snapshotPlay: snapshotPlay,
+                                catalogImageURL: songCatalog.artworkURL(for: play.songName)
+                            )
                         )
                     } label: {
                         PerformanceRecentPlayRow(play: play, snapshotPlay: snapshotPlay)
@@ -204,7 +211,8 @@ struct PerformanceSessionView: View {
                         snapshotPlay: matchingRecentPlay(
                             for: play,
                             in: appModel.snapshot?.recentPlays ?? []
-                        )
+                        ),
+                        catalogImageURL: songCatalog.artworkURL(for: play.songName)
                     )
                 )
             }
@@ -248,6 +256,7 @@ struct PerformanceSessionView: View {
 private struct SessionRow: View {
     let session: MyPIUPerformanceSession
     let snapshotPlays: [RecentPlay]
+    let catalogArtworkURL: (String) -> URL?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -288,7 +297,11 @@ private struct SessionRow: View {
                                 initiallyPresentedPlayID: play.id
                             )
                         } label: {
-                            SessionPlayArtwork(play: play, snapshotPlay: snapshotPlay)
+                            SessionPlayArtwork(
+                                play: play,
+                                snapshotPlay: snapshotPlay,
+                                catalogImageURL: catalogArtworkURL(play.songName)
+                            )
                         }
                         .buttonStyle(.plain)
                         .accessibilityHint("Opens this play inside the session")
@@ -304,10 +317,14 @@ private struct SessionRow: View {
 private struct SessionPlayArtwork: View {
     let play: MyPIUPerformanceDashboard.Play
     let snapshotPlay: RecentPlay?
+    let catalogImageURL: URL?
 
     var body: some View {
         VStack(spacing: 4) {
-            SongArtwork(url: play.songImageURL ?? snapshotPlay?.songImageURL, size: 56)
+            SongArtwork(
+                url: play.songImageURL ?? snapshotPlay?.songImageURL ?? catalogImageURL,
+                size: 56
+            )
             Text(play.displayChartToken)
                 .font(.caption2.bold().monospaced())
                 .foregroundStyle(AppTheme.mutedInk)

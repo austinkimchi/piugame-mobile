@@ -167,6 +167,7 @@ fun PerformanceSessionsScreen(
     onLoad: () -> Unit,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
+    artworkUrl: (String) -> String?,
     onOpenSession: (MyPiuPerformanceSession) -> Unit,
     onOpenPlay: (MyPiuPerformanceSession, MyPiuPerformanceDashboard.Play) -> Unit,
 ) {
@@ -194,6 +195,7 @@ fun PerformanceSessionsScreen(
             ) { index, session ->
                 SessionRow(
                     session = session,
+                    artworkUrl = artworkUrl,
                     onClick = { onOpenSession(session) },
                     onOpenPlay = { play -> onOpenPlay(session, play) },
                 )
@@ -281,6 +283,7 @@ fun PerformanceSessionScreen(
 @Composable
 private fun SessionRow(
     session: MyPiuPerformanceSession,
+    artworkUrl: (String) -> String?,
     onClick: () -> Unit,
     onOpenPlay: (MyPiuPerformanceDashboard.Play) -> Unit,
 ) {
@@ -317,7 +320,11 @@ private fun SessionRow(
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(session.plays, key = { it.id }) { play ->
-                SessionPlayArtwork(play = play, onClick = { onOpenPlay(play) })
+                SessionPlayArtwork(
+                    play = play,
+                    artworkUrl = artworkUrl(play.songName),
+                    onClick = { onOpenPlay(play) },
+                )
             }
         }
     }
@@ -326,6 +333,7 @@ private fun SessionRow(
 @Composable
 private fun SessionPlayArtwork(
     play: MyPiuPerformanceDashboard.Play,
+    artworkUrl: String?,
     onClick: () -> Unit,
 ) {
     Column(
@@ -333,7 +341,7 @@ private fun SessionPlayArtwork(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        SongArtwork(play.songImageUrl, Modifier.size(56.dp))
+        SongArtwork(play.songImageUrl ?: artworkUrl, Modifier.size(56.dp))
         Text(
             play.displayChartToken,
             style = MaterialTheme.typography.labelSmall,
@@ -420,7 +428,10 @@ private fun PerformancePlayRow(
 }
 
 @Composable
-fun PerformancePlayDetailScreen(play: MyPiuPerformanceDashboard.Play) {
+fun PerformancePlayDetailScreen(
+    play: MyPiuPerformanceDashboard.Play,
+    artworkUrl: String? = null,
+) {
     val failed = performancePlayIsFailed(play.grade, play.stageBreak)
     val score = if (failed) "FAILED" else formatActivityInteger(play.score)
     LazyColumn(
@@ -433,7 +444,7 @@ fun PerformancePlayDetailScreen(play: MyPiuPerformanceDashboard.Play) {
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                SongArtwork(play.songImageUrl, Modifier.size(96.dp))
+                SongArtwork(play.songImageUrl ?: artworkUrl, Modifier.size(96.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(play.songName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
                     ChartTokenBadge(play.displayChartToken)

@@ -26,6 +26,14 @@ struct RootView: View {
             }
         }
         .tint(AppTheme.accent)
+        .environmentObject(songCatalog)
+        .task(id: appModel.myPIUAccount?.piuGameVersion ?? appModel.selectedVersion) {
+            let preferredVersion = appModel.myPIUAccount?.piuGameVersion ?? appModel.selectedVersion
+            let versions = [preferredVersion] + PIUGameVersion.allCases.filter { $0 != preferredVersion }
+            for version in versions {
+                await songCatalog.preloadArtwork(version: version)
+            }
+        }
         .onChange(of: selectedDestination) { _, destination in
             visitedDestinations.insert(destination)
             resignFocus()

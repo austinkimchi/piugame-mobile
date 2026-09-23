@@ -196,8 +196,10 @@ fun MyPiuApp(
             selectedVersionReady = true
         }
     }
+    LaunchedEffect(state.isBusy) {
+        if (!state.isBusy) catalogViewModel.start()
+    }
     LaunchedEffect(destination, state.isBusy) {
-        if (destination == AppDestination.SONGS && !state.isBusy) catalogViewModel.start()
         if (
             (destination == AppDestination.PROGRESS || destination == AppDestination.ACTIVITY) &&
             !state.isBusy
@@ -352,7 +354,10 @@ fun MyPiuApp(
                     onOpenPumbility = { showingPumbility = true },
                 )
                 destination == AppDestination.ACTIVITY && selectedSessionPlay != null -> {
-                    PerformancePlayDetailScreen(selectedSessionPlay)
+                    PerformancePlayDetailScreen(
+                        play = selectedSessionPlay,
+                        artworkUrl = catalogViewModel.artworkUrl(selectedSessionPlay.songName),
+                    )
                 }
                 destination == AppDestination.ACTIVITY && selectedPerformanceSession != null -> {
                     PerformanceSessionScreen(
@@ -365,6 +370,7 @@ fun MyPiuApp(
                     onLoad = performanceViewModel::loadSession,
                     onRefresh = { performanceViewModel.loadSession(force = true) },
                     onLoadMore = performanceViewModel::loadMoreSessions,
+                    artworkUrl = catalogViewModel::artworkUrl,
                     onOpenSession = { session ->
                         selectedSessionId = session.id.ifBlank { session.summary.endedAt }
                     },

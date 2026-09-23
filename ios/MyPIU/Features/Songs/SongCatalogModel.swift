@@ -47,8 +47,10 @@ final class SongCatalogModel: ObservableObject {
     @Published private(set) var isShowingCachedData = false
     @Published private(set) var paginationGeneration = 0
     @Published private(set) var favoriteError: String?
+    @Published private(set) var artworkURLsByTitle: [String: URL] = [:]
 
     private let cache: CatalogCache
+    private let artworkSearchCatalog: CatalogSearch
     private var searchCatalog: CatalogSearch
     private var filteredSearchCatalog: FilteredCatalogSearch
     private var requestID = UUID()
@@ -61,11 +63,17 @@ final class SongCatalogModel: ObservableObject {
     private var confirmedFavorites: [String: ConfirmedFavorite] = [:]
     private var favoriteRevision = 0
 
-    init(apiClient: MyPIUAPIClient = MyPIUAPIClient(), cache: CatalogCache = CatalogCache()) {
+    init(
+        apiClient: MyPIUAPIClient = MyPIUAPIClient(),
+        cache: CatalogCache = CatalogCache(),
+        artworkSearchCatalog: CatalogSearch? = nil
+    ) {
         self.cache = cache
-        self.searchCatalog = { query, cursor, version in
+        let publicSearch: CatalogSearch = { query, cursor, version in
             try await apiClient.searchCatalog(query: query, cursor: cursor, version: version)
         }
+        self.artworkSearchCatalog = artworkSearchCatalog ?? publicSearch
+        self.searchCatalog = publicSearch
         self.filteredSearchCatalog = { query, cursor, version, filters in
             try await apiClient.searchCatalog(
                 query: query,
@@ -109,6 +117,55 @@ final class SongCatalogModel: ObservableObject {
             debounce: debounce,
             useFreshCompleteCache: true
         )
+    }
+
+    func preloadArtwork(version: PIUGameVersion) async {
+        let filters = CatalogFilters.empty
+        let cacheScope = "public"
+        let cached = await cache.load(
+            query: "",
+            version: version,
+            scope: cacheScope,
+            sortBy: filters.sortBy,
+            sortDirection: filters.sortDirection
+        )
+        if let cached, cached.listing.hasMore == false {
+            mergeArtworkIndex(cached.listing.songs)
+            if Date().timeIntervalSince(cached.cachedAt) < Self.completeCatalogFreshness {
+                return
+            }
+        }
+
+        do {
+            let firstPage = try await artworkSearchCatalog("", nil, version)
+            var completeListing = CatalogListing()
+            completeListing.replace(with: firstPage)
+            var pageCount = 1
+            while let cursor = completeListing.nextCursor, pageCount < 200 {
+                try Task.checkCancellation()
+                let page = try await artworkSearchCatalog("", cursor, version)
+                completeListing.append(page, requestedCursor: cursor)
+                pageCount += 1
+            }
+            try Task.checkCancellation()
+            mergeArtworkIndex(completeListing.songs)
+            try? await cache.save(
+                completeListing,
+                query: "",
+                version: version,
+                scope: cacheScope,
+                sortBy: filters.sortBy,
+                sortDirection: filters.sortDirection
+            )
+        } catch is CancellationError {
+            return
+        } catch {
+            // Artwork preload is best effort. The catalog screen still reports load errors normally.
+        }
+    }
+
+    func artworkURL(for songTitle: String) -> URL? {
+        artworkURLsByTitle[Self.artworkKey(songTitle)]
     }
 
     func reload(
@@ -168,6 +225,9 @@ final class SongCatalogModel: ObservableObject {
         }
         guard !Task.isCancelled, self.requestID == requestID else { return }
         listing = listingApplyingCurrentFavorites(cached?.listing ?? CatalogListing())
+        if normalizedQuery.isEmpty, filters.isEmpty, cached?.listing.hasMore == false {
+            mergeArtworkIndex(cached?.listing.songs ?? [])
+        }
         isShowingCachedData = cached != nil
         if useFreshCompleteCache,
            normalizedQuery.isEmpty,
@@ -197,6 +257,9 @@ final class SongCatalogModel: ObservableObject {
             }
             guard !Task.isCancelled, self.requestID == requestID else { return }
             listing.replace(with: pageApplyingFavorites(page, confirmedAfter: startingFavoriteRevision))
+            if normalizedQuery.isEmpty, filters.isEmpty, page.nextCursor == nil {
+                mergeArtworkIndex(page.songs)
+            }
             listingRequestID = requestID
             paginationGeneration += 1
             isShowingCachedData = false
@@ -528,6 +591,23 @@ final class SongCatalogModel: ObservableObject {
             cacheListing.setFavorite(value, forSlug: slug)
         }
         return cacheListing
+    }
+
+    private func mergeArtworkIndex(_ songs: [CatalogSong]) {
+        var updated = artworkURLsByTitle
+        for song in songs {
+            guard let imageURL = song.imageURL else { continue }
+            updated[Self.artworkKey(song.title)] = imageURL
+        }
+        artworkURLsByTitle = updated
+    }
+
+    private static func artworkKey(_ value: String) -> String {
+        value
+            .precomposedStringWithCompatibilityMapping
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
     }
 
     private func hasConfirmedFavorite(slug: String, newerThan revision: Int) -> Bool {

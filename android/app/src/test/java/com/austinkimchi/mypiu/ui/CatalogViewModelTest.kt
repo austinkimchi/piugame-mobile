@@ -102,6 +102,27 @@ class CatalogViewModelTest {
     }
 
     @Test
+    fun artworkIndexSurvivesSearchAndNormalizesSessionTitle() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakeCatalogDataSource(song = favoriteSong().copy(imageUrl = "/jackets/song.png"))
+            val viewModel = CatalogViewModel(source)
+            viewModel.start()
+            advanceUntilIdle()
+
+            source.searchHandler = { _, _, _, _ -> CatalogSearchPage(emptyList(), null, 0) }
+            viewModel.setQuery("unrelated")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.state.value.listing.songs.isEmpty())
+            assertEquals("/jackets/song.png", viewModel.artworkUrl("  SONG  "))
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun failedFavoriteRollsBackOptimisticState() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)

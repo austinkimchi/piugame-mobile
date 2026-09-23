@@ -324,6 +324,33 @@ final class CatalogTests: XCTestCase {
     }
 
     @MainActor
+    func testArtworkPreloadKeepsNormalizedTitleIndexWhenVisibleSearchChanges() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fixturePage = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let song = try XCTUnwrap(fixturePage.songs.first)
+        let completePage = CatalogSearchPage(songs: [song], nextCursor: nil, total: 1)
+        let catalog = SongCatalogModel(
+            cache: CatalogCache(directory: directory),
+            artworkSearchCatalog: { _, _, _ in completePage }
+        )
+
+        await catalog.preloadArtwork(version: .phoenix2)
+        await catalog.loadIfNeeded(
+            query: "unrelated",
+            version: .phoenix2,
+            debounce: false,
+            using: { _, _, _ in CatalogSearchPage(songs: [], nextCursor: nil, total: 0) }
+        )
+
+        XCTAssertEqual(
+            catalog.artworkURL(for: "  battle   no.1 ")?.absoluteString,
+            "https://mypiu.austin.kim/assets/piu/song.png"
+        )
+        XCTAssertTrue(catalog.listing.songs.isEmpty)
+    }
+
+    @MainActor
     func testCatalogForwardsWebsiteStyleFilters() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
