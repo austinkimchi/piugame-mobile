@@ -52,6 +52,8 @@ class AppViewModel(
     }
 
     fun refresh() {
+        if (mutableState.value.isBusy) return
+        mutableState.update { it.copy(isBusy = true, message = null) }
         viewModelScope.launch { runOperation { repository.sync() } }
     }
 

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -83,11 +84,15 @@ private val catalogSongJson = Json { ignoreUnknownKeys = true }
 fun MyPiuApp(
     viewModel: AppViewModel,
     catalogViewModel: CatalogViewModel,
+    performanceViewModel: PerformanceViewModel,
     openAuthorization: (String) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val catalogState by catalogViewModel.state.collectAsStateWithLifecycle()
+    val performanceState by performanceViewModel.state.collectAsStateWithLifecycle()
+    val performanceDashboard = performanceState.dashboard
     var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
+    var showingPumbility by rememberSaveable { mutableStateOf(false) }
     var selectedSongSlug by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedChartToken by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSongVersionName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -114,8 +119,18 @@ fun MyPiuApp(
     val catalogAccountId = state.account?.id ?: state.accountId
     val preferredCatalogVersion = state.account?.piuGameVersion ?: state.accountPiuGameVersion ?: state.piuVersion
 
+    fun refreshProgress() {
+        if (state.isBusy || performanceState.isLoading) return
+        when {
+            state.isPiuConnected -> viewModel.refresh()
+            performanceState.isConnected -> performanceViewModel.refresh()
+        }
+    }
+
     fun navigateBack() {
-        if (selectedChartToken != null) {
+        if (showingPumbility) {
+            showingPumbility = false
+        } else if (selectedChartToken != null) {
             selectedChartToken = null
         } else {
             selectedSongSlug = null
@@ -124,10 +139,13 @@ fun MyPiuApp(
         }
     }
 
-    BackHandler(enabled = selectedSongSlug != null, onBack = ::navigateBack)
+    BackHandler(enabled = selectedSongSlug != null || showingPumbility, onBack = ::navigateBack)
 
     LaunchedEffect(selectedSong) {
         if (selectedSong != null) selectedSongFallbackJson = catalogSongJson.encodeToString(selectedSong)
+    }
+    LaunchedEffect(showingPumbility, performanceDashboard) {
+        if (showingPumbility && performanceDashboard == null) showingPumbility = false
     }
     LaunchedEffect(
         catalogAccountId,
@@ -138,6 +156,10 @@ fun MyPiuApp(
             accountId = catalogAccountId,
             connected = state.isMyPiuConnected,
             preferredVersion = preferredCatalogVersion,
+        )
+        performanceViewModel.updateSession(
+            accountId = catalogAccountId,
+            connected = state.isMyPiuConnected,
         )
     }
     LaunchedEffect(selectedSongSlug, selectedSongVersion, catalogState.version) {
@@ -150,11 +172,18 @@ fun MyPiuApp(
     }
     LaunchedEffect(destination, state.isBusy) {
         if (destination == AppDestination.SONGS && !state.isBusy) catalogViewModel.start()
+        if (destination == AppDestination.PROGRESS && !state.isBusy) performanceViewModel.start()
     }
     LaunchedEffect(catalogState.sessionInvalidated) {
         if (catalogState.sessionInvalidated) {
             viewModel.reconcileConnectionState()
             catalogViewModel.acknowledgeSessionInvalidation()
+        }
+    }
+    LaunchedEffect(performanceState.sessionInvalidated) {
+        if (performanceState.sessionInvalidated) {
+            viewModel.reconcileConnectionState()
+            performanceViewModel.acknowledgeSessionInvalidation()
         }
     }
 
@@ -164,9 +193,11 @@ fun MyPiuApp(
                 title = {
                     Text(
                         when {
+                            showingPumbility -> "Pumbility"
                             selectedChartToken != null -> selectedChartToken.orEmpty()
                             selectedSong != null -> selectedSong.title
                             destination == AppDestination.SONGS -> "Songs"
+                            destination == AppDestination.PROGRESS -> "Progress"
                             else -> "MyPIU"
                         },
                         fontWeight = FontWeight.Black,
@@ -175,7 +206,7 @@ fun MyPiuApp(
                     )
                 },
                 navigationIcon = {
-                    if (selectedSongSlug != null) {
+                    if (selectedSongSlug != null || showingPumbility) {
                         IconButton(onClick = ::navigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
@@ -188,7 +219,7 @@ fun MyPiuApp(
                     }
                 },
                 actions = {
-                    if (selectedSong == null || selectedChartToken != null) {
+                    if (!showingPumbility && (selectedSong == null || selectedChartToken != null)) {
                         IconButton(
                             onClick = {
                                 when {
@@ -200,6 +231,7 @@ fun MyPiuApp(
                                         )
                                     }
                                     destination == AppDestination.SONGS -> catalogViewModel.refresh()
+                                    destination == AppDestination.PROGRESS -> refreshProgress()
                                     else -> viewModel.refresh()
                                 }
                             },
@@ -208,6 +240,10 @@ fun MyPiuApp(
                                     !isRestoringSelectedVersion && !catalogState.chartHistory.orDefaultLoading
                                 }
                                 destination == AppDestination.SONGS -> !catalogState.isLoading
+                                destination == AppDestination.PROGRESS -> !state.isBusy && when {
+                                    performanceState.isConnected -> !performanceState.isLoading
+                                    else -> state.isPiuConnected
+                                }
                                 else -> state.isPiuConnected && !state.isBusy
                             },
                         ) {
@@ -226,12 +262,17 @@ fun MyPiuApp(
                             destination = item
                             selectedSongSlug = null
                             selectedChartToken = null
+                            showingPumbility = false
                             selectedSongVersionName = null
                             selectedSongFallbackJson = null
                         },
                         icon = {
                             Icon(
-                                imageVector = if (item == AppDestination.HOME) Icons.Default.Home else Icons.Default.MusicNote,
+                                imageVector = when (item) {
+                                    AppDestination.HOME -> Icons.Default.Home
+                                    AppDestination.PROGRESS -> Icons.Default.PieChart
+                                    AppDestination.SONGS -> Icons.Default.MusicNote
+                                },
                                 contentDescription = null,
                             )
                         },
@@ -250,6 +291,16 @@ fun MyPiuApp(
                     state = state,
                     viewModel = viewModel,
                     openAuthorization = openAuthorization,
+                )
+                destination == AppDestination.PROGRESS && showingPumbility && performanceDashboard != null -> {
+                    PumbilityBreakdownScreen(performanceDashboard)
+                }
+                destination == AppDestination.PROGRESS -> ProgressScreen(
+                    state = performanceState,
+                    localProfile = state.profile,
+                    localRecentPlayCount = state.recentPlays.size,
+                    onRefresh = ::refreshProgress,
+                    onOpenPumbility = { showingPumbility = true },
                 )
                 selectedSong == null -> CatalogScreen(
                     state = catalogState,
@@ -341,6 +392,7 @@ private fun HomeContent(
 
 private enum class AppDestination(val label: String) {
     HOME("Home"),
+    PROGRESS("Progress"),
     SONGS("Songs"),
 }
 

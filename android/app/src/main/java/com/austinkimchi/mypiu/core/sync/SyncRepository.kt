@@ -11,6 +11,7 @@ import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.network.OAuthCoordinator
 import com.austinkimchi.mypiu.core.network.PiuGameClient
 import com.austinkimchi.mypiu.core.network.PiuGameException
+import com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal
 import com.austinkimchi.mypiu.core.security.SessionStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -23,6 +24,7 @@ class SyncRepository(
     private val installationId: String,
     private val appVersion: String,
     private val piuClient: (PiuGameVersion) -> PiuGameClient = ::PiuGameClient,
+    private val performanceRefreshSignal: PerformanceRefreshSignal = PerformanceRefreshSignal(),
 ) {
     private val syncMutex = Mutex()
 
@@ -120,7 +122,9 @@ class SyncRepository(
     }
 
     private suspend fun upload(snapshot: PiuSnapshot, accessToken: String): MyPiuSyncResult = try {
-        apiClient.upload(snapshot, accessToken, installationId, appVersion)
+        apiClient.upload(snapshot, accessToken, installationId, appVersion).also {
+            performanceRefreshSignal.notifyUploadCompleted()
+        }
     } catch (error: MyPiuApiException) {
         if (error.isPermanentPiuLinkError) {
             val credentials = sessionStore.credentials()
