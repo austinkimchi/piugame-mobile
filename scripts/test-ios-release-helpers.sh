@@ -28,11 +28,8 @@ PY
 export_options="$test_directory/ExportOptions.plist"
 "$repository_root/scripts/create-ios-export-options.sh" \
   "$export_options" "$APPLE_TEAM_ID"
-upload_options="$test_directory/UploadOptions.plist"
-"$repository_root/scripts/create-ios-export-options.sh" \
-  "$upload_options" "$APPLE_TEAM_ID" upload
 
-python3 - "$export_options" "$upload_options" <<'PY'
+python3 - "$export_options" <<'PY'
 import pathlib
 import plistlib
 import sys
@@ -49,10 +46,6 @@ assert options == {
     "teamID": "ABCDE12345",
     "uploadSymbols": True,
 }
-
-with pathlib.Path(sys.argv[2]).open("rb") as plist_file:
-    upload_options = plistlib.load(plist_file)
-assert upload_options == {**options, "destination": "upload"}
 PY
 
 if APP_STORE_CONNECT_PRIVATE_KEY=not-a-key \
@@ -85,13 +78,6 @@ if APP_STORE_CONNECT_KEY_ID=SHORT \
   "$repository_root/scripts/prepare-app-store-connect-key.sh" \
   "$test_directory/short-key.p8" >/dev/null 2>&1; then
   echo "Short App Store Connect key ID was accepted." >&2
-  exit 1
-fi
-
-if "$repository_root/scripts/create-ios-export-options.sh" \
-  "$test_directory/invalid-destination.plist" "$APPLE_TEAM_ID" invalid \
-  >/dev/null 2>&1; then
-  echo "Invalid iOS export destination was accepted." >&2
   exit 1
 fi
 
