@@ -632,6 +632,7 @@ private fun SectionTitle(title: String, detail: String?) {
 
 @Composable
 private fun RecentPlayRow(play: RecentPlay) {
+    val failed = performancePlayIsFailed(play.grade, play.stageBreak)
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -639,7 +640,7 @@ private fun RecentPlayRow(play: RecentPlay) {
                 contentDescription = listOf(
                     play.songName,
                     performanceChartTokenAccessibilityLabel(play.chartToken),
-                    if (play.stageBreak) "Failed" else play.score?.let(NumberFormat.getIntegerInstance()::format)
+                    if (failed) "Failed" else play.score?.let(NumberFormat.getIntegerInstance()::format)
                         ?: "Score unavailable",
                     play.playedAt ?: "Time unavailable",
                 ).joinToString()
@@ -670,8 +671,8 @@ private fun RecentPlayRow(play: RecentPlay) {
                 )
             }
             Text(
-                if (play.stageBreak) "BREAK" else play.score?.let(NumberFormat.getIntegerInstance()::format) ?: "-",
-                color = if (play.stageBreak) MaterialTheme.colorScheme.secondary else Color.Unspecified,
+                if (failed) "FAILED" else play.score?.let(NumberFormat.getIntegerInstance()::format) ?: "-",
+                color = if (failed) MaterialTheme.colorScheme.error else Color.Unspecified,
                 fontWeight = FontWeight.Black,
             )
         }
