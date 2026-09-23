@@ -107,6 +107,7 @@ private fun PerformanceProgressContent(
         if (isLoading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         error?.let { message -> item { ProgressError(message, onRefresh) } }
         item { CompletionPanel(summary, profile.displayName) }
+        item { NextTitlePanel(profile.nextTitle) }
         item {
             ProgressSection("Score health") {
                 MetricGrid(
@@ -159,6 +160,74 @@ private fun PerformanceProgressContent(
             }
         }
     }
+}
+
+@Composable
+private fun NextTitlePanel(objective: MyPiuPerformanceDashboard.NextTitle?) {
+    ProgressSection("Next Title") {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            if (objective == null) {
+                Text(
+                    "Refresh PIUGAME to calculate your next title objective.",
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            objective.name,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            NumberFormat.getPercentInstance().format(objective.progressFraction),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { objective.progressFraction },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "${formatDecimal(objective.current)} / ${formatDecimal(objective.target)}",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            "${formatDecimal(objective.remaining)} remaining",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        titleMetricLabel(objective.metric),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun titleMetricLabel(metric: String): String = when (metric) {
+    "single_pumbility" -> "Single Pumbility"
+    "double_pumbility" -> "Double Pumbility"
+    "total_pumbility" -> "Total Pumbility"
+    else -> "Pumbility"
 }
 
 @Composable

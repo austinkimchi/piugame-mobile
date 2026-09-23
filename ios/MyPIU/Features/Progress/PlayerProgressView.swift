@@ -50,6 +50,8 @@ struct PlayerProgressView: View {
             LazyVStack(alignment: .leading, spacing: 20) {
                 completionPanel(summary, displayName: profile.displayName)
 
+                nextTitlePanel(profile.nextTitle)
+
                 progressSection("Score health") {
                     metricGrid([
                         ProgressMetric(
@@ -159,6 +161,61 @@ struct PlayerProgressView: View {
         .padding(16)
         .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func nextTitlePanel(_ objective: MyPIUPerformanceDashboard.NextTitle?) -> some View {
+        progressSection("Next Title") {
+            if let objective {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(objective.name)
+                            .font(.headline)
+                        Spacer()
+                        Text(percent(objective.progressFraction * 100))
+                            .font(.subheadline.bold().monospacedDigit())
+                            .foregroundStyle(AppTheme.accent)
+                    }
+
+                    SwiftUI.ProgressView(value: objective.progressFraction)
+                        .tint(AppTheme.accent)
+
+                    HStack {
+                        Text("\(format(objective.current)) / \(format(objective.target))")
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                        Spacer()
+                        Text("\(format(objective.remaining)) remaining")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text(titleMetricLabel(objective.metric))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(16)
+                .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Next title \(objective.name)")
+                .accessibilityValue("\(format(objective.current)) of \(format(objective.target)) \(titleMetricLabel(objective.metric))")
+            } else {
+                Text("Refresh PIUGAME to calculate your next title objective.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+            }
+        }
+    }
+
+    private func titleMetricLabel(_ metric: String) -> String {
+        switch metric {
+        case "single_pumbility": "Single Pumbility"
+        case "double_pumbility": "Double Pumbility"
+        case "total_pumbility": "Total Pumbility"
+        default: "Pumbility"
+        }
     }
 
     private func progressSection<Content: View>(

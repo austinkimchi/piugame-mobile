@@ -15,6 +15,8 @@ class PerformanceModelsTest {
 
         assertEquals("PLAYER#1234", dashboard.profile?.displayName)
         assertEquals(15_770.43, dashboard.profile?.pumbilityScore ?: 0.0, 0.001)
+        assertEquals("[S] ADVANCED LV.5", dashboard.profile?.nextTitle?.name)
+        assertEquals(171.06, dashboard.profile?.nextTitle?.remaining ?: 0.0, 0.001)
         assertEquals(954_848, dashboard.totals.averageBestScore)
         assertEquals("S19", dashboard.recentPlays.single().displayChartToken)
         assertEquals("Big Daddy:big-daddy:s:19", dashboard.topCharts.single().id)
@@ -84,6 +86,12 @@ class PerformanceModelsTest {
                   "clearCount": 640,
                   "totalCharts": 3900,
                   "progressPercent": 16,
+                  "nextTitle": {
+                    "name": "[S] ADVANCED LV.5",
+                    "metric": "single_pumbility",
+                    "current": 15828.94,
+                    "target": 16000
+                  },
                   "recentArcade": "ROUND1",
                   "lastSyncedAt": "2026-09-22T07:30:00.000Z"
                 },
