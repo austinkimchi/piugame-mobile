@@ -14,7 +14,14 @@ test -d "$app"
 test -f "$app/Info.plist"
 test -x "$app/MyPIU"
 test -f "$app/Assets.car"
-test -n "$(find "$app" -maxdepth 1 -name 'AppIcon*.png' -size +0c -print -quit)"
+app_icon=
+for candidate in "$app"/AppIcon*.png; do
+  if test -s "$candidate"; then
+    app_icon=$candidate
+    break
+  fi
+done
+test -n "$app_icon"
 test -f "$privacy_manifest"
 test -d "$extension"
 test -f "$extension/Info.plist"
