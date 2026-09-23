@@ -91,6 +91,42 @@ actor MyPIUAPIClient {
         )
     }
 
+    func exchangeAppleIdentityToken(
+        identityToken: String,
+        nonce: String,
+        firstName: String?,
+        lastName: String?,
+        installationID: String,
+        appVersion: String?
+    ) async throws -> MyPIUAccessToken {
+        var request = URLRequest(url: url(path: "/api/mobile/v1/token"))
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        var form = URLComponents()
+        form.queryItems = [
+            URLQueryItem(name: "grant_type", value: "urn:ietf:params:oauth:grant-type:token-exchange"),
+            URLQueryItem(name: "subject_token_type", value: "urn:ietf:params:oauth:token-type:id_token"),
+            URLQueryItem(name: "subject_token", value: identityToken),
+            URLQueryItem(name: "client_id", value: Self.clientID),
+            URLQueryItem(name: "nonce", value: nonce),
+            URLQueryItem(name: "first_name", value: firstName),
+            URLQueryItem(name: "last_name", value: lastName),
+            URLQueryItem(name: "installation_id", value: installationID),
+            URLQueryItem(name: "app_version", value: appVersion)
+        ]
+        request.httpBody = form.percentEncodedQuery?.data(using: .utf8)
+
+        let response: TokenResponse = try await send(request)
+        guard response.tokenType.caseInsensitiveCompare("Bearer") == .orderedSame else {
+            throw MyPIUAPIError.invalidResponse
+        }
+        return MyPIUAccessToken(
+            value: response.accessToken,
+            expiresAt: Date(timeIntervalSinceNow: TimeInterval(response.expiresIn)),
+            installationID: installationID
+        )
+    }
+
     func account(accessToken: String) async throws -> MyPIUAccount {
         var request = authenticatedRequest(path: "/api/mobile/v1/me", accessToken: accessToken)
         request.httpMethod = "GET"

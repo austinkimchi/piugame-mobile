@@ -1,3 +1,4 @@
+import AuthenticationServices
 import Foundation
 import Combine
 
@@ -217,19 +218,7 @@ final class AppModel: ObservableObject {
         myPIUState = .authenticating
         do {
             let token = try await oauthCoordinator.authorize(provider: provider)
-            do {
-                try tokenStore.save(token)
-            } catch {
-                await discardUnstoredMyPIUToken(token)
-                return false
-            }
-            installationID = token.installationID
-            accessToken = token
-            guard await loadMyPIUAccount(using: token) else { return false }
-            if let snapshot {
-                await uploadToMyPIU(snapshot)
-            }
-            return true
+            return await finishMyPIUConnection(token)
         } catch {
             if let apiError = error as? MyPIUAPIError, apiError.isUnauthorized {
                 clearMyPIUSession()
@@ -238,6 +227,46 @@ final class AppModel: ObservableObject {
             }
             return false
         }
+    }
+
+    func prepareMyPIUAppleRequest(_ request: ASAuthorizationAppleIDRequest) {
+        do {
+            try oauthCoordinator.prepareAppleRequest(request)
+        } catch {
+            myPIUState = .failed(error.localizedDescription)
+        }
+    }
+
+    func connectMyPIUWithApple(_ result: Result<ASAuthorization, Error>) async -> Bool {
+        myPIUState = .authenticating
+        do {
+            return await finishMyPIUConnection(try await oauthCoordinator.authorizeWithApple(result))
+        } catch {
+            if let apiError = error as? MyPIUAPIError, apiError.isUnauthorized {
+                clearMyPIUSession()
+            } else if let oauthError = error as? MyPIUOAuthError, case .cancelled = oauthError {
+                myPIUState = .signedOut
+            } else {
+                myPIUState = .failed(error.localizedDescription)
+            }
+            return false
+        }
+    }
+
+    private func finishMyPIUConnection(_ token: MyPIUAccessToken) async -> Bool {
+        do {
+            try tokenStore.save(token)
+        } catch {
+            await discardUnstoredMyPIUToken(token)
+            return false
+        }
+        installationID = token.installationID
+        accessToken = token
+        guard await loadMyPIUAccount(using: token) else { return false }
+        if let snapshot {
+            await uploadToMyPIU(snapshot)
+        }
+        return true
     }
 
     func retryMyPIU() async {

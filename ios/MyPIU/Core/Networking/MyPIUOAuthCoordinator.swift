@@ -28,6 +28,7 @@ final class MyPIUOAuthCoordinator: NSObject, ASWebAuthenticationPresentationCont
     private let installationID: String
     private let appVersion: String?
     private var activeSession: ASWebAuthenticationSession?
+    private var appleNonce: String?
 
     init(apiClient: MyPIUAPIClient, installationID: String, appVersion: String?) {
         self.apiClient = apiClient
@@ -36,7 +37,7 @@ final class MyPIUOAuthCoordinator: NSObject, ASWebAuthenticationPresentationCont
     }
 
     func authorize(provider: MyPIUAuthProvider) async throws -> MyPIUAccessToken {
-        guard activeSession == nil else { throw MyPIUOAuthError.alreadyAuthenticating }
+        guard activeSession == nil, appleNonce == nil else { throw MyPIUOAuthError.alreadyAuthenticating }
         let verifier = try secureRandomURLString(byteCount: 32)
         let state = try secureRandomURLString(byteCount: 24)
         let challenge = mobilePkceChallenge(verifier)
@@ -94,6 +95,38 @@ final class MyPIUOAuthCoordinator: NSObject, ASWebAuthenticationPresentationCont
         }
     }
 
+    func prepareAppleRequest(_ request: ASAuthorizationAppleIDRequest) throws {
+        guard activeSession == nil, appleNonce == nil else { throw MyPIUOAuthError.alreadyAuthenticating }
+        let nonce = try secureRandomURLString(byteCount: 32)
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = appleNonceHash(nonce)
+        appleNonce = nonce
+    }
+
+    func authorizeWithApple(_ result: Result<ASAuthorization, Error>) async throws -> MyPIUAccessToken {
+        guard let nonce = appleNonce else { throw MyPIUOAuthError.invalidCallback }
+        appleNonce = nil
+        let authorization: ASAuthorization
+        do {
+            authorization = try result.get()
+        } catch let error as ASAuthorizationError where error.code == .canceled {
+            throw MyPIUOAuthError.cancelled
+        }
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = credential.identityToken,
+              let identityToken = String(data: tokenData, encoding: .utf8) else {
+            throw MyPIUOAuthError.invalidCallback
+        }
+        return try await apiClient.exchangeAppleIdentityToken(
+            identityToken: identityToken,
+            nonce: nonce,
+            firstName: credential.fullName?.givenName,
+            lastName: credential.fullName?.familyName,
+            installationID: installationID,
+            appVersion: appVersion
+        )
+    }
+
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
         return scenes.flatMap { $0.windows }.first(where: \.isKeyWindow) ?? UIWindow()
@@ -102,6 +135,10 @@ final class MyPIUOAuthCoordinator: NSObject, ASWebAuthenticationPresentationCont
 
 func mobilePkceChallenge(_ verifier: String) -> String {
     Data(SHA256.hash(data: Data(verifier.utf8))).base64URLEncodedString()
+}
+
+func appleNonceHash(_ nonce: String) -> String {
+    SHA256.hash(data: Data(nonce.utf8)).map { String(format: "%02x", $0) }.joined()
 }
 
 private func secureRandomURLString(byteCount: Int) throws -> String {
