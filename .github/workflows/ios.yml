@@ -63,7 +63,7 @@ jobs:
             -json > "$RUNNER_TEMP/mypiu-release-settings.json"
           MARKETING_VERSION="$(jq -er '.[] | select(.target == "MyPIU") | .buildSettings.MARKETING_VERSION' "$RUNNER_TEMP/mypiu-release-settings.json")"
           BUILD_NUMBER="$(jq -er '.[] | select(.target == "MyPIU") | .buildSettings.CURRENT_PROJECT_VERSION' "$RUNNER_TEMP/mypiu-release-settings.json")"
-          grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$' <<< "$MARKETING_VERSION"
+          grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' <<< "$MARKETING_VERSION"
           grep -Eq '^[1-9][0-9]*$' <<< "$BUILD_NUMBER"
           echo "marketing_version=$MARKETING_VERSION" >> "$GITHUB_OUTPUT"
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"

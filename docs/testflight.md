@@ -23,7 +23,7 @@ open ios/MyPIU.xcodeproj
 
 In Xcode, select the MyPIU and MyPIUSafariExtension targets, choose the same development team for both, and confirm automatic signing succeeds. Select a generic iOS device, then use **Product > Archive**. In Organizer, validate the archive and choose **Distribute App > TestFlight & App Store**.
 
-For each upload, increment `CURRENT_PROJECT_VERSION` in `project.yml`. Keep `MARKETING_VERSION` unchanged for replacement beta builds of the same release.
+For each upload, increment `CURRENT_PROJECT_VERSION` in `project.yml`. Keep `MARKETING_VERSION` as three period-separated integers, such as `0.1.0`, and leave it unchanged for replacement beta builds of the same release.
 
 After changing either version, let the iOS CI archive gate pass before creating the signed archive. The CI artifact is named `mypiu-ios-unsigned-archive-<commit>` and contains `MyPIU.xcarchive.zip` plus its SHA-256 file. It is retained for seven days for comparison with the signed release candidate. After downloading it on macOS, run `shasum -a 256 -c MyPIU.xcarchive.zip.sha256`, then extract it with `ditto -x -k MyPIU.xcarchive.zip .` so bundle permissions and metadata are preserved.
 
