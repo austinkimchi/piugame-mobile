@@ -30,10 +30,10 @@ Use a [team API key](https://developer.apple.com/documentation/appstoreconnectap
 1. Increment `CURRENT_PROJECT_VERSION` in `ios/project.yml`. Keep `MARKETING_VERSION` as three period-separated integers, such as `0.1.0`, and leave it unchanged for replacement beta builds of the same release.
 2. Let the ordinary **iOS** workflow pass on `main`.
 3. Run **iOS signed release** from the Actions page on `main` with **Upload the verified IPA to App Store Connect** disabled. Approve the protected environment deployment after checking the commit and version.
-4. Download `mypiu-ios-signed-<version>-<build>`, run `shasum -a 256 -c MyPIU.ipa.sha256`, and retain the checksum with the release record.
-5. Run the workflow again with upload enabled. The workflow exports and verifies the exact IPA first, retains it for 14 days, then uploads it with Apple's Transporter and JWT authentication. An accepted upload still needs time to process before it appears in App Store Connect.
+4. Download `mypiu-ios-signed-<version>-<build>`, verify both checksum files with `shasum -a 256 -c`, and retain the IPA plus `MyPIU.xcarchive.zip` with the release record. GitHub retains this recovery copy for 90 days, but it is not a permanent archive.
+5. Run the workflow again with upload enabled. The workflow first exports and verifies an IPA from the signed archive, retains the IPA and matching dSYMs, then asks Xcode to upload the same archive with symbols. An accepted upload still needs time to process before it appears in App Store Connect.
 
-The signed workflow verifies the app and embedded Safari extension bundle IDs, versions, signatures, App Store provisioning profiles, expiration dates, team ownership, and production entitlements. It never selects a TestFlight group or submits an external beta for review; those remain separate operator decisions in App Store Connect.
+The signed workflow verifies the app and embedded Safari extension bundle IDs, versions, signatures, signing certificates, App Store provisioning profiles, expiration dates, team ownership, and production entitlements. It removes the API key before verification and artifact upload, then narrowly restores it only when an App Store upload was explicitly requested. It never selects a TestFlight group or submits an external beta for review; those remain separate operator decisions in App Store Connect.
 
 ## Local fallback
 

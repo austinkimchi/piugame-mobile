@@ -17,19 +17,27 @@ require_value APP_STORE_CONNECT_KEY_ID
 require_value APP_STORE_CONNECT_ISSUER_ID
 require_value APP_STORE_CONNECT_PRIVATE_KEY
 
-case "$APPLE_TEAM_ID" in
-  *[!A-Z0-9]* | ????????? | ???????????*)
-    echo "APPLE_TEAM_ID must contain exactly 10 uppercase letters or digits." >&2
-    exit 1
-    ;;
-esac
+validate_identifier() {
+  identifier_value=$1
+  identifier_name=$2
+  case "$identifier_value" in
+    ??????????) ;;
+    *)
+      echo "$identifier_name must contain exactly 10 uppercase letters or digits." >&2
+      exit 1
+      ;;
+  esac
 
-case "$APP_STORE_CONNECT_KEY_ID" in
-  *[!A-Z0-9]* | ????????? | ???????????*)
-    echo "APP_STORE_CONNECT_KEY_ID must contain exactly 10 uppercase letters or digits." >&2
-    exit 1
-    ;;
-esac
+  case "$identifier_value" in
+    *[!A-Z0-9]*)
+      echo "$identifier_name must contain exactly 10 uppercase letters or digits." >&2
+      exit 1
+      ;;
+  esac
+}
+
+validate_identifier "$APPLE_TEAM_ID" APPLE_TEAM_ID
+validate_identifier "$APP_STORE_CONNECT_KEY_ID" APP_STORE_CONNECT_KEY_ID
 
 if ! printf '%s\n' "$APP_STORE_CONNECT_ISSUER_ID" \
   | grep -Eq '^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'; then

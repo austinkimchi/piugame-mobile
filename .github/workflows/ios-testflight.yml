@@ -121,6 +121,9 @@ jobs:
             -authenticationKeyPath "${{ steps.apple_key.outputs.path }}" \
             -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
             -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
+      - name: Remove signing key after export
+        if: always()
+        run: rm -f "$HOME/.private_keys/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"
       - name: Verify App Store IPA
         id: ipa
         run: |
@@ -136,6 +139,13 @@ jobs:
             shasum -a 256 "$(basename "$ipa_path")" > "$(basename "$ipa_path").sha256"
           )
           echo "path=$ipa_path" >> "$GITHUB_OUTPUT"
+      - name: Package signed archive and dSYMs
+        run: |
+          cd "$RUNNER_TEMP"
+          ditto -c -k --sequesterRsrc --keepParent \
+            MyPIU.xcarchive MyPIU.xcarchive.zip
+          test -s MyPIU.xcarchive.zip
+          shasum -a 256 MyPIU.xcarchive.zip > MyPIU.xcarchive.zip.sha256
       - name: Retain signed release candidate
         uses: actions/upload-artifact@v4
         with:
@@ -143,17 +153,33 @@ jobs:
           path: |
             ${{ steps.ipa.outputs.path }}
             ${{ steps.ipa.outputs.path }}.sha256
+            ${{ runner.temp }}/MyPIU.xcarchive.zip
+            ${{ runner.temp }}/MyPIU.xcarchive.zip.sha256
           if-no-files-found: error
-          retention-days: 14
-      - name: Upload verified IPA to App Store Connect
+          retention-days: 90
+      - name: Restore App Store Connect key for upload
         if: inputs.upload_to_testflight
-        run: >-
-          xcrun iTMSTransporter
-          -m upload
-          -assetFile "${{ steps.ipa.outputs.path }}"
-          -apiKey "$APP_STORE_CONNECT_KEY_ID"
-          -apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
-          -v informational
+        id: apple_upload_key
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          key_path="$HOME/.private_keys/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"
+          ./scripts/prepare-app-store-connect-key.sh "$key_path"
+          echo "path=$key_path" >> "$GITHUB_OUTPUT"
+      - name: Upload archive and symbols to App Store Connect
+        if: inputs.upload_to_testflight
+        run: |
+          ./scripts/create-ios-export-options.sh \
+            "$RUNNER_TEMP/UploadOptions.plist" "$APPLE_TEAM_ID" upload
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/MyPIU.xcarchive" \
+            -exportPath "$RUNNER_TEMP/MyPIUUpload" \
+            -exportOptionsPlist "$RUNNER_TEMP/UploadOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "${{ steps.apple_upload_key.outputs.path }}" \
+            -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
       - name: Remove App Store Connect key
         if: always()
         run: rm -f "$HOME/.private_keys/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"

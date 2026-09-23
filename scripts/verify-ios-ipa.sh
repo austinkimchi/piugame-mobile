@@ -36,6 +36,12 @@ codesign -d --entitlements :- "$app" \
   > "$verification_directory/app-entitlements.plist" 2>/dev/null
 codesign -d --entitlements :- "$extension" \
   > "$verification_directory/extension-entitlements.plist" 2>/dev/null
+codesign -d --extract-certificates "$verification_directory/app-signing-" \
+  "$app" >/dev/null 2>&1
+codesign -d --extract-certificates "$verification_directory/extension-signing-" \
+  "$extension" >/dev/null 2>&1
+test -s "$verification_directory/app-signing-0"
+test -s "$verification_directory/extension-signing-0"
 
 python3 - \
   "$app/Info.plist" \
@@ -44,6 +50,8 @@ python3 - \
   "$verification_directory/extension-profile.plist" \
   "$verification_directory/app-entitlements.plist" \
   "$verification_directory/extension-entitlements.plist" \
+  "$verification_directory/app-signing-0" \
+  "$verification_directory/extension-signing-0" \
   "$expected_marketing_version" \
   "$expected_build_number" \
   "$expected_team_id" <<'PY'
@@ -64,22 +72,31 @@ app_profile = read_plist(sys.argv[3])
 extension_profile = read_plist(sys.argv[4])
 app_entitlements = read_plist(sys.argv[5])
 extension_entitlements = read_plist(sys.argv[6])
-expected_version = sys.argv[7]
-expected_build = sys.argv[8]
-expected_team = sys.argv[9]
+app_signing_certificate = pathlib.Path(sys.argv[7]).read_bytes()
+extension_signing_certificate = pathlib.Path(sys.argv[8]).read_bytes()
+expected_version = sys.argv[9]
+expected_build = sys.argv[10]
+expected_team = sys.argv[11]
 
 bundles = (
-    (app_info, app_profile, app_entitlements, "com.austinkimchi.mypiu"),
+    (
+        app_info,
+        app_profile,
+        app_entitlements,
+        app_signing_certificate,
+        "com.austinkimchi.mypiu",
+    ),
     (
         extension_info,
         extension_profile,
         extension_entitlements,
+        extension_signing_certificate,
         "com.austinkimchi.mypiu.safari",
     ),
 )
 now = datetime.datetime.now(datetime.timezone.utc)
 
-for info, profile, signed_entitlements, expected_bundle_id in bundles:
+for info, profile, signed_entitlements, signing_certificate, expected_bundle_id in bundles:
     assert info["CFBundleIdentifier"] == expected_bundle_id
     assert info["CFBundleShortVersionString"] == expected_version
     assert info["CFBundleVersion"] == expected_build
@@ -87,6 +104,7 @@ for info, profile, signed_entitlements, expected_bundle_id in bundles:
     assert profile["ExpirationDate"].replace(tzinfo=datetime.timezone.utc) > now
     assert "ProvisionedDevices" not in profile
     assert profile.get("ProvisionsAllDevices") is not True
+    assert signing_certificate in profile["DeveloperCertificates"]
 
     entitlements = profile["Entitlements"]
     assert entitlements["application-identifier"] == f"{expected_team}.{expected_bundle_id}"
