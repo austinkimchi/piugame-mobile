@@ -79,6 +79,36 @@ data class MyPiuPerformanceDashboard(
 @Serializable
 data class PerformanceResponse(val performance: MyPiuPerformanceDashboard)
 
+@Serializable
+data class MyPiuPerformanceSession(
+    val summary: Summary,
+    val plays: List<MyPiuPerformanceDashboard.Play> = emptyList(),
+) {
+    @Serializable
+    data class Summary(
+        val playCount: Int,
+        val clearCount: Int,
+        val failedCount: Int,
+        val stageBreakCount: Int,
+        val averageScore: Int? = null,
+        val bestScore: Int? = null,
+        val distinctCharts: Int,
+        val startedAt: String,
+        val endedAt: String,
+        val durationMinutes: Int,
+    ) {
+        val clearRate: Double?
+            get() = if (playCount > 0) {
+                (clearCount.toDouble() / playCount * 100.0).coerceIn(0.0, 100.0)
+            } else {
+                null
+            }
+    }
+}
+
+@Serializable
+data class PerformanceSessionResponse(val session: MyPiuPerformanceSession? = null)
+
 data class PerformanceProgressSummary(
     val clearedCharts: Int?,
     val totalCharts: Int?,

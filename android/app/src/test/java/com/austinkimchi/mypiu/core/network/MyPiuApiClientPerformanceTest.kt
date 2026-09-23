@@ -35,4 +35,29 @@ class MyPiuApiClientPerformanceTest {
         assertEquals("Bearer token", captured.header("Authorization"))
         assertEquals("application/json", captured.header("Accept"))
     }
+
+    @Test
+    fun performanceSessionUsesMobileBearerContract() = runTest {
+        lateinit var captured: Request
+        val httpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                captured = chain.request()
+                Response.Builder()
+                    .request(captured)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(PerformanceModelsTest.SESSION_FIXTURE.toResponseBody("application/json".toMediaType()))
+                    .build()
+            }
+            .build()
+        val session = MyPiuApiClient("https://mypiu.example/", client = httpClient)
+            .performanceSession("session-token")
+
+        assertEquals(4, session?.summary?.playCount)
+        assertEquals("GET", captured.method)
+        assertEquals("/api/mobile/v1/performance/session", captured.url.encodedPath)
+        assertEquals("Bearer session-token", captured.header("Authorization"))
+        assertEquals("application/json", captured.header("Accept"))
+    }
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.austinkimchi.mypiu.AppContainer
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
+import com.austinkimchi.mypiu.core.model.MyPiuPerformanceSession
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.performance.PerformanceDataSource
 import com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal
@@ -26,6 +27,7 @@ class PerformanceViewModel(
 
     private var sessionGeneration = 0L
     private var loadJob: Job? = null
+    private var sessionJob: Job? = null
     private var started = false
     private var observedRefreshRevision = refreshSignal.revision.value
 
@@ -34,7 +36,11 @@ class PerformanceViewModel(
             refreshSignal.revision.collect { revision ->
                 if (revision == observedRefreshRevision) return@collect
                 observedRefreshRevision = revision
-                if (started) refresh()
+                if (started) {
+                    val refreshSession = mutableState.value.isSessionLoaded
+                    refresh()
+                    if (refreshSession) loadSession(force = true)
+                }
             }
         }
     }
@@ -47,6 +53,7 @@ class PerformanceViewModel(
 
         sessionGeneration += 1
         loadJob?.cancel()
+        sessionJob?.cancel()
         mutableState.value = PerformanceUiState(
             accountScope = scope,
             isConnected = isConnected,
@@ -63,6 +70,13 @@ class PerformanceViewModel(
     fun refresh() {
         if (!mutableState.value.isConnected) return
         reload()
+    }
+
+    fun loadSession(force: Boolean = false) {
+        val snapshot = mutableState.value
+        if (!snapshot.isConnected || snapshot.accountScope == null) return
+        if (!force && (snapshot.isSessionLoading || snapshot.isSessionLoaded)) return
+        reloadSession()
     }
 
     fun acknowledgeSessionInvalidation() {
@@ -87,12 +101,71 @@ class PerformanceViewModel(
                 if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
                 val sessionInvalidated = error is MyPiuApiException &&
                     (error.isUnauthorized || error.isAccountNotFound)
+                if (sessionInvalidated) {
+                    sessionGeneration += 1
+                    sessionJob?.cancel()
+                }
                 mutableState.update {
                     it.copy(
                         dashboard = if (sessionInvalidated) null else it.dashboard,
+                        session = if (sessionInvalidated) null else it.session,
+                        isSessionLoaded = if (sessionInvalidated) false else it.isSessionLoaded,
+                        isSessionLoading = if (sessionInvalidated) false else it.isSessionLoading,
+                        sessionError = if (sessionInvalidated) null else it.sessionError,
                         isConnected = if (sessionInvalidated) false else it.isConnected,
                         isLoading = false,
                         error = error.message ?: "Performance could not be loaded.",
+                        sessionInvalidated = sessionInvalidated,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun reloadSession() {
+        val snapshot = mutableState.value
+        if (!snapshot.isConnected || snapshot.accountScope == null) return
+        val generation = sessionGeneration
+        val scope = snapshot.accountScope
+        sessionJob?.cancel()
+        sessionJob = viewModelScope.launch {
+            mutableState.update {
+                it.copy(
+                    session = null,
+                    isSessionLoading = true,
+                    isSessionLoaded = false,
+                    sessionError = null,
+                )
+            }
+            try {
+                val session = repository.session()
+                if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
+                mutableState.update {
+                    it.copy(
+                        session = session,
+                        isSessionLoading = false,
+                        isSessionLoaded = true,
+                        sessionError = null,
+                    )
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
+                val sessionInvalidated = error is MyPiuApiException &&
+                    (error.isUnauthorized || error.isAccountNotFound)
+                if (sessionInvalidated) {
+                    sessionGeneration += 1
+                    loadJob?.cancel()
+                }
+                mutableState.update {
+                    it.copy(
+                        dashboard = if (sessionInvalidated) null else it.dashboard,
+                        session = null,
+                        isConnected = if (sessionInvalidated) false else it.isConnected,
+                        isSessionLoading = false,
+                        isSessionLoaded = false,
+                        sessionError = error.message ?: "Recent session could not be loaded.",
                         sessionInvalidated = sessionInvalidated,
                     )
                 }
@@ -111,7 +184,11 @@ data class PerformanceUiState(
     val accountScope: String? = null,
     val isConnected: Boolean = false,
     val dashboard: MyPiuPerformanceDashboard? = null,
+    val session: MyPiuPerformanceSession? = null,
     val isLoading: Boolean = false,
+    val isSessionLoading: Boolean = false,
+    val isSessionLoaded: Boolean = false,
+    val sessionError: String? = null,
     val error: String? = null,
     val sessionInvalidated: Boolean = false,
 )
