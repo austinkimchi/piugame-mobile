@@ -51,6 +51,40 @@ jobs:
           assert extension_info["NSExtensionPrincipalClass"].endswith(".SafariWebExtensionHandler")
           PY
           ! grep -Eq '^[[:space:]]*import[[:space:]]' "$APPEX/src/service-worker.js"
+      - name: Read release version
+        id: release_version
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -project MyPIU.xcodeproj \
+            -scheme MyPIU \
+            -configuration Release \
+            -showBuildSettings \
+            -json > "$RUNNER_TEMP/mypiu-release-settings.json"
+          MARKETING_VERSION="$(jq -er '.[] | select(.target == "MyPIU") | .buildSettings.MARKETING_VERSION' "$RUNNER_TEMP/mypiu-release-settings.json")"
+          BUILD_NUMBER="$(jq -er '.[] | select(.target == "MyPIU") | .buildSettings.CURRENT_PROJECT_VERSION' "$RUNNER_TEMP/mypiu-release-settings.json")"
+          grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' <<< "$MARKETING_VERSION"
+          grep -Eq '^[1-9][0-9]*$' <<< "$BUILD_NUMBER"
+          echo "marketing_version=$MARKETING_VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+      - name: Archive unsigned iOS release
+        working-directory: ios
+        run: >-
+          xcodebuild
+          -project MyPIU.xcodeproj
+          -scheme MyPIU
+          -configuration Release
+          -destination 'generic/platform=iOS'
+          -archivePath "$RUNNER_TEMP/MyPIU.xcarchive"
+          -derivedDataPath "$RUNNER_TEMP/MyPIUArchiveDerivedData"
+          CODE_SIGNING_ALLOWED=NO
+          archive
+      - name: Verify iOS release archive
+        run: >-
+          ./scripts/verify-ios-archive.sh
+          "$RUNNER_TEMP/MyPIU.xcarchive"
+          "${{ steps.release_version.outputs.marketing_version }}"
+          "${{ steps.release_version.outputs.build_number }}"
       - name: Run tests
         working-directory: ios
         run: |
@@ -73,3 +107,17 @@ jobs:
             -destination "platform=iOS Simulator,id=$DEVICE_ID" \
             CODE_SIGNING_ALLOWED=NO \
             test
+      - name: Package iOS release archive
+        run: |
+          cd "$RUNNER_TEMP"
+          ditto -c -k --sequesterRsrc --keepParent MyPIU.xcarchive MyPIU.xcarchive.zip
+          test -s MyPIU.xcarchive.zip
+          shasum -a 256 MyPIU.xcarchive.zip > MyPIU.xcarchive.zip.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mypiu-ios-unsigned-archive-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/MyPIU.xcarchive.zip
+            ${{ runner.temp }}/MyPIU.xcarchive.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
