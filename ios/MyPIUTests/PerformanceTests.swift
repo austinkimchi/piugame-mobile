@@ -159,6 +159,41 @@ final class PerformanceTests: XCTestCase {
         XCTAssertFalse(performancePlayIsFailed(grade: "s", stageBreak: false))
     }
 
+    func testRecentPerformancePlayUsesMatchingSnapshotArtworkAndJudgments() {
+        let serverPlay = MyPIUPerformanceDashboard.Play(
+            id: "server-play",
+            songName: "BATTLE NO.1",
+            chartToken: "battle-no-1:s:19",
+            score: 954_848,
+            grade: "s",
+            plate: "rg",
+            mode: "S",
+            level: "19",
+            playedAt: "2026-09-22T07:20:00.000Z",
+            stageBreak: false
+        )
+        let snapshotPlay = RecentPlay(
+            songName: "Battle No. 1",
+            songImageURL: URL(string: "https://www.piugame.com/data/song_img/battle.png"),
+            mode: "s",
+            level: "19",
+            score: 954_848,
+            grade: "s",
+            plate: "rg",
+            stageBreak: false,
+            judgments: JudgmentCounts(perfect: 900, great: 20, good: 3, bad: 1, miss: 2),
+            playedAt: "2026-09-22 16:20:00 (GMT+9)"
+        )
+
+        let match = matchingRecentPlay(for: serverPlay, in: [snapshotPlay])
+        let presentation = RecentPlayPresentation(play: serverPlay, snapshotPlay: match)
+
+        XCTAssertEqual(match, snapshotPlay)
+        XCTAssertEqual(presentation.songImageURL, snapshotPlay.songImageURL)
+        XCTAssertEqual(presentation.judgments.perfect, 900)
+        XCTAssertEqual(presentation.judgmentValues.reduce(0) { $0 + $1.value }, 926)
+    }
+
     func testDecodesSongChartHistoryNewestFirst() throws {
         let data = Data(
             #"""

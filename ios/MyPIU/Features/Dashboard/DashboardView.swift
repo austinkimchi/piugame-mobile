@@ -17,7 +17,11 @@ struct DashboardView: View {
                     description: Text("Open Account to connect and load your performance.")
                 )
             } else if case .failed(let message) = model.state {
-                ContentUnavailableView("Sync failed", systemImage: "exclamationmark.arrow.triangle.2.circlepath", description: Text(message))
+                ContentUnavailableView(
+                    "Sync failed",
+                    systemImage: "exclamationmark.arrow.triangle.2.circlepath",
+                    description: Text(message)
+                )
             } else {
                 ProgressView("Loading performance")
             }
@@ -39,23 +43,26 @@ struct DashboardView: View {
     }
 
     private func dashboard(_ performance: MyPIUPerformanceDashboard) -> some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(performance.profile?.displayName ?? model.myPIUAccount?.name ?? "MyPIU")
-                        .font(.title2.bold())
-                    Text(model.myPIUAccount?.piuGameVersion.displayName ?? model.selectedVersion.displayName)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
+        let snapshotPlays = model.snapshot?.recentPlays ?? []
+        let pumbilityScore = performance.profile?.pumbilityScore ?? model.snapshot?.profile.pumbilityScore
+
+        return ScrollView {
+            LazyVStack(alignment: .leading, spacing: 14) {
+                dashboardHeader(
+                    displayName: performance.profile?.displayName ?? model.myPIUAccount?.name ?? "MyPIU",
+                    version: model.myPIUAccount?.piuGameVersion.displayName ?? model.selectedVersion.displayName
+                )
 
                 LazyVGrid(columns: metricColumns, spacing: 10) {
                     NavigationLink {
-                        PumbilityBreakdownView(performance: performance)
+                        PumbilityBreakdownView(
+                            performance: performance,
+                            pumbilityScore: pumbilityScore
+                        )
                     } label: {
                         MetricTile(
                             title: "Pumbility",
-                            value: format(performance.profile?.pumbilityScore),
+                            value: format(pumbilityScore),
                             detail: changeLabel(performance.totals.pumbilityChange24Hours),
                             icon: "chart.line.uptrend.xyaxis",
                             tint: AppTheme.positive
@@ -63,6 +70,7 @@ struct DashboardView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("Shows the Pumbility chart breakdown")
+
                     NavigationLink {
                         RecommendationSongsView()
                     } label: {
@@ -71,11 +79,12 @@ struct DashboardView: View {
                             value: format(performance.totals.averageBestScore),
                             detail: changeLabel(performance.totals.averageBestScoreChange24Hours),
                             icon: "chart.bar.xaxis",
-                            tint: AppTheme.accent
+                            tint: AppTheme.info
                         )
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("Shows recommended charts")
+
                     MetricTile(
                         title: "Upscores",
                         value: format(performance.totals.upscoresThisWeek),
@@ -83,6 +92,7 @@ struct DashboardView: View {
                         icon: "bolt.fill",
                         tint: AppTheme.warning
                     )
+
                     NavigationLink {
                         PerformanceSessionView()
                     } label: {
@@ -91,57 +101,159 @@ struct DashboardView: View {
                             value: format(performance.totals.recentlyPlayed),
                             detail: "Plays",
                             icon: "clock.arrow.circlepath",
-                            tint: .blue
+                            tint: AppTheme.ink
                         )
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("Shows the latest play session summary")
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Recently played")
-                        .font(.headline)
-                    ForEach(Array(performance.recentPlays.prefix(5))) { play in
-                        PerformanceRecentPlayRow(play: play)
-                        if play.id != performance.recentPlays.prefix(5).last?.id { Divider() }
+                dashboardSection(title: "RECENT PLAYS", detail: "View all in Activity") {
+                    let recentPlays = Array(performance.recentPlays.prefix(5))
+                    if recentPlays.isEmpty {
+                        Text("No recent plays yet.")
+                            .foregroundStyle(AppTheme.mutedInk)
+                    } else {
+                        ForEach(recentPlays) { play in
+                            let snapshotPlay = matchingRecentPlay(for: play, in: snapshotPlays)
+                            NavigationLink {
+                                RecentPlayDetailView(
+                                    play: RecentPlayPresentation(play: play, snapshotPlay: snapshotPlay)
+                                )
+                            } label: {
+                                PerformanceRecentPlayRow(play: play, snapshotPlay: snapshotPlay)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Shows score and judgment details")
+                            if play.id != recentPlays.last?.id { Divider() }
+                        }
+                    }
+                }
+
+                dashboardSection(title: "TOP TRACKED CHARTS") {
+                    let charts = Array(performance.topCharts.prefix(5))
+                    if charts.isEmpty {
+                        Text("No tracked chart bests yet.")
+                            .foregroundStyle(AppTheme.mutedInk)
+                    } else {
+                        ForEach(charts) { chart in
+                            PerformanceChartRow(chart: chart)
+                            if chart.id != charts.last?.id { Divider() }
+                        }
                     }
                 }
             }
+            .frame(maxWidth: 760, alignment: .leading)
             .padding()
+            .frame(maxWidth: .infinity)
         }
+        .background(AppTheme.pageBackground.ignoresSafeArea())
         .refreshable { await model.refresh() }
     }
 
     private func dashboard(_ snapshot: PIUSnapshot) -> some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(snapshot.profile.displayName)
-                        .font(.title2.bold())
-                    Text(snapshot.version.displayName)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
+            LazyVStack(alignment: .leading, spacing: 14) {
+                dashboardHeader(
+                    displayName: snapshot.profile.displayName,
+                    version: snapshot.version.displayName
+                )
 
                 LazyVGrid(columns: metricColumns, spacing: 10) {
-                    MetricTile(title: "Pumbility", value: format(snapshot.profile.pumbilityScore), detail: nil, icon: "chart.line.uptrend.xyaxis", tint: AppTheme.positive)
-                    MetricTile(title: "Rating", value: format(snapshot.profile.rating), detail: nil, icon: "gauge.with.dots.needle.50percent", tint: AppTheme.accent)
-                    MetricTile(title: "Plays", value: format(snapshot.profile.playCount), detail: nil, icon: "figure.run", tint: .blue)
-                    MetricTile(title: "Clears", value: format(snapshot.profile.clearCount), detail: nil, icon: "checkmark.circle", tint: AppTheme.warning)
+                    MetricTile(
+                        title: "Pumbility",
+                        value: format(snapshot.profile.pumbilityScore),
+                        detail: nil,
+                        icon: "chart.line.uptrend.xyaxis",
+                        tint: AppTheme.positive
+                    )
+                    MetricTile(
+                        title: "Rating",
+                        value: format(snapshot.profile.rating),
+                        detail: nil,
+                        icon: "gauge.with.dots.needle.50percent",
+                        tint: AppTheme.info
+                    )
+                    MetricTile(
+                        title: "Plays",
+                        value: format(snapshot.profile.playCount),
+                        detail: nil,
+                        icon: "figure.run",
+                        tint: AppTheme.ink
+                    )
+                    MetricTile(
+                        title: "Clears",
+                        value: format(snapshot.profile.clearCount),
+                        detail: nil,
+                        icon: "checkmark.circle",
+                        tint: AppTheme.warning
+                    )
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Recently played")
-                        .font(.headline)
-                    ForEach(snapshot.recentPlays.prefix(5)) { play in
-                        RecentPlayRow(play: play)
-                        if play.id != snapshot.recentPlays.prefix(5).last?.id { Divider() }
+                dashboardSection(title: "RECENT PLAYS", detail: "Tap a play for judgments") {
+                    let recentPlays = Array(snapshot.recentPlays.prefix(5))
+                    if recentPlays.isEmpty {
+                        Text("No recent plays yet.")
+                            .foregroundStyle(AppTheme.mutedInk)
+                    } else {
+                        ForEach(recentPlays) { play in
+                            NavigationLink {
+                                RecentPlayDetailView(play: RecentPlayPresentation(play: play))
+                            } label: {
+                                RecentPlayRow(play: play)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Shows score and judgment details")
+                            if play.id != recentPlays.last?.id { Divider() }
+                        }
                     }
                 }
             }
+            .frame(maxWidth: 760, alignment: .leading)
             .padding()
+            .frame(maxWidth: .infinity)
         }
+        .background(AppTheme.pageBackground.ignoresSafeArea())
         .refreshable { await model.refresh() }
+    }
+
+    private func dashboardHeader(displayName: String, version: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("PERFORMANCE")
+                    .font(.caption.bold())
+                    .tracking(1.6)
+                    .foregroundStyle(AppTheme.mutedInk)
+                Spacer()
+                Circle()
+                    .fill(AppTheme.accent)
+                    .frame(width: 9, height: 9)
+                    .accessibilityHidden(true)
+            }
+            Text(displayName)
+                .font(.system(.largeTitle, design: .rounded, weight: .black))
+                .foregroundStyle(AppTheme.ink)
+            Text("Your \(version) play data, progress, and latest results.")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .websiteCard()
+        .accessibilityElement(children: .combine)
+    }
+
+    private func dashboardSection<Content: View>(
+        title: String,
+        detail: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            WebsiteSectionTitle(title: title, detail: detail)
+            content()
+        }
+        .padding(16)
+        .websiteCard()
     }
 
     private func format(_ value: Int?) -> String {
@@ -173,57 +285,93 @@ private struct MetricTile: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Image(systemName: icon)
+                .font(.headline.bold())
                 .foregroundStyle(tint)
             Text(value)
-                .font(.title3.bold().monospacedDigit())
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(.title2.bold().monospacedDigit())
+                .foregroundStyle(AppTheme.ink)
+            Text(title.uppercased())
+                .font(.caption.bold())
+                .tracking(0.8)
+                .foregroundStyle(AppTheme.mutedInk)
             if let detail {
                 Text(detail)
                     .font(.caption2.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.mutedInk)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
-        .padding(12)
-        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+        .padding(14)
+        .websiteCard()
         .accessibilityElement(children: .combine)
     }
 }
 
 struct PerformanceRecentPlayRow: View {
     let play: MyPIUPerformanceDashboard.Play
+    var snapshotPlay: RecentPlay?
+
+    init(play: MyPIUPerformanceDashboard.Play, snapshotPlay: RecentPlay? = nil) {
+        self.play = play
+        self.snapshotPlay = snapshotPlay
+    }
 
     var body: some View {
-        let failed = performancePlayIsFailed(grade: play.grade, stageBreak: play.stageBreak)
+        RecentPlayRowContent(play: RecentPlayPresentation(play: play, snapshotPlay: snapshotPlay))
+    }
+}
+
+struct RecentPlayRow: View {
+    let play: RecentPlay
+
+    var body: some View {
+        RecentPlayRowContent(play: RecentPlayPresentation(play: play))
+    }
+}
+
+private struct RecentPlayRowContent: View {
+    let play: RecentPlayPresentation
+
+    var body: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
+            SongArtwork(url: play.songImageURL, size: 62)
+            VStack(alignment: .leading, spacing: 5) {
                 Text(play.songName)
                     .font(.body.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
                     .lineLimit(2)
-                Text("\(performanceGradeLabel(play.grade)) / \(performanceDateLabel(play.playedAt))")
-                    .font(.caption)
-                    .foregroundStyle(failed ? AppTheme.accent : .secondary)
+                HStack(spacing: 7) {
+                    ChartTokenBadge(chartToken: play.chartToken)
+                    Text(performanceDateLabel(play.playedAt))
+                        .lineLimit(1)
+                }
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 5) {
-                ChartTokenBadge(chartToken: play.displayChartToken)
-                Text(failed ? "FAILED" : play.score?.formatted() ?? "-")
+                Text(play.isFailed ? "FAILED" : (play.score?.formatted() ?? "-"))
                     .font(.caption.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(failed ? AppTheme.accent : .primary)
+                    .foregroundStyle(play.isFailed ? AppTheme.danger : AppTheme.ink)
+                Text(performanceGradeLabel(play.grade))
+                    .font(.caption2.bold())
+                    .foregroundStyle(AppTheme.mutedInk)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.bold())
+                    .foregroundStyle(AppTheme.mutedInk)
             }
         }
-        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .padding(.vertical, 3)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(play.songName)
         .accessibilityValue(
             [
-                performanceChartTokenAccessibilityLabel(play.displayChartToken),
+                performanceChartTokenAccessibilityLabel(play.chartToken),
                 performanceGradeLabel(play.grade),
-                failed ? "Failed" : (play.score?.formatted() ?? "Score unavailable"),
+                play.isFailed ? "Failed" : (play.score?.formatted() ?? "Score unavailable"),
                 performanceDateLabel(play.playedAt)
             ].joined(separator: ", ")
         )
@@ -238,12 +386,13 @@ struct PerformanceChartRow: View {
             if let rank = chart.topPlayRank {
                 Text("#\(rank)")
                     .font(.caption.bold().monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 28, alignment: .leading)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .frame(minWidth: 30, alignment: .leading)
             }
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(chart.songName)
                     .font(.body.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
                     .lineLimit(2)
                 HStack(spacing: 6) {
                     Text(performanceGradeLabel(chart.bestGrade))
@@ -253,13 +402,14 @@ struct PerformanceChartRow: View {
                     }
                 }
                 .font(.caption.weight(.semibold).monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppTheme.mutedInk)
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 5) {
                 ChartTokenBadge(chartToken: chart.displayChartToken)
                 Text(chart.bestScore?.formatted() ?? "-")
                     .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(AppTheme.ink)
             }
         }
         .padding(.vertical, 4)
@@ -277,7 +427,7 @@ struct ChartTokenBadge: View {
             .font(.caption.bold().monospaced())
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
-            .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 4))
+            .background(AppTheme.ink)
             .foregroundStyle(.white)
             .accessibilityLabel(performanceChartTokenAccessibilityLabel(chartToken))
     }
@@ -334,34 +484,4 @@ func performanceDateLabel(_ value: String?) -> String {
     let standard = Date.ISO8601FormatStyle()
     guard let date = (try? fractional.parse(value)) ?? (try? standard.parse(value)) else { return value }
     return date.formatted(date: .abbreviated, time: .shortened)
-}
-
-struct RecentPlayRow: View {
-    let play: RecentPlay
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(play.songName)
-                    .font(.body.weight(.semibold))
-                    .lineLimit(2)
-                Text(play.playedAt ?? "Time unavailable")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 5) {
-                Text(play.chartToken)
-                    .font(.caption.bold().monospaced())
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 4))
-                    .foregroundStyle(.white)
-                Text(play.stageBreak ? "FAILED" : play.score?.formatted() ?? "-")
-                    .font(.caption.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(play.stageBreak ? AppTheme.accent : .primary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
 }

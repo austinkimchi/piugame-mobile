@@ -98,7 +98,7 @@ struct SongChartHistoryView: View {
                     summaryRow(
                         "Latest score",
                         value: latestFailed ? "FAILED" : scoreLabel(stats.latestScore),
-                        tint: latestFailed ? AppTheme.accent : nil
+                        tint: latestFailed ? AppTheme.danger : nil
                     )
                     summaryRow("Tracked attempts", value: stats.recentPlayCount.formatted())
                     summaryRow("Stage breaks", value: stats.stageBreakCount.formatted())
@@ -221,7 +221,7 @@ private struct ChartAttemptRow: View {
                 Spacer(minLength: 8)
                 Text(failed ? "FAILED" : attempt.score?.formatted() ?? "-")
                     .font(.body.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(failed ? AppTheme.accent : .primary)
+                    .foregroundStyle(failed ? AppTheme.danger : .primary)
             }
 
             let judgments = judgmentValues

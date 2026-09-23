@@ -157,8 +157,13 @@ actor PIUGameClient {
         let pumbility = try parser.parsePumbilityScore(html: pumbilityPage)
         return try PIUSnapshot(
             version: version,
-            profile: parser.parseProfile(html: profileHTML, username: username, pumbilityScore: pumbility),
-            recentPlays: parser.parseRecentPlays(html: recentPage),
+            profile: parser.parseProfile(
+                html: profileHTML,
+                username: username,
+                pumbilityScore: pumbility,
+                baseURL: version.baseURL
+            ),
+            recentPlays: parser.parseRecentPlays(html: recentPage, baseURL: version.baseURL),
             fetchedAt: Date()
         )
     }

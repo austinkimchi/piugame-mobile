@@ -35,8 +35,48 @@ final class PIUHTMLParserTests: XCTestCase {
         XCTAssertEqual(plays[1].plate, "fg")
     }
 
+    func testRelativeSongArtworkResolvesAgainstPIUGameOrigin() throws {
+        let html = Fixtures.recent.replacingOccurrences(
+            of: "https://www.piugame.com/data/song_img/a.png",
+            with: "/data/song_img/a.png"
+        )
+
+        let plays = try parser.parseRecentPlays(
+            html: html,
+            baseURL: URL(string: "https://www.piugame.com")
+        )
+
+        XCTAssertEqual(
+            plays.first?.songImageURL?.absoluteString,
+            "https://www.piugame.com/data/song_img/a.png"
+        )
+    }
+
     func testPumbilityDecimalIsPreserved() throws {
         XCTAssertEqual(try parser.parsePumbilityScore(html: Fixtures.pumbility), 15_770.43)
+    }
+
+    func testPumbilityUsesVisibleLabelWhenWebsiteClassesChange() throws {
+        let html = """
+        <section class="performance-summary-card">
+          <p class="metric-label">Pumbility</p>
+          <strong class="metric-value">15,770.43</strong>
+        </section>
+        """
+
+        XCTAssertEqual(try parser.parsePumbilityScore(html: html), 15_770.43)
+    }
+
+    func testPumbilityParsesCurrentPIUGamePointClass() throws {
+        let html = """
+        <div class="pumbility_total_wrap">
+          <div class="info-wrap"><div class="score">
+            <span class="pumbility-point-sub">15,770.43</span>
+          </div></div>
+        </div>
+        """
+
+        XCTAssertEqual(try parser.parsePumbilityScore(html: html), 15_770.43)
     }
 
     func testInvalidLevelAssetsAreRejected() throws {

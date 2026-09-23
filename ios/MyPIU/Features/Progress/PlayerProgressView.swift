@@ -45,6 +45,7 @@ struct PlayerProgressView: View {
         profile: MyPIUPerformanceDashboard.Profile
     ) -> some View {
         let summary = PerformanceProgressSummary(profile: profile)
+        let pumbilityScore = profile.pumbilityScore ?? model.snapshot?.profile.pumbilityScore
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 20) {
                 completionPanel(summary, displayName: profile.displayName)
@@ -53,7 +54,7 @@ struct PlayerProgressView: View {
                     metricGrid([
                         ProgressMetric(
                             title: "Pumbility",
-                            value: format(profile.pumbilityScore),
+                            value: format(pumbilityScore),
                             detail: changeLabel(performance.totals.pumbilityChange24Hours),
                             icon: "chart.line.uptrend.xyaxis",
                             tint: AppTheme.positive
@@ -68,7 +69,10 @@ struct PlayerProgressView: View {
                     ])
 
                     NavigationLink {
-                        PumbilityBreakdownView(performance: performance)
+                        PumbilityBreakdownView(
+                            performance: performance,
+                            pumbilityScore: pumbilityScore
+                        )
                     } label: {
                         Label("Pumbility breakdown", systemImage: "list.number")
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -204,6 +208,12 @@ struct PlayerProgressView: View {
 struct PumbilityBreakdownView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let performance: MyPIUPerformanceDashboard
+    let pumbilityScore: Double?
+
+    init(performance: MyPIUPerformanceDashboard, pumbilityScore: Double? = nil) {
+        self.performance = performance
+        self.pumbilityScore = pumbilityScore
+    }
 
     private var charts: [MyPIUPerformanceDashboard.Chart] {
         performance.topCharts
@@ -219,7 +229,10 @@ struct PumbilityBreakdownView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
                 metricLayout {
-                    pumbilityMetric("Pumbility", value: format(performance.profile?.pumbilityScore))
+                    pumbilityMetric(
+                        "Pumbility",
+                        value: format(pumbilityScore ?? performance.profile?.pumbilityScore)
+                    )
                     pumbilityMetric("Chart total", value: format(chartContribution))
                 }
 

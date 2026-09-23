@@ -98,7 +98,17 @@ struct PerformanceSessionView: View {
 
             Section("Plays") {
                 ForEach(session.plays) { play in
-                    PerformanceRecentPlayRow(play: play)
+                    let snapshotPlay = matchingRecentPlay(
+                        for: play,
+                        in: appModel.snapshot?.recentPlays ?? []
+                    )
+                    NavigationLink {
+                        RecentPlayDetailView(
+                            play: RecentPlayPresentation(play: play, snapshotPlay: snapshotPlay)
+                        )
+                    } label: {
+                        PerformanceRecentPlayRow(play: play, snapshotPlay: snapshotPlay)
+                    }
                 }
             }
         }
@@ -133,7 +143,7 @@ struct PerformanceSessionView: View {
 
     private func clearRateTint(_ percent: Double?) -> Color? {
         guard let percent else { return nil }
-        return percent >= 80 ? AppTheme.positive : (percent < 50 ? AppTheme.accent : nil)
+        return percent >= 80 ? AppTheme.positive : (percent < 50 ? AppTheme.danger : nil)
     }
 
     private func durationLabel(_ minutes: Int) -> String {
