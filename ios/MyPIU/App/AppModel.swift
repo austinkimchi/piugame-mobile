@@ -531,12 +531,17 @@ final class AppModel: ObservableObject {
         defer { isPIUGameSyncInFlight = false }
 
         state = .syncing
-        let client = PIUGameClient(version: credentials.version)
-        self.client = client
+        let client: PIUGameClient
+        if self.credentials == credentials, let existingClient = self.client {
+            client = existingClient
+        } else {
+            client = PIUGameClient(version: credentials.version)
+        }
         do {
             let snapshot = try await client.loginAndFetch(username: credentials.username, password: credentials.password)
             guard saveAfterSuccess || self.credentials == credentials else { return false }
             if saveAfterSuccess { try credentialStore.save(credentials) }
+            self.client = client
             self.credentials = credentials
             self.snapshot = snapshot
             state = .ready
