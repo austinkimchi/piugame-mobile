@@ -247,7 +247,7 @@ fun MyPiuApp(
                                     }
                                     destination == AppDestination.SONGS -> catalogViewModel.refresh()
                                     destination == AppDestination.PROGRESS -> refreshProgress()
-                                    destination == AppDestination.ACTIVITY -> performanceViewModel.refresh()
+                                    destination == AppDestination.ACTIVITY -> refreshProgress()
                                     else -> viewModel.refresh()
                                 }
                             },
