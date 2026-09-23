@@ -46,6 +46,8 @@ Opening the app and pull-to-refresh always attempt a foreground sync. Returning 
 
 The initial full-history import is foreground-only, uses a low concurrency limit, and is explicitly initiated by the user. Routine refresh fetches only profile, Pumbility, and recent plays.
 
+While the process remains alive, each connected iOS account reuses one ephemeral `URLSession` and its private in-memory PIUGAME cookie store. A refresh probes the profile with that cookie, skips the login request when it is still authenticated, and performs one credential login when any authenticated endpoint shows that the session expired. That recovery is retried only once per refresh. Cookies are never written to disk or uploaded to MyPIU.
+
 ## Shared contracts, separate implementations
 
 The TypeScript `piugame-sdk` remains the behavior reference. Its Node-only dependencies and cookie implementation are not embedded in the native app. Parser fixtures and normalized DTO examples should be shared across repositories so Swift, Kotlin, and TypeScript implementations can be compared against the same inputs.
