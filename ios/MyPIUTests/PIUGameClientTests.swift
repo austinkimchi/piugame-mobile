@@ -14,8 +14,9 @@ final class PIUGameClientTests: XCTestCase {
 
         XCTAssertEqual(first.profile.username, "fixture")
         XCTAssertEqual(second.profile.pumbilityScore, 123.45)
-        XCTAssertEqual(firstRequests.count, 4)
-        XCTAssertEqual(requests.count, 7)
+        XCTAssertEqual(firstRequests.count, 5)
+        XCTAssertEqual(requests.count, 8)
+        XCTAssertEqual(requests.filter { $0.method == "GET" && $0.path == "/bbs/login.php" }.count, 1)
         XCTAssertEqual(requests.filter { $0.method == "POST" && $0.path == "/bbs/login_check.php" }.count, 1)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/play_data.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/recently_played.php" }.count, 2)
@@ -31,7 +32,8 @@ final class PIUGameClientTests: XCTestCase {
         _ = try await client.loginAndFetch(username: "fixture", password: "secret")
         let requests = await transport.recordedRequests()
 
-        XCTAssertEqual(requests.count, 9)
+        XCTAssertEqual(requests.count, 11)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/play_data.php" }.count, 3)
     }
@@ -44,7 +46,8 @@ final class PIUGameClientTests: XCTestCase {
         _ = try await client.loginAndFetch(username: "second", password: "secret")
         let requests = await transport.recordedRequests()
 
-        XCTAssertEqual(requests.count, 8)
+        XCTAssertEqual(requests.count, 10)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/play_data.php" }.count, 2)
     }
@@ -58,7 +61,8 @@ final class PIUGameClientTests: XCTestCase {
         _ = try await client.loginAndFetch(username: "fixture", password: "secret")
         let requests = await transport.recordedRequests()
 
-        XCTAssertEqual(requests.count, 11)
+        XCTAssertEqual(requests.count, 13)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
     }
 
@@ -71,7 +75,8 @@ final class PIUGameClientTests: XCTestCase {
         _ = try await client.loginAndFetch(username: "fixture", password: "secret")
         let requests = await transport.recordedRequests()
 
-        XCTAssertEqual(requests.count, 9)
+        XCTAssertEqual(requests.count, 11)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/play_data.php" }.count, 3)
     }
@@ -86,7 +91,8 @@ final class PIUGameClientTests: XCTestCase {
         let requests = await transport.recordedRequests()
 
         XCTAssertEqual(snapshot.profile.pumbilityScore, 123.45)
-        XCTAssertEqual(requests.count, 11)
+        XCTAssertEqual(requests.count, 13)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
     }
 }
@@ -98,6 +104,7 @@ private actor PIUGameTransportStub: PIUGameHTTPTransport {
     }
 
     private var authenticated = false
+    private var loginSessionPrepared = false
     private var shouldExpireDuringRecentFetch = false
     private var rejectedProfileStatusCode: Int?
     private var shouldRedirectPumbilityToLogin = false
@@ -111,9 +118,15 @@ private actor PIUGameTransportStub: PIUGameHTTPTransport {
         let body: String
         let statusCode: Int
         let responseURL: URL?
-        if method == "POST", path == "/bbs/login_check.php" {
-            authenticated = true
-            body = "OK"
+        if method == "GET", path == "/bbs/login.php" {
+            loginSessionPrepared = true
+            body = Self.loginHTML
+            statusCode = 200
+            responseURL = request.url
+        } else if method == "POST", path == "/bbs/login_check.php" {
+            authenticated = loginSessionPrepared
+            loginSessionPrepared = false
+            body = authenticated ? "OK" : Self.loginHTML
             statusCode = 200
             responseURL = request.url
         } else if path == "/my_page/play_data.php", let rejectedProfileStatusCode {

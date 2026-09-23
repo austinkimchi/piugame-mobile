@@ -309,7 +309,7 @@ final class AppModel: ObservableObject {
             version: selectedVersion
         )
         guard !credentials.username.isEmpty, !password.isEmpty else {
-            state = .failed("Enter your PIUGAME username and password.")
+            state = .failed("Enter your PIUGAME email and password.")
             return false
         }
         return await sync(using: credentials, saveAfterSuccess: true)

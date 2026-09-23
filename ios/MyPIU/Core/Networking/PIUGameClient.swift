@@ -90,6 +90,8 @@ actor PIUGameClient {
 
     private func authenticate(username: String, password: String) async throws -> String {
         authenticatedUsername = nil
+        try await prepareLoginSession()
+
         var request = URLRequest(url: url(path: "/bbs/login_check.php"))
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -110,6 +112,21 @@ actor PIUGameClient {
         }
         authenticatedUsername = username
         return probe
+    }
+
+    private func prepareLoginSession() async throws {
+        var request = URLRequest(url: url(path: "/bbs/login.php"))
+        request.httpMethod = "GET"
+        request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
+
+        // PIUGAME initializes its PHP session through the AM.PASS SSO redirect
+        // chain before it will evaluate a credential POST. The final response is
+        // intentionally the login page, so this request cannot use send(_:),
+        // which treats that URL as an expired authenticated session.
+        let response = try await transport.response(for: request)
+        guard (200..<400).contains(response.statusCode) else {
+            throw PIUGameClientError.unexpectedStatus(response.statusCode)
+        }
     }
 
     func fetchSnapshot(username: String) async throws -> PIUSnapshot {
