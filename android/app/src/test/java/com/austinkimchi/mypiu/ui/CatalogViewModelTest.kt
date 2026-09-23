@@ -210,6 +210,49 @@ class CatalogViewModelTest {
     }
 
     @Test
+    fun oldFavoriteSuccessReloadsMatchingReplacementSession() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val requestStarted = CompletableDeferred<Unit>()
+            val requestResult = CompletableDeferred<Boolean>()
+            var serverFavorite = false
+            val source = FakeCatalogDataSource(favoriteHandler = { _, _, _ ->
+                requestStarted.complete(Unit)
+                requestResult.await().also { serverFavorite = it }
+            })
+            source.searchHandler = { _, _, _, _ ->
+                CatalogSearchPage(listOf(favoriteSong().copy(isFavorite = serverFavorite)), null, 1)
+            }
+            val viewModel = CatalogViewModel(source)
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            viewModel.start()
+            advanceUntilIdle()
+
+            viewModel.toggleFavorite(viewModel.state.value.listing.songs.single())
+            runCurrent()
+            assertTrue(requestStarted.isCompleted)
+
+            viewModel.updateSession(null, connected = false, preferredVersion = null)
+            advanceUntilIdle()
+            viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+            advanceUntilIdle()
+            assertFalse(viewModel.state.value.listing.songs.single().isFavorite)
+            val searchesBeforeSuccess = source.searches.size
+
+            requestResult.complete(true)
+            advanceUntilIdle()
+
+            assertTrue(source.searches.size > searchesBeforeSuccess)
+            assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+            assertTrue(viewModel.state.value.isMyPiuConnected)
+            assertTrue(viewModel.state.value.updatingFavorites.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun refavoritingFromRemovedFavoritesDetailReinsertsSong() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)

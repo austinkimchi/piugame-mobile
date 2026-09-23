@@ -188,6 +188,12 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 val authoritative = repository.setFavorite(song.slug, requested, version)
                 val isCurrentMutation = finishFavoriteMutation(mutationKey, mutation)
                 val current = mutableState.value
+                val shouldReconcileReplacementSession =
+                    isCurrentMutation &&
+                        mutationSessionGeneration != sessionGeneration &&
+                        current.isMyPiuConnected &&
+                        current.version == version &&
+                        current.cacheScope == scope
                 if (
                     isCurrentMutation &&
                     mutationSessionGeneration == sessionGeneration &&
@@ -220,6 +226,15 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                     } catch (_: Exception) {
                         // A future catalog load can repair a failed best-effort cache update.
                     }
+                }
+                if (
+                    shouldReconcileReplacementSession &&
+                    mutationSessionGeneration != sessionGeneration &&
+                    mutableState.value.isMyPiuConnected &&
+                    mutableState.value.version == version &&
+                    mutableState.value.cacheScope == scope
+                ) {
+                    reload(debounce = false)
                 }
             } catch (error: CancellationException) {
                 if (finishFavoriteMutation(mutationKey, mutation)) {
