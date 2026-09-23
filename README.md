@@ -25,6 +25,7 @@ open ios/MyPIU.xcodeproj
 ```
 
 The generation script installs the pinned extension build dependencies, creates the Safari-compatible runtime from the shared browser-extension sources, and embeds the Safari Web Extension target in MyPIU.
+The generated project and Safari runtime are checked in so Xcode Cloud can discover and build `ios/MyPIU.xcodeproj` from a clean clone. Run the script after changing `ios/project.yml` or the shared extension sources; CI verifies that the checked-in artifacts remain current.
 
 The first vertical slice connects directly to PIUGAME PHOENIX 2, stores credentials in Keychain, parses the profile and recent-play pages on-device, and renders a native SwiftUI dashboard.
 

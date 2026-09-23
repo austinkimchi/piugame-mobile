@@ -542,7 +542,10 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func performanceSessions() async throws -> [MyPIUPerformanceSession] {
+    func performanceSessions(
+        offset: Int = 0,
+        limit: Int = 20
+    ) async throws -> MyPIUPerformanceSessionsPage {
         guard let token = accessToken, let accountID = myPIUAccount?.id else {
             throw MyPIUAPIError.server(status: 401, code: "invalid_token")
         }
@@ -552,7 +555,11 @@ final class AppModel: ObservableObject {
         }
 
         do {
-            let sessions = try await apiClient.performanceSessions(accessToken: token.value)
+            let sessions = try await apiClient.performanceSessions(
+                offset: offset,
+                limit: limit,
+                accessToken: token.value
+            )
             guard accessToken?.value == token.value, myPIUAccount?.id == accountID else {
                 throw CancellationError()
             }

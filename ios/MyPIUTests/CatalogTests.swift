@@ -9,6 +9,7 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(page.nextCursor, "Mg")
         XCTAssertEqual(page.songs.first?.title, "BATTLE NO.1")
         XCTAssertEqual(page.songs.first?.chartSummary, ["S10", "S19", "D20", "C2"])
+        XCTAssertEqual(page.songs.first?.folderLabel, "ORIGINAL #49")
         XCTAssertTrue(page.songs.first?.isPremium == true)
         XCTAssertTrue(page.songs.first?.isFavorite == true)
     }
@@ -125,6 +126,36 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(newest?.listing.songs.first?.slug, "battle-no-1")
     }
 
+    func testCatalogCacheSeparatesSortOrders() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = CatalogCache(directory: directory)
+        let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        var listing = CatalogListing()
+        listing.replace(with: page)
+
+        try await cache.save(
+            listing,
+            query: "",
+            version: .phoenix2,
+            scope: "public",
+            sortBy: .artist,
+            sortDirection: .ascending
+        )
+
+        let artistSort = await cache.load(
+            query: "",
+            version: .phoenix2,
+            scope: "public",
+            sortBy: .artist,
+            sortDirection: .ascending
+        )
+        let defaultSort = await cache.load(query: "", version: .phoenix2, scope: "public")
+
+        XCTAssertEqual(artistSort?.listing, listing)
+        XCTAssertNil(defaultSort)
+    }
+
     func testCatalogCachePropagatesFavoriteWithinAccountAndVersion() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -236,6 +267,7 @@ final class CatalogTests: XCTestCase {
             bpm: firstSong.bpm,
             chartSummary: firstSong.chartSummary,
             folder: firstSong.folder,
+            folderPosition: firstSong.folderPosition,
             series: firstSong.series,
             tags: firstSong.tags,
             isPremium: firstSong.isPremium,
@@ -289,6 +321,33 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(restoredRequestCount, 0)
         XCTAssertEqual(restoredCatalog.listing.songs.map(\.slug), ["battle-no-1", "second-song"])
         XCTAssertEqual(restoredCatalog.listing.filterOptions, fixturePage.filterOptions)
+    }
+
+    @MainActor
+    func testArtworkPreloadKeepsNormalizedTitleIndexWhenVisibleSearchChanges() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fixturePage = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let song = try XCTUnwrap(fixturePage.songs.first)
+        let completePage = CatalogSearchPage(songs: [song], nextCursor: nil, total: 1)
+        let catalog = SongCatalogModel(
+            cache: CatalogCache(directory: directory),
+            artworkSearchCatalog: { _, _, _ in completePage }
+        )
+
+        await catalog.preloadArtwork(version: .phoenix2)
+        await catalog.loadIfNeeded(
+            query: "unrelated",
+            version: .phoenix2,
+            debounce: false,
+            using: { _, _, _ in CatalogSearchPage(songs: [], nextCursor: nil, total: 0) }
+        )
+
+        XCTAssertEqual(
+            catalog.artworkURL(for: "  battle   no.1 ")?.absoluteString,
+            "https://mypiu.austin.kim/assets/piu/song.png"
+        )
+        XCTAssertTrue(catalog.listing.songs.isEmpty)
     }
 
     @MainActor
@@ -686,6 +745,7 @@ final class CatalogTests: XCTestCase {
           "bpm": "200",
           "chartSummary": ["S10", "S19", "D20", "C2"],
           "folder": "ORIGINAL",
+          "folderPosition": 49,
           "series": "XX",
           "tags": ["intense"],
           "isPremium": true,

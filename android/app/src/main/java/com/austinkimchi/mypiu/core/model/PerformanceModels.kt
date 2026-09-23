@@ -30,10 +30,19 @@ data class MyPiuPerformanceDashboard(
         val name: String,
         val metric: String,
         val current: Double,
+        val previousTarget: Double? = null,
         val target: Double,
     ) {
         val progressFraction: Float
-            get() = if (target > 0) (current / target).coerceIn(0.0, 1.0).toFloat() else 0f
+            get() {
+                val intervalStart = previousTarget ?: 0.0
+                val interval = target - intervalStart
+                return if (interval > 0) {
+                    ((current - intervalStart) / interval).coerceIn(0.0, 1.0).toFloat()
+                } else {
+                    0f
+                }
+            }
 
         val remaining: Double
             get() = (target - current).coerceAtLeast(0.0)
@@ -68,6 +77,7 @@ data class MyPiuPerformanceDashboard(
         val stageBreak: Boolean = false,
         val arcadeName: String? = null,
         val judgments: JudgmentCounts? = null,
+        val songImageUrl: String? = null,
     ) {
         val displayChartToken: String
             get() = if (mode != null && level != null) "${mode.uppercase()}$level" else chartToken
@@ -129,7 +139,10 @@ data class MyPiuPerformanceSession(
 data class PerformanceSessionResponse(val session: MyPiuPerformanceSession? = null)
 
 @Serializable
-data class PerformanceSessionsResponse(val sessions: List<MyPiuPerformanceSession> = emptyList())
+data class PerformanceSessionsResponse(
+    val sessions: List<MyPiuPerformanceSession> = emptyList(),
+    val nextOffset: Int? = null,
+)
 
 data class PerformanceProgressSummary(
     val clearedCharts: Int?,

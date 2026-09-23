@@ -1,6 +1,6 @@
 # Safari Web Extension
 
-MyPIU Sync uses the same Manifest V3 runtime in Chromium and Safari. The files in `browser-extension/` remain the only source of extension behavior; generated Xcode projects are build artifacts rather than maintained source.
+MyPIU Sync uses the same Manifest V3 runtime in Chromium and Safari. The files in `browser-extension/` remain the only source of extension behavior. The generated iOS project and Safari runtime are checked in as reproducible build artifacts so Xcode Cloud has a complete project in every clone.
 
 Apple documents this native-wrapper requirement in [Packaging a web extension for Safari](https://developer.apple.com/documentation/safariservices/packaging-a-web-extension-for-safari). Safari grants host access per website, so the shipping build also follows Apple's [Safari web extension permission model](https://developer.apple.com/documentation/safariservices/managing-safari-web-extension-permissions).
 
@@ -22,10 +22,10 @@ xcrun safari-web-extension-packager browser-extension/dist/safari-mv3 \
 
 Safari does not currently accept the Chromium `background.type` manifest key. Staging therefore bundles the shared module worker into a classic worker and removes that one key from the generated manifest; the authored Chromium sources remain unchanged. CI fails if Apple's packager reports any other unsupported manifest keys.
 
-CI checks that the generated iOS scheme builds without signing, creates an unsigned Release archive for the macOS scheme, and verifies that the copied Safari resources exactly match the staged runtime. The generated project and unsigned archive are uploaded for seven days as packaging evidence.
+CI regenerates the checked-in iOS project and Safari runtime, fails if either artifact has drifted, checks that the iOS scheme builds without signing, creates an unsigned Release archive for the macOS scheme, and verifies that the copied Safari resources exactly match the staged runtime. The unsigned archive is uploaded for seven days as packaging evidence.
 
 ## Integration boundary
 
-The generated wrapper is a feasibility and compatibility artifact. `scripts/generate-ios-project.sh` stages the same Safari runtime into `ios/MyPIUSafariExtension/Resources`, then XcodeGen embeds `MyPIUSafariExtension.appex` in the existing MyPIU app. Generated resources and Xcode projects remain ignored so there is one authored JavaScript source.
+The generated wrapper is a feasibility and compatibility artifact. `scripts/generate-ios-project.sh` stages the same Safari runtime into `ios/MyPIUSafariExtension/Resources`, then XcodeGen embeds `MyPIUSafariExtension.appex` in the existing MyPIU app. Those generated files are committed for Xcode Cloud discovery and clean-clone builds; changes still originate in `browser-extension/` and `ios/project.yml`.
 
 The macOS wrapper has stable app and extension identities plus a documented signing and archive path in `macos-release.md`. Distribution still requires Apple Developer signing, App Store Connect records, privacy metadata, and physical-device verification of Safari's per-site permission prompts for PIUGAME and MyPIU.

@@ -15,6 +15,8 @@ actor CatalogCache {
         let scope: String
         let query: String
         let version: PIUGameVersion
+        let sortBy: CatalogSortOption
+        let sortDirection: CatalogSortDirection
         var songs: [CatalogSong]
         let nextCursor: String?
         var total: Int
@@ -22,7 +24,7 @@ actor CatalogCache {
         let cachedAt: Date
     }
 
-    private static let schemaVersion = 3
+    private static let schemaVersion = 4
     private static let maximumEntries = 12
 
     private let directory: URL
@@ -37,10 +39,20 @@ actor CatalogCache {
             ?? fileManager.temporaryDirectory.appendingPathComponent("MyPIU", isDirectory: true)
     }
 
-    func load(query: String, version: PIUGameVersion, scope: String) -> CachedListing? {
+    func load(
+        query: String,
+        version: PIUGameVersion,
+        scope: String,
+        sortBy: CatalogSortOption = .series,
+        sortDirection: CatalogSortDirection = .descending
+    ) -> CachedListing? {
         let query = normalizedQuery(query)
         guard let entry = readStore().entries.first(where: {
-            $0.scope == scope && $0.query == query && $0.version == version
+            $0.scope == scope
+                && $0.query == query
+                && $0.version == version
+                && $0.sortBy == sortBy
+                && $0.sortDirection == sortDirection
         }) else {
             return nil
         }
@@ -60,16 +72,26 @@ actor CatalogCache {
         query: String,
         version: PIUGameVersion,
         scope: String,
+        sortBy: CatalogSortOption = .series,
+        sortDirection: CatalogSortDirection = .descending,
         now: Date = Date()
     ) throws {
         let query = normalizedQuery(query)
         var store = readStore()
-        store.entries.removeAll { $0.scope == scope && $0.query == query && $0.version == version }
+        store.entries.removeAll {
+            $0.scope == scope
+                && $0.query == query
+                && $0.version == version
+                && $0.sortBy == sortBy
+                && $0.sortDirection == sortDirection
+        }
         store.entries.append(
             Entry(
                 scope: scope,
                 query: query,
                 version: version,
+                sortBy: sortBy,
+                sortDirection: sortDirection,
                 songs: listing.songs,
                 nextCursor: listing.nextCursor,
                 total: listing.total,

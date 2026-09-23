@@ -31,6 +31,14 @@ struct MyPIUAccount: Codable, Equatable, Sendable {
     let piuGameVersion: PIUGameVersion
     let piuProfile: LinkedPIUProfile?
 
+    var displayUsername: String? {
+        guard let username = username?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !username.isEmpty else {
+            return nil
+        }
+        return username
+    }
+
     struct LinkedPIUProfile: Codable, Equatable, Sendable {
         let piuUsername: String
         let displayName: String

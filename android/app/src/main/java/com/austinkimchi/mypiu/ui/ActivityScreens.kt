@@ -8,10 +8,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -44,6 +47,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.austinkimchi.mypiu.core.model.JudgmentCounts
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceSession
 import com.austinkimchi.mypiu.core.model.RecentPlay
@@ -162,7 +166,10 @@ fun PerformanceSessionsScreen(
     state: PerformanceUiState,
     onLoad: () -> Unit,
     onRefresh: () -> Unit,
+    onLoadMore: () -> Unit,
+    artworkUrl: (String) -> String?,
     onOpenSession: (MyPiuPerformanceSession) -> Unit,
+    onOpenPlay: (MyPiuPerformanceSession, MyPiuPerformanceDashboard.Play) -> Unit,
 ) {
     LaunchedEffect(state.accountScope) { onLoad() }
 
@@ -186,15 +193,46 @@ fun PerformanceSessionsScreen(
                 state.sessions,
                 key = { index, session -> session.id.ifBlank { "${session.summary.endedAt}:$index" } },
             ) { index, session ->
-                SessionRow(session, onClick = { onOpenSession(session) })
+                SessionRow(
+                    session = session,
+                    artworkUrl = artworkUrl,
+                    onClick = { onOpenSession(session) },
+                    onOpenPlay = { play -> onOpenPlay(session, play) },
+                )
                 if (index < state.sessions.lastIndex) HorizontalDivider()
+                if (index >= state.sessions.lastIndex - 3 && state.nextSessionOffset != null) {
+                    LaunchedEffect(state.nextSessionOffset, state.isSessionLoadingMore) {
+                        if (!state.isSessionLoadingMore) onLoadMore()
+                    }
+                }
+            }
+            if (state.isSessionLoadingMore) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            } else if (state.sessionPaginationError != null) {
+                item {
+                    Button(onClick = onLoadMore, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Retry loading more")
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun PerformanceSessionScreen(session: MyPiuPerformanceSession) {
+fun PerformanceSessionScreen(
+    session: MyPiuPerformanceSession,
+    onOpenPlay: (MyPiuPerformanceDashboard.Play) -> Unit,
+) {
     val summary = session.summary
     LazyColumn(
         modifier = Modifier.fillMaxSize().widthIn(max = 860.dp),
@@ -235,7 +273,7 @@ fun PerformanceSessionScreen(session: MyPiuPerformanceSession) {
             item { EmptyActivity("No plays in this session") }
         } else {
             itemsIndexed(session.plays, key = { _, play -> play.id }) { index, play ->
-                PerformancePlayRow(play)
+                PerformancePlayRow(play, onClick = { onOpenPlay(play) })
                 if (index < session.plays.lastIndex) HorizontalDivider()
             }
         }
@@ -243,33 +281,73 @@ fun PerformanceSessionScreen(session: MyPiuPerformanceSession) {
 }
 
 @Composable
-private fun SessionRow(session: MyPiuPerformanceSession, onClick: () -> Unit) {
+private fun SessionRow(
+    session: MyPiuPerformanceSession,
+    artworkUrl: (String) -> String?,
+    onClick: () -> Unit,
+    onOpenPlay: (MyPiuPerformanceDashboard.Play) -> Unit,
+) {
     val summary = session.summary
     Column(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(sessionTimestampLabel(summary.endedAt), fontWeight = FontWeight.Bold)
+            session.arcadeName?.takeIf(String::isNotBlank)?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "Clear ${summary.clearCount}/${summary.playCount}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "(${formatPercent(summary.clearRate)})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = clearRateColor(summary.clearRate) ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "· ${sessionModeSummary(session.plays)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(session.plays, key = { it.id }) { play ->
+                SessionPlayArtwork(
+                    play = play,
+                    artworkUrl = artworkUrl(play.songName),
+                    onClick = { onOpenPlay(play) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionPlayArtwork(
+    play: MyPiuPerformanceDashboard.Play,
+    artworkUrl: String?,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.width(56.dp).clickable(onClick = onClick).semantics(mergeDescendants = true) {},
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(sessionTimestampLabel(summary.endedAt), fontWeight = FontWeight.Bold)
-        session.arcadeName?.takeIf(String::isNotBlank)?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                "Clear ${summary.clearCount}/${summary.playCount}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                "(${formatPercent(summary.clearRate)})",
-                style = MaterialTheme.typography.bodySmall,
-                color = clearRateColor(summary.clearRate) ?: MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                "· ${sessionModeSummary(session.plays)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        SongArtwork(play.songImageUrl ?: artworkUrl, Modifier.size(56.dp))
+        Text(
+            play.displayChartToken,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
     }
 }
 
@@ -304,13 +382,18 @@ private fun SessionSummaryRow(title: String, value: String, valueColor: Color? =
 }
 
 @Composable
-private fun PerformancePlayRow(play: MyPiuPerformanceDashboard.Play) {
+private fun PerformancePlayRow(
+    play: MyPiuPerformanceDashboard.Play,
+    onClick: (() -> Unit)? = null,
+) {
     val failed = performancePlayIsFailed(play.grade, play.stageBreak)
     val grade = performanceGradeLabel(play.grade)
     val score = if (failed) "FAILED" else formatActivityInteger(play.score)
+    val clickModifier = onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(clickModifier)
             .padding(vertical = 10.dp)
             .clearAndSetSemantics {
                 contentDescription = listOf(
@@ -340,6 +423,89 @@ private fun PerformancePlayRow(play: MyPiuPerformanceDashboard.Play) {
                 fontWeight = FontWeight.Bold,
                 color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             )
+        }
+    }
+}
+
+@Composable
+fun PerformancePlayDetailScreen(
+    play: MyPiuPerformanceDashboard.Play,
+    artworkUrl: String? = null,
+) {
+    val failed = performancePlayIsFailed(play.grade, play.stageBreak)
+    val score = if (failed) "FAILED" else formatActivityInteger(play.score)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().widthIn(max = 720.dp),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                SongArtwork(play.songImageUrl ?: artworkUrl, Modifier.size(96.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(play.songName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                    ChartTokenBadge(play.displayChartToken)
+                    Text(
+                        performanceDateLabel(play.playedAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                tonalElevation = 1.dp,
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("RESULT", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        score,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Black,
+                        color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(performanceGradeLabel(play.grade), style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        }
+        play.judgments?.let { judgments ->
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    tonalElevation = 1.dp,
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("JUDGMENTS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        JudgmentBreakdown(judgments)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun JudgmentBreakdown(judgments: JudgmentCounts) {
+    val values = listOf(
+        "Perfect" to judgments.perfect,
+        "Great" to judgments.great,
+        "Good" to judgments.good,
+        "Bad" to judgments.bad,
+        "Miss" to judgments.miss,
+    ).filter { it.second != null }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        values.forEach { (label, value) ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(formatActivityInteger(value), fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

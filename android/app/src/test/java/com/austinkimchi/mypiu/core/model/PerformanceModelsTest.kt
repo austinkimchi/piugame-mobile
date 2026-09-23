@@ -17,6 +17,7 @@ class PerformanceModelsTest {
         assertEquals(15_770.43, dashboard.profile?.pumbilityScore ?: 0.0, 0.001)
         assertEquals("[S] ADVANCED LV.5", dashboard.profile?.nextTitle?.name)
         assertEquals(171.06, dashboard.profile?.nextTitle?.remaining ?: 0.0, 0.001)
+        assertEquals(0.31576f, dashboard.profile?.nextTitle?.progressFraction ?: 0f, 0.00001f)
         assertEquals(954_848, dashboard.totals.averageBestScore)
         assertEquals("S19", dashboard.recentPlays.single().displayChartToken)
         assertEquals("Big Daddy:big-daddy:s:19", dashboard.topCharts.single().id)
@@ -31,6 +32,10 @@ class PerformanceModelsTest {
         assertEquals(4, session.summary.playCount)
         assertEquals(75.0, session.summary.clearRate ?: 0.0, 0.001)
         assertEquals("S19", session.plays.single().displayChartToken)
+        assertEquals(
+            "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png",
+            session.plays.single().songImageUrl,
+        )
         assertEquals(73, session.summary.durationMinutes)
     }
 
@@ -90,6 +95,7 @@ class PerformanceModelsTest {
                     "name": "[S] ADVANCED LV.5",
                     "metric": "single_pumbility",
                     "current": 15828.94,
+                    "previousTarget": 15750,
                     "target": 16000
                   },
                   "recentArcade": "ROUND1",
@@ -162,6 +168,7 @@ class PerformanceModelsTest {
                   "grade": "aa",
                   "mode": "S",
                   "level": "19",
+                  "songImageUrl": "https://mypiu.austin.kim/assets/piu/phoenix2/song_img2/big-daddy.png",
                   "playedAt": "2026-09-22T07:20:00.000Z",
                   "stageBreak": false
                 }]

@@ -2,6 +2,8 @@ package com.austinkimchi.mypiu.core.catalog
 
 import com.austinkimchi.mypiu.core.model.CatalogListing
 import com.austinkimchi.mypiu.core.model.CatalogSong
+import com.austinkimchi.mypiu.core.model.CatalogSortDirection
+import com.austinkimchi.mypiu.core.model.CatalogSortOption
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
@@ -43,6 +45,36 @@ class CatalogCacheTest {
                 SONG.slug,
                 cache.load("query-12", PiuGameVersion.PHOENIX_2, "public")?.listing?.songs?.single()?.slug,
             )
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun cacheSeparatesSortOrders() = runTest {
+        val directory = Files.createTempDirectory("mypiu-catalog-test").toFile()
+        try {
+            val cache = CatalogCache(directory)
+            cache.save(
+                listing = LISTING,
+                query = "",
+                version = PiuGameVersion.PHOENIX_2,
+                scope = "public",
+                sortBy = CatalogSortOption.ARTIST,
+                sortDirection = CatalogSortDirection.ASCENDING,
+            )
+
+            assertEquals(
+                LISTING,
+                cache.load(
+                    "",
+                    PiuGameVersion.PHOENIX_2,
+                    "public",
+                    CatalogSortOption.ARTIST,
+                    CatalogSortDirection.ASCENDING,
+                )?.listing,
+            )
+            assertNull(cache.load("", PiuGameVersion.PHOENIX_2, "public"))
         } finally {
             directory.deleteRecursively()
         }

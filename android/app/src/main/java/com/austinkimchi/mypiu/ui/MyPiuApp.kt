@@ -99,6 +99,7 @@ fun MyPiuApp(
     var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
     var showingPumbility by rememberSaveable { mutableStateOf(false) }
     var selectedSessionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedSessionPlayId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSongSlug by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedChartToken by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSongVersionName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -108,6 +109,9 @@ fun MyPiuApp(
         performanceState.sessions.firstOrNull { session ->
             session.id == selectedId || (session.id.isBlank() && session.summary.endedAt == selectedId)
         }
+    }
+    val selectedSessionPlay = selectedSessionPlayId?.let { selectedId ->
+        selectedPerformanceSession?.plays?.firstOrNull { it.id == selectedId }
     }
     val selectedSongFallback = remember(selectedSongFallbackJson) {
         selectedSongFallbackJson?.let { runCatching { catalogSongJson.decodeFromString<CatalogSong>(it) }.getOrNull() }
@@ -140,7 +144,9 @@ fun MyPiuApp(
     }
 
     fun navigateBack() {
-        if (selectedSessionId != null) {
+        if (selectedSessionPlayId != null) {
+            selectedSessionPlayId = null
+        } else if (selectedSessionId != null) {
             selectedSessionId = null
         } else if (showingPumbility) {
             showingPumbility = false
@@ -163,6 +169,9 @@ fun MyPiuApp(
     }
     LaunchedEffect(showingPumbility, performanceDashboard) {
         if (showingPumbility && performanceDashboard == null) showingPumbility = false
+    }
+    LaunchedEffect(selectedPerformanceSession) {
+        if (selectedPerformanceSession == null) selectedSessionPlayId = null
     }
     LaunchedEffect(
         catalogAccountId,
@@ -187,8 +196,10 @@ fun MyPiuApp(
             selectedVersionReady = true
         }
     }
+    LaunchedEffect(state.isBusy) {
+        if (!state.isBusy) catalogViewModel.start()
+    }
     LaunchedEffect(destination, state.isBusy) {
-        if (destination == AppDestination.SONGS && !state.isBusy) catalogViewModel.start()
         if (
             (destination == AppDestination.PROGRESS || destination == AppDestination.ACTIVITY) &&
             !state.isBusy
@@ -220,6 +231,7 @@ fun MyPiuApp(
                         selectedChartToken = null
                         showingPumbility = false
                         selectedSessionId = null
+                        selectedSessionPlayId = null
                         selectedSongVersionName = null
                         selectedSongFallbackJson = null
                     },
@@ -245,6 +257,7 @@ fun MyPiuApp(
                 title = {
                     Text(
                         when {
+                            selectedSessionPlay != null -> selectedSessionPlay.songName
                             selectedPerformanceSession != null -> performanceSessionDayLabel(
                                 selectedPerformanceSession.summary.endedAt,
                             )
@@ -340,21 +353,37 @@ fun MyPiuApp(
                     onRefresh = ::refreshProgress,
                     onOpenPumbility = { showingPumbility = true },
                 )
+                destination == AppDestination.ACTIVITY && selectedSessionPlay != null -> {
+                    PerformancePlayDetailScreen(
+                        play = selectedSessionPlay,
+                        artworkUrl = catalogViewModel.artworkUrl(selectedSessionPlay.songName),
+                    )
+                }
                 destination == AppDestination.ACTIVITY && selectedPerformanceSession != null -> {
-                    PerformanceSessionScreen(selectedPerformanceSession)
+                    PerformanceSessionScreen(
+                        session = selectedPerformanceSession,
+                        onOpenPlay = { play -> selectedSessionPlayId = play.id },
+                    )
                 }
                 destination == AppDestination.ACTIVITY -> PerformanceSessionsScreen(
                     state = performanceState,
                     onLoad = performanceViewModel::loadSession,
                     onRefresh = { performanceViewModel.loadSession(force = true) },
+                    onLoadMore = performanceViewModel::loadMoreSessions,
+                    artworkUrl = catalogViewModel::artworkUrl,
                     onOpenSession = { session ->
                         selectedSessionId = session.id.ifBlank { session.summary.endedAt }
+                    },
+                    onOpenPlay = { session, play ->
+                        selectedSessionId = session.id.ifBlank { session.summary.endedAt }
+                        selectedSessionPlayId = play.id
                     },
                 )
                 selectedSong == null -> CatalogScreen(
                     state = catalogState,
                     imageUrl = catalogViewModel::imageUrl,
                     onQueryChange = catalogViewModel::setQuery,
+                    onSortChange = catalogViewModel::setSort,
                     onFeedChange = catalogViewModel::setFeed,
                     onVersionChange = catalogViewModel::setVersion,
                     onRefresh = catalogViewModel::refresh,
@@ -465,8 +494,8 @@ private fun HomeContent(
 
 private enum class AppDestination(val label: String) {
     HOME("Home"),
-    PROGRESS("Progress"),
     ACTIVITY("Sessions"),
+    PROGRESS("Progress"),
     SONGS("Songs"),
 }
 
@@ -494,7 +523,9 @@ private val ChartHistoryUiState?.orDefaultLoading: Boolean
 private fun ConnectionHeader(state: AppUiState) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = state.profile?.displayName ?: state.account?.name ?: "Your player dashboard",
+            text = state.profile?.displayName
+                ?: state.account?.username?.takeIf { it.isNotBlank() }
+                ?: "Your player dashboard",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
         )
@@ -578,7 +609,7 @@ private fun MyPiuConnection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HorizontalDivider()
-        SectionTitle("MyPIU account", state.account?.email)
+        SectionTitle("MyPIU account", state.account?.username?.takeIf { it.isNotBlank() } ?: "Username not set")
         if (state.isMyPiuConnected) {
             FilledTonalButton(onClick = onDisconnect, enabled = !state.isBusy) {
                 Icon(Icons.Default.AccountCircle, contentDescription = null)

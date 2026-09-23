@@ -26,6 +26,14 @@ struct RootView: View {
             }
         }
         .tint(AppTheme.accent)
+        .environmentObject(songCatalog)
+        .task(id: appModel.myPIUAccount?.piuGameVersion ?? appModel.selectedVersion) {
+            let preferredVersion = appModel.myPIUAccount?.piuGameVersion ?? appModel.selectedVersion
+            let versions = [preferredVersion] + PIUGameVersion.allCases.filter { $0 != preferredVersion }
+            for version in versions {
+                await songCatalog.preloadArtwork(version: version)
+            }
+        }
         .onChange(of: selectedDestination) { _, destination in
             visitedDestinations.insert(destination)
             resignFocus()
@@ -54,7 +62,7 @@ struct RootView: View {
 
     private var compactLayout: some View {
         TabView(selection: $selectedDestination) {
-            ForEach(Destination.allCases) { destination in
+            ForEach(Destination.compactOrder) { destination in
                 navigationStack(for: destination)
                 .tabItem {
                     Label(destination.title, systemImage: destination.compactSystemImage)
@@ -151,6 +159,8 @@ private enum Destination: String, CaseIterable, Identifiable {
     case progress
     case activity
     case account
+
+    static let compactOrder: [Destination] = [.home, .activity, .progress, .songs, .account]
 
     var id: String { rawValue }
 

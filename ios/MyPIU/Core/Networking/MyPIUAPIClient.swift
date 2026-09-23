@@ -151,14 +151,31 @@ actor MyPIUAPIClient {
         return response.session
     }
 
-    func performanceSessions(accessToken: String) async throws -> [MyPIUPerformanceSession] {
-        var request = authenticatedRequest(
-            path: "/api/mobile/v1/performance/sessions",
-            accessToken: accessToken
-        )
+    func performanceSessions(
+        offset: Int = 0,
+        limit: Int = 20,
+        accessToken: String
+    ) async throws -> MyPIUPerformanceSessionsPage {
+        var components = URLComponents(
+            url: url(path: "/api/mobile/v1/performance/sessions"),
+            resolvingAgainstBaseURL: false
+        )!
+        components.queryItems = [
+            URLQueryItem(name: "offset", value: String(max(0, offset))),
+            URLQueryItem(name: "limit", value: String(min(max(limit, 1), 50)))
+        ]
+        guard let requestURL = components.url else {
+            throw MyPIUAPIError.invalidResponse
+        }
+        var request = URLRequest(url: requestURL)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpMethod = "GET"
         let response: PerformanceSessionsResponse = try await send(request)
-        return response.sessions
+        return MyPIUPerformanceSessionsPage(
+            sessions: response.sessions,
+            nextOffset: response.nextOffset
+        )
     }
 
     func searchCatalog(
@@ -176,8 +193,8 @@ actor MyPIUAPIClient {
         var queryItems = [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "limit", value: String(min(max(limit, 1), 35))),
-            URLQueryItem(name: "sortBy", value: "title"),
-            URLQueryItem(name: "sortDirection", value: "asc"),
+            URLQueryItem(name: "sortBy", value: filters.sortBy.rawValue),
+            URLQueryItem(name: "sortDirection", value: filters.sortDirection.rawValue),
             URLQueryItem(name: "supportedVersion", value: version.rawValue)
         ]
         if let cursor {
@@ -371,6 +388,7 @@ private struct PerformanceSessionResponse: Decodable {
 
 private struct PerformanceSessionsResponse: Decodable {
     let sessions: [MyPIUPerformanceSession]
+    let nextOffset: Int?
 }
 
 private struct FavoriteUpdatePayload: Encodable {

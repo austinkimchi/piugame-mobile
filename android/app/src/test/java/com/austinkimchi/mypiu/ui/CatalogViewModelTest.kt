@@ -5,6 +5,8 @@ import com.austinkimchi.mypiu.core.catalog.CatalogDataSource
 import com.austinkimchi.mypiu.core.model.CatalogListing
 import com.austinkimchi.mypiu.core.model.CatalogSearchPage
 import com.austinkimchi.mypiu.core.model.CatalogSong
+import com.austinkimchi.mypiu.core.model.CatalogSortDirection
+import com.austinkimchi.mypiu.core.model.CatalogSortOption
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.SongChartPerformance
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
@@ -26,6 +28,26 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CatalogViewModelTest {
+    @Test
+    fun sortChangesReloadTheCatalogWithWebsiteSortValues() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakeCatalogDataSource()
+            val viewModel = CatalogViewModel(source)
+            viewModel.start()
+            advanceUntilIdle()
+
+            viewModel.setSort(CatalogSortOption.ARTIST, CatalogSortDirection.ASCENDING)
+            advanceUntilIdle()
+
+            assertEquals(CatalogSortOption.ARTIST, source.searches.last().sortBy)
+            assertEquals(CatalogSortDirection.ASCENDING, source.searches.last().sortDirection)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test
     fun accountFeedsUseSpecialQueriesAndPreferredVersion() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
@@ -74,6 +96,27 @@ class CatalogViewModelTest {
             advanceUntilIdle()
 
             assertEquals(listOf("new"), source.searches.map(Search::query))
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun artworkIndexSurvivesSearchAndNormalizesSessionTitle() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakeCatalogDataSource(song = favoriteSong().copy(imageUrl = "/jackets/song.png"))
+            val viewModel = CatalogViewModel(source)
+            viewModel.start()
+            advanceUntilIdle()
+
+            source.searchHandler = { _, _, _, _ -> CatalogSearchPage(emptyList(), null, 0) }
+            viewModel.setQuery("unrelated")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.state.value.listing.songs.isEmpty())
+            assertEquals("/jackets/song.png", viewModel.artworkUrl("  SONG  "))
         } finally {
             Dispatchers.resetMain()
         }
@@ -503,6 +546,8 @@ private data class Search(
     val cursor: String?,
     val version: PiuGameVersion,
     val authenticated: Boolean,
+    val sortBy: CatalogSortOption,
+    val sortDirection: CatalogSortDirection,
 )
 
 private data class CachedFavoriteWrite(
@@ -531,8 +576,10 @@ private class FakeCatalogDataSource(
         cursor: String?,
         version: PiuGameVersion,
         authenticated: Boolean,
+        sortBy: CatalogSortOption,
+        sortDirection: CatalogSortDirection,
     ): CatalogSearchPage {
-        searches += Search(query, cursor, version, authenticated)
+        searches += Search(query, cursor, version, authenticated, sortBy, sortDirection)
         searchHandler?.let { return it(query, cursor, version, authenticated) }
         return CatalogSearchPage(listOf(song), null, 1)
     }
@@ -556,6 +603,8 @@ private class FakeCatalogDataSource(
         query: String,
         version: PiuGameVersion,
         scope: String,
+        sortBy: CatalogSortOption,
+        sortDirection: CatalogSortDirection,
     ): CatalogCache.CachedListing? {
         cacheReads += scope
         return null
@@ -566,6 +615,8 @@ private class FakeCatalogDataSource(
         query: String,
         version: PiuGameVersion,
         scope: String,
+        sortBy: CatalogSortOption,
+        sortDirection: CatalogSortDirection,
     ) {
         cacheWrites += scope
         cachedSongFavorites += listing.songs.map(CatalogSong::isFavorite)
