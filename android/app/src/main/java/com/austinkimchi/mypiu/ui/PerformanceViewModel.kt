@@ -49,6 +49,10 @@ class PerformanceViewModel(private val repository: PerformanceDataSource) : View
         reload()
     }
 
+    fun onAppResumed() {
+        if (started) refresh()
+    }
+
     fun acknowledgeSessionInvalidation() {
         mutableState.update { it.copy(sessionInvalidated = false) }
     }

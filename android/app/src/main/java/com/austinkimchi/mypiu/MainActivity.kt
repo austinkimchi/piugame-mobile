@@ -52,6 +52,11 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
     }
 
+    override fun onResume() {
+        super.onResume()
+        performanceViewModel.onAppResumed()
+    }
+
     private fun handleIntent(intent: Intent) {
         val callback = intent.myPiuOAuthCallback() ?: return
         intent.data = null

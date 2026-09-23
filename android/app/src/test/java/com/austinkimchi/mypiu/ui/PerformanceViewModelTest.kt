@@ -49,6 +49,35 @@ class PerformanceViewModelTest {
     }
 
     @Test
+    fun appResumeReloadsOnlyAfterProgressHasStarted() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        try {
+            val source = FakePerformanceDataSource(
+                ArrayDeque(listOf(dashboard("First"), dashboard("Resumed"))),
+            )
+            val viewModel = PerformanceViewModel(source)
+            viewModel.updateSession("one", connected = true)
+
+            viewModel.onAppResumed()
+            advanceUntilIdle()
+            assertEquals(0, source.requests)
+
+            viewModel.start()
+            advanceUntilIdle()
+            assertEquals("First", viewModel.state.value.dashboard?.profile?.displayName)
+
+            viewModel.onAppResumed()
+            advanceUntilIdle()
+
+            assertEquals("Resumed", viewModel.state.value.dashboard?.profile?.displayName)
+            assertEquals(2, source.requests)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun accountSwitchClearsOldDashboardAndLoadsReplacement() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
