@@ -59,6 +59,9 @@ final class AppModel: ObservableObject {
     private var volatilePendingRevocations: [MyPIUAccessToken] = []
     private var performanceRequestID = UUID()
     private var hasRestored = false
+    private var restorationTask: Task<Void, Never>?
+    private var isPIUGameSyncInFlight = false
+    private var lastPIUGameSyncAttemptAt: Date?
     private var isRetryingPendingRevocations = false
     private var shouldRetryPendingRevocations = false
 
@@ -99,7 +102,22 @@ final class AppModel: ObservableObject {
 
     func restore() async {
         guard !hasRestored else { return }
+        if let restorationTask {
+            await restorationTask.value
+            return
+        }
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.restoreOnce()
+        }
+        restorationTask = task
+        await task.value
+        restorationTask = nil
         hasRestored = true
+    }
+
+    private func restoreOnce() async {
         Task { await retryPendingMyPIURevocations() }
 
         let savedCredentials: PIUCredentials?
@@ -113,6 +131,7 @@ final class AppModel: ObservableObject {
 
         guard let savedCredentials else {
             state = .signedOut
+            BackgroundRefreshScheduler.cancel()
             await restoreMyPIU()
             return
         }
@@ -120,6 +139,7 @@ final class AppModel: ObservableObject {
         credentials = savedCredentials
         selectedVersion = savedCredentials.version
         state = .restoring
+        BackgroundRefreshScheduler.schedule()
 
         async let myPIURestore: Void = restoreMyPIU()
         let didSync = await sync(
@@ -249,8 +269,38 @@ final class AppModel: ObservableObject {
         await revocationRetry
     }
 
-    func handleAppActivation() async {
+    func performBackgroundRefresh() async {
+        await restore()
+        guard credentials != nil else {
+            BackgroundRefreshScheduler.cancel()
+            return
+        }
+        if BackgroundRefreshScheduler.shouldRefreshAfterActivation(
+            lastRefreshAt: latestPIUGameRefreshAt
+        ) {
+            await refresh()
+        }
+        if credentials != nil {
+            BackgroundRefreshScheduler.schedule()
+        } else {
+            BackgroundRefreshScheduler.cancel()
+        }
+    }
+
+    func handleAppActivation(now: Date = Date()) async {
         await retryPendingMyPIURevocations()
+        guard let credentials else { return }
+        guard BackgroundRefreshScheduler.shouldRefreshAfterActivation(
+            lastRefreshAt: latestPIUGameRefreshAt,
+            now: now
+        ) else { return }
+        _ = await sync(using: credentials, saveAfterSuccess: false)
+    }
+
+    private var latestPIUGameRefreshAt: Date? {
+        [lastPIUGameSyncAttemptAt, snapshot?.fetchedAt]
+            .compactMap { $0 }
+            .max()
     }
 
     func searchCatalog(
@@ -402,7 +452,9 @@ final class AppModel: ObservableObject {
             credentials = nil
             client = nil
             snapshot = nil
+            lastPIUGameSyncAttemptAt = nil
             state = .signedOut
+            BackgroundRefreshScheduler.cancel()
         } catch {
             state = .failed(error.localizedDescription)
         }
@@ -413,6 +465,11 @@ final class AppModel: ObservableObject {
         saveAfterSuccess: Bool,
         uploadAfterSuccess: Bool = true
     ) async -> Bool {
+        guard !isPIUGameSyncInFlight else { return false }
+        isPIUGameSyncInFlight = true
+        lastPIUGameSyncAttemptAt = Date()
+        defer { isPIUGameSyncInFlight = false }
+
         state = .syncing
         let client = PIUGameClient(version: credentials.version)
         self.client = client

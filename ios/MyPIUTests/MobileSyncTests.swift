@@ -3,6 +3,40 @@ import XCTest
 @testable import MyPIU
 
 final class MobileSyncTests: XCTestCase {
+    func testActivationRefreshPolicyRunsInitiallyAndAtTheStaleThreshold() {
+        let now = Date(timeIntervalSince1970: 1_790_000_000)
+
+        XCTAssertTrue(
+            BackgroundRefreshScheduler.shouldRefreshAfterActivation(
+                lastRefreshAt: nil,
+                now: now
+            )
+        )
+        XCTAssertTrue(
+            BackgroundRefreshScheduler.shouldRefreshAfterActivation(
+                lastRefreshAt: now.addingTimeInterval(-BackgroundRefreshScheduler.activationRefreshInterval),
+                now: now
+            )
+        )
+    }
+
+    func testActivationRefreshPolicyThrottlesRecentAndFutureAttempts() {
+        let now = Date(timeIntervalSince1970: 1_790_000_000)
+
+        XCTAssertFalse(
+            BackgroundRefreshScheduler.shouldRefreshAfterActivation(
+                lastRefreshAt: now.addingTimeInterval(-BackgroundRefreshScheduler.activationRefreshInterval + 1),
+                now: now
+            )
+        )
+        XCTAssertFalse(
+            BackgroundRefreshScheduler.shouldRefreshAfterActivation(
+                lastRefreshAt: now.addingTimeInterval(60),
+                now: now
+            )
+        )
+    }
+
     func testExpiredAccessTokenRequiresReauthentication() {
         let token = MyPIUAccessToken(
             value: "expired-token",
