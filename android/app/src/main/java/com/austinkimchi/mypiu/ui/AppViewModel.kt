@@ -51,8 +51,10 @@ class AppViewModel(
         viewModelScope.launch { runOperation { repository.connectPiu(username, password, version) } }
     }
 
-    fun refresh() {
-        viewModelScope.launch { runOperation { repository.sync() } }
+    fun refresh(onSuccess: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            if (runOperation { repository.sync() } == null) onSuccess?.invoke()
+        }
     }
 
     fun reconcileConnectionState() {

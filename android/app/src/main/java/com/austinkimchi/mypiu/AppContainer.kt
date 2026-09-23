@@ -5,6 +5,7 @@ import com.austinkimchi.mypiu.core.catalog.CatalogCache
 import com.austinkimchi.mypiu.core.catalog.CatalogRepository
 import com.austinkimchi.mypiu.core.network.MyPiuApiClient
 import com.austinkimchi.mypiu.core.network.OAuthCoordinator
+import com.austinkimchi.mypiu.core.performance.PerformanceRepository
 import com.austinkimchi.mypiu.core.security.AndroidKeystoreSecretStore
 import com.austinkimchi.mypiu.core.security.InstallationIdentity
 import com.austinkimchi.mypiu.core.security.SessionStore
@@ -35,5 +36,6 @@ class AppContainer(context: Context) {
         apiClient = apiClient,
         cache = CatalogCache(File(context.cacheDir, "catalog")),
     )
+    val performanceRepository = PerformanceRepository(sessionStore, apiClient)
     val scheduler = SyncScheduler(context)
 }

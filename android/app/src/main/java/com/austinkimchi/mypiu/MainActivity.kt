@@ -11,6 +11,7 @@ import androidx.core.net.toUri
 import com.austinkimchi.mypiu.ui.AppViewModel
 import com.austinkimchi.mypiu.ui.CatalogViewModel
 import com.austinkimchi.mypiu.ui.MyPiuApp
+import com.austinkimchi.mypiu.ui.PerformanceViewModel
 import com.austinkimchi.mypiu.ui.theme.MyPiuTheme
 
 class MainActivity : ComponentActivity() {
@@ -23,6 +24,9 @@ class MainActivity : ComponentActivity() {
     private val catalogViewModel: CatalogViewModel by viewModels {
         CatalogViewModel.Factory((application as MyPIUApplication).container)
     }
+    private val performanceViewModel: PerformanceViewModel by viewModels {
+        PerformanceViewModel.Factory((application as MyPIUApplication).container)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +36,7 @@ class MainActivity : ComponentActivity() {
                 MyPiuApp(
                     viewModel = viewModel,
                     catalogViewModel = catalogViewModel,
+                    performanceViewModel = performanceViewModel,
                     openAuthorization = { url ->
                         CustomTabsIntent.Builder().build().launchUrl(this, url.toUri())
                     },
