@@ -57,6 +57,7 @@ After changing either version, let the iOS CI archive gate pass before creating 
 - Confirm the backend account-deletion release is live.
 - Exercise Google and Discord sign-in on a physical device.
 - Connect PIUGAME, foreground sync, background refresh, sign-out, and account deletion.
+- Open the Support and Privacy Policy links from Account and confirm the displayed version and build match the installed beta.
 - Confirm the archive contains `PrivacyInfo.xcprivacy` and the 1024-point App Store icon.
 - Confirm the archive contains `MyPIU Sync Extension.appex`, then enable it in Safari and grant access to MyPIU and the selected PIUGAME version on a physical device.
 - Confirm App Store Connect reports no missing export-compliance or privacy information.
