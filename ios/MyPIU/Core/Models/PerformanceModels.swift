@@ -16,8 +16,25 @@ struct MyPIUPerformanceDashboard: Decodable, Equatable, Sendable {
         let clearCount: Int?
         let totalCharts: Int?
         let progressPercent: Double?
+        let nextTitle: NextTitle?
         let recentArcade: String?
         let lastSyncedAt: String?
+    }
+
+    struct NextTitle: Decodable, Equatable, Sendable {
+        let name: String
+        let metric: String
+        let current: Double
+        let target: Double
+
+        var progressFraction: Double {
+            guard target > 0 else { return 0 }
+            return min(1, max(0, current / target))
+        }
+
+        var remaining: Double {
+            max(0, target - current)
+        }
     }
 
     struct Totals: Decodable, Equatable, Sendable {

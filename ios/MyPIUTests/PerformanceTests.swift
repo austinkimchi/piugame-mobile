@@ -15,6 +15,12 @@ final class PerformanceTests: XCTestCase {
                 "clearCount": 640,
                 "totalCharts": 3900,
                 "progressPercent": 16,
+                "nextTitle": {
+                  "name": "[S] ADVANCED LV.5",
+                  "metric": "single_pumbility",
+                  "current": 15828.94,
+                  "target": 16000
+                },
                 "recentArcade": "ROUND1",
                 "lastSyncedAt": "2026-09-22T07:30:00.000Z"
               },
@@ -68,6 +74,8 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(dashboard.profile?.clearCount, 640)
         XCTAssertEqual(dashboard.profile?.totalCharts, 3_900)
         XCTAssertEqual(dashboard.profile?.progressPercent, 16)
+        XCTAssertEqual(dashboard.profile?.nextTitle?.name, "[S] ADVANCED LV.5")
+        XCTAssertEqual(dashboard.profile?.nextTitle?.remaining ?? 0, 171.06, accuracy: 0.001)
         XCTAssertEqual(dashboard.totals.averageBestScore, 954_848)
         XCTAssertEqual(dashboard.recentPlays.first?.id, "play-1")
         XCTAssertEqual(dashboard.recentPlays.first?.score, 954_848)

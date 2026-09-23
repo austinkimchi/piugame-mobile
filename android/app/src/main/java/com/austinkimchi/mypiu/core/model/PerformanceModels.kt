@@ -20,9 +20,24 @@ data class MyPiuPerformanceDashboard(
         val clearCount: Int? = null,
         val totalCharts: Int? = null,
         val progressPercent: Double? = null,
+        val nextTitle: NextTitle? = null,
         val recentArcade: String? = null,
         val lastSyncedAt: String? = null,
     )
+
+    @Serializable
+    data class NextTitle(
+        val name: String,
+        val metric: String,
+        val current: Double,
+        val target: Double,
+    ) {
+        val progressFraction: Float
+            get() = if (target > 0) (current / target).coerceIn(0.0, 1.0).toFloat() else 0f
+
+        val remaining: Double
+            get() = (target - current).coerceAtLeast(0.0)
+    }
 
     @Serializable
     data class Totals(
