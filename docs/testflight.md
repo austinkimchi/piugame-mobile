@@ -6,6 +6,8 @@ CI creates an unsigned generic-device Release archive and verifies the built app
 
 ## One-time App Store Connect setup
 
+The version-controlled English listing copy, TestFlight copy, screenshot plan, and private-value checklist live in [`ios/AppStore`](../ios/AppStore/README.md). Run `./scripts/verify-ios-store-metadata.sh` before copying them into App Store Connect.
+
 1. Create explicit App IDs for `com.austinkimchi.mypiu` and `com.austinkimchi.mypiu.safari`, then create the App Store Connect app record for the main app ID.
 2. Set the iOS privacy policy URL to `https://mypiu.austin.kim/privacy`.
 3. Complete App Privacy using the same linked, non-tracking data categories declared in `PrivacyInfo.xcprivacy`: name, email address, user ID, device ID, gameplay content, and coarse location.

@@ -1,0 +1,1 @@
+MyPIU is a native companion for tracking Pump It Up scores, chart progress, Pumbility, recent sessions, and recommendations. PIUGAME pages are fetched and parsed on the tester's device, while only normalized performance data is sent to the MyPIU account the tester connects.

@@ -10,6 +10,8 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
+      - name: Validate App Store metadata
+        run: ./scripts/verify-ios-store-metadata.sh
       - name: Test iOS release helpers
         run: ./scripts/test-ios-release-helpers.sh
       - uses: actions/setup-node@v5
