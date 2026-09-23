@@ -65,7 +65,7 @@ struct AccountView: View {
             if let profile = model.snapshot?.profile {
                 Section("PIUGAME") {
                     LabeledContent("Player", value: profile.displayName)
-                    LabeledContent("Username", value: profile.username)
+                    LabeledContent("Email", value: profile.username)
                     LabeledContent("Version", value: model.selectedVersion.displayName)
                 }
 
@@ -81,7 +81,8 @@ struct AccountView: View {
                 }
             } else {
                 Section("PIUGAME") {
-                    TextField("Username", text: $username)
+                    TextField("Email", text: $username)
+                        .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     SecureField("Password", text: $password)

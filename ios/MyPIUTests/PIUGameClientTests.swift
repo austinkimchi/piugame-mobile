@@ -14,12 +14,31 @@ final class PIUGameClientTests: XCTestCase {
 
         XCTAssertEqual(first.profile.username, "fixture")
         XCTAssertEqual(second.profile.pumbilityScore, 123.45)
-        XCTAssertEqual(firstRequests.count, 4)
-        XCTAssertEqual(requests.count, 7)
+        XCTAssertEqual(firstRequests.count, 5)
+        XCTAssertEqual(requests.count, 8)
+        XCTAssertEqual(requests.filter { $0.method == "GET" && $0.path == "/bbs/login.php" }.count, 1)
         XCTAssertEqual(requests.filter { $0.method == "POST" && $0.path == "/bbs/login_check.php" }.count, 1)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/play_data.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/recently_played.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/pumbility.php" }.count, 2)
+    }
+
+    func testLoginCheckPageIsReportedAsCredentialFailure() async {
+        let transport = PIUGameTransportStub()
+        let client = PIUGameClient(version: .phoenix2, transport: transport)
+        await transport.rejectNextLogin()
+
+        do {
+            _ = try await client.loginAndFetch(username: "fixture", password: "wrong")
+            XCTFail("Expected authentication to fail")
+        } catch PIUGameClientError.authenticationFailed {
+            let requests = await transport.recordedRequests()
+            XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 1)
+            XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 1)
+            XCTAssertEqual(requests.filter { $0.path == "/my_page/play_data.php" }.count, 0)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
     }
 
     func testExpiredSessionRelogsInAndRetriesWithFreshCookies() async throws {
@@ -31,7 +50,8 @@ final class PIUGameClientTests: XCTestCase {
         _ = try await client.loginAndFetch(username: "fixture", password: "secret")
         let requests = await transport.recordedRequests()
 
-        XCTAssertEqual(requests.count, 9)
+        XCTAssertEqual(requests.count, 11)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/play_data.php" }.count, 3)
     }
@@ -44,12 +64,13 @@ final class PIUGameClientTests: XCTestCase {
         _ = try await client.loginAndFetch(username: "second", password: "secret")
         let requests = await transport.recordedRequests()
 
-        XCTAssertEqual(requests.count, 8)
+        XCTAssertEqual(requests.count, 10)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/play_data.php" }.count, 2)
     }
 
-    func testLoginPageFromAuthenticatedEndpointInvalidatesSession() async throws {
+    func testLoginRedirectFromAuthenticatedEndpointInvalidatesSession() async throws {
         let transport = PIUGameTransportStub()
         let client = PIUGameClient(version: .phoenix2, transport: transport)
 
@@ -58,7 +79,8 @@ final class PIUGameClientTests: XCTestCase {
         _ = try await client.loginAndFetch(username: "fixture", password: "secret")
         let requests = await transport.recordedRequests()
 
-        XCTAssertEqual(requests.count, 11)
+        XCTAssertEqual(requests.count, 13)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
     }
 
@@ -71,7 +93,8 @@ final class PIUGameClientTests: XCTestCase {
         _ = try await client.loginAndFetch(username: "fixture", password: "secret")
         let requests = await transport.recordedRequests()
 
-        XCTAssertEqual(requests.count, 9)
+        XCTAssertEqual(requests.count, 11)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/my_page/play_data.php" }.count, 3)
     }
@@ -86,7 +109,8 @@ final class PIUGameClientTests: XCTestCase {
         let requests = await transport.recordedRequests()
 
         XCTAssertEqual(snapshot.profile.pumbilityScore, 123.45)
-        XCTAssertEqual(requests.count, 11)
+        XCTAssertEqual(requests.count, 13)
+        XCTAssertEqual(requests.filter { $0.path == "/bbs/login.php" }.count, 2)
         XCTAssertEqual(requests.filter { $0.path == "/bbs/login_check.php" }.count, 2)
     }
 }
@@ -98,7 +122,9 @@ private actor PIUGameTransportStub: PIUGameHTTPTransport {
     }
 
     private var authenticated = false
+    private var loginSessionPrepared = false
     private var shouldExpireDuringRecentFetch = false
+    private var shouldRejectNextLogin = false
     private var rejectedProfileStatusCode: Int?
     private var shouldRedirectPumbilityToLogin = false
     private var requests: [RecordedRequest] = []
@@ -111,11 +137,20 @@ private actor PIUGameTransportStub: PIUGameHTTPTransport {
         let body: String
         let statusCode: Int
         let responseURL: URL?
-        if method == "POST", path == "/bbs/login_check.php" {
-            authenticated = true
-            body = "OK"
+        if method == "GET", path == "/bbs/login.php" {
+            loginSessionPrepared = true
+            body = Self.loginHTML
             statusCode = 200
             responseURL = request.url
+        } else if method == "POST", path == "/bbs/login_check.php" {
+            authenticated = loginSessionPrepared && !shouldRejectNextLogin
+            loginSessionPrepared = false
+            shouldRejectNextLogin = false
+            body = authenticated ? "OK" : Self.loginHTML
+            statusCode = 200
+            responseURL = authenticated
+                ? URL(string: "https://www.piugame.com/")
+                : request.url
         } else if path == "/my_page/play_data.php", let rejectedProfileStatusCode {
             self.rejectedProfileStatusCode = nil
             authenticated = false
@@ -125,7 +160,7 @@ private actor PIUGameTransportStub: PIUGameHTTPTransport {
         } else if !authenticated {
             body = Self.loginHTML
             statusCode = 200
-            responseURL = request.url
+            responseURL = URL(string: "https://www.piugame.com/bbs/login.php")
         } else {
             switch path {
             case "/my_page/play_data.php": body = Self.profileHTML
@@ -142,7 +177,7 @@ private actor PIUGameTransportStub: PIUGameHTTPTransport {
             default: body = ""
             }
             statusCode = 200
-            responseURL = path == "/my_page/pumbility.php" && !authenticated
+            responseURL = path.hasPrefix("/my_page/") && !authenticated
                 ? URL(string: "https://www.piugame.com/bbs/login.php")
                 : request.url
         }
@@ -156,6 +191,10 @@ private actor PIUGameTransportStub: PIUGameHTTPTransport {
 
     func expireSession() {
         authenticated = false
+    }
+
+    func rejectNextLogin() {
+        shouldRejectNextLogin = true
     }
 
     func expireDuringNextRecentFetch() {
@@ -182,6 +221,12 @@ private actor PIUGameTransportStub: PIUGameHTTPTransport {
     """#
 
     private static let profileHTML = #"""
+    <div hidden>
+      <form action="/bbs/login_check.php">
+        <input name="mb_id" />
+        <input name="mb_password" />
+      </form>
+    </div>
     <div class="play_data_wrap">
       <div class="profile_name"><div class="name_w"><span class="t2">PLAYER#1234</span></div></div>
     </div>
