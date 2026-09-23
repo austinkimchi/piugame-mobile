@@ -13,7 +13,6 @@ struct RootView: View {
     @State private var activityPath = NavigationPath()
     @State private var accountPath = NavigationPath()
     @State private var songQuery = ""
-    @State private var activitySection: ActivityView.Section = .recent
     @State private var accountUsername = ""
     @State private var accountPassword = ""
     @State private var showingAccountDeletion = false
@@ -125,7 +124,7 @@ struct RootView: View {
         case .progress:
             PlayerProgressView()
         case .activity:
-            ActivityView(section: $activitySection)
+            PerformanceSessionsView()
         case .account:
             AccountView(
                 username: $accountUsername,
@@ -160,7 +159,7 @@ private enum Destination: String, CaseIterable, Identifiable {
         case .home: "Home"
         case .songs: "Songs"
         case .progress: "Progress"
-        case .activity: "Activity"
+        case .activity: "Sessions"
         case .account: "Account"
         }
     }

@@ -98,11 +98,17 @@ fun MyPiuApp(
     val performanceDashboard = performanceState.dashboard
     var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
     var showingPumbility by rememberSaveable { mutableStateOf(false) }
-    var showingPerformanceSession by rememberSaveable { mutableStateOf(false) }
+    var selectedSessionId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSongSlug by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedChartToken by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSongVersionName by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSongFallbackJson by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingDisconnection by remember { mutableStateOf<AccountDisconnection?>(null) }
+    val selectedPerformanceSession = selectedSessionId?.let { selectedId ->
+        performanceState.sessions.firstOrNull { session ->
+            session.id == selectedId || (session.id.isBlank() && session.summary.endedAt == selectedId)
+        }
+    }
     val selectedSongFallback = remember(selectedSongFallbackJson) {
         selectedSongFallbackJson?.let { runCatching { catalogSongJson.decodeFromString<CatalogSong>(it) }.getOrNull() }
     }
@@ -134,8 +140,8 @@ fun MyPiuApp(
     }
 
     fun navigateBack() {
-        if (showingPerformanceSession) {
-            showingPerformanceSession = false
+        if (selectedSessionId != null) {
+            selectedSessionId = null
         } else if (showingPumbility) {
             showingPumbility = false
         } else if (selectedChartToken != null) {
@@ -148,7 +154,7 @@ fun MyPiuApp(
     }
 
     BackHandler(
-        enabled = selectedSongSlug != null || showingPumbility || showingPerformanceSession,
+        enabled = selectedSongSlug != null || showingPumbility || selectedSessionId != null,
         onBack = ::navigateBack,
     )
 
@@ -213,7 +219,7 @@ fun MyPiuApp(
                         selectedSongSlug = null
                         selectedChartToken = null
                         showingPumbility = false
-                        showingPerformanceSession = false
+                        selectedSessionId = null
                         selectedSongVersionName = null
                         selectedSongFallbackJson = null
                     },
@@ -239,13 +245,15 @@ fun MyPiuApp(
                 title = {
                     Text(
                         when {
-                            showingPerformanceSession -> "Recent Session"
+                            selectedPerformanceSession != null -> performanceSessionDayLabel(
+                                selectedPerformanceSession.summary.endedAt,
+                            )
                             showingPumbility -> "Pumbility"
                             selectedChartToken != null -> selectedChartToken.orEmpty()
                             selectedSong != null -> selectedSong.title
                             destination == AppDestination.SONGS -> "Songs"
                             destination == AppDestination.PROGRESS -> "Progress"
-                            destination == AppDestination.ACTIVITY -> "Activity"
+                            destination == AppDestination.ACTIVITY -> "Sessions"
                             else -> "MyPIU"
                         },
                         fontWeight = FontWeight.Black,
@@ -254,7 +262,7 @@ fun MyPiuApp(
                     )
                 },
                 navigationIcon = {
-                    if (selectedSongSlug != null || showingPumbility || showingPerformanceSession) {
+                    if (selectedSongSlug != null || showingPumbility || selectedSessionId != null) {
                         IconButton(onClick = ::navigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
@@ -267,11 +275,13 @@ fun MyPiuApp(
                     }
                 },
                 actions = {
-                    if (!showingPumbility && (selectedSong == null || selectedChartToken != null)) {
+                    if (
+                        !showingPumbility && destination != AppDestination.ACTIVITY &&
+                        (selectedSong == null || selectedChartToken != null)
+                    ) {
                         IconButton(
                             onClick = {
                                 when {
-                                    showingPerformanceSession -> performanceViewModel.loadSession(force = true)
                                     selectedChartToken != null && selectedSong != null -> {
                                         catalogViewModel.loadChartHistory(
                                             selectedSong,
@@ -286,8 +296,6 @@ fun MyPiuApp(
                                 }
                             },
                             enabled = when {
-                                showingPerformanceSession -> performanceState.isConnected &&
-                                    !performanceState.isSessionLoading
                                 selectedChartToken != null -> {
                                     !isRestoringSelectedVersion && !catalogState.chartHistory.orDefaultLoading
                                 }
@@ -319,6 +327,8 @@ fun MyPiuApp(
                     state = state,
                     viewModel = viewModel,
                     openAuthorization = openAuthorization,
+                    onDisconnectMyPiu = { pendingDisconnection = AccountDisconnection.MYPIU },
+                    onDisconnectPiuGame = { pendingDisconnection = AccountDisconnection.PIUGAME },
                 )
                 destination == AppDestination.PROGRESS && showingPumbility && performanceDashboard != null -> {
                     PumbilityBreakdownScreen(performanceDashboard)
@@ -330,17 +340,16 @@ fun MyPiuApp(
                     onRefresh = ::refreshProgress,
                     onOpenPumbility = { showingPumbility = true },
                 )
-                destination == AppDestination.ACTIVITY && showingPerformanceSession -> PerformanceSessionScreen(
+                destination == AppDestination.ACTIVITY && selectedPerformanceSession != null -> {
+                    PerformanceSessionScreen(selectedPerformanceSession)
+                }
+                destination == AppDestination.ACTIVITY -> PerformanceSessionsScreen(
                     state = performanceState,
-                    accountName = performanceDashboard?.profile?.displayName ?: state.account?.name,
                     onLoad = performanceViewModel::loadSession,
                     onRefresh = { performanceViewModel.loadSession(force = true) },
-                )
-                destination == AppDestination.ACTIVITY -> ActivityScreen(
-                    state = performanceState,
-                    localRecentPlays = state.recentPlays,
-                    onRefresh = ::refreshProgress,
-                    onOpenSession = { showingPerformanceSession = true },
+                    onOpenSession = { session ->
+                        selectedSessionId = session.id.ifBlank { session.summary.endedAt }
+                    },
                 )
                 selectedSong == null -> CatalogScreen(
                     state = catalogState,
@@ -394,6 +403,27 @@ fun MyPiuApp(
             },
         )
     }
+    pendingDisconnection?.let { action ->
+        AlertDialog(
+            onDismissRequest = { pendingDisconnection = null },
+            title = { Text(action.title) },
+            text = { Text(action.message) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDisconnection = null
+                        when (action) {
+                            AccountDisconnection.MYPIU -> viewModel.disconnectMyPiu()
+                            AccountDisconnection.PIUGAME -> viewModel.disconnectPiu()
+                        }
+                    },
+                ) { Text(action.buttonLabel) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDisconnection = null }) { Text("Cancel") }
+            },
+        )
+    }
 }
 
 @Composable
@@ -401,6 +431,8 @@ private fun HomeContent(
     state: AppUiState,
     viewModel: AppViewModel,
     openAuthorization: (String) -> Unit,
+    onDisconnectMyPiu: () -> Unit,
+    onDisconnectPiuGame: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth().widthIn(max = 760.dp),
@@ -414,14 +446,14 @@ private fun HomeContent(
             MyPiuConnection(
                 state = state,
                 onAuthorize = { provider -> viewModel.authorizationUrl(provider)?.let(openAuthorization) },
-                onDisconnect = viewModel::disconnectMyPiu,
+                onDisconnect = onDisconnectMyPiu,
             )
         }
         item {
             PiuConnection(
                 state = state,
                 onConnect = viewModel::connectPiu,
-                onDisconnect = viewModel::disconnectPiu,
+                onDisconnect = onDisconnectPiuGame,
             )
         }
         if (state.recentPlays.isNotEmpty()) {
@@ -434,8 +466,25 @@ private fun HomeContent(
 private enum class AppDestination(val label: String) {
     HOME("Home"),
     PROGRESS("Progress"),
-    ACTIVITY("Activity"),
+    ACTIVITY("Sessions"),
     SONGS("Songs"),
+}
+
+private enum class AccountDisconnection(
+    val title: String,
+    val message: String,
+    val buttonLabel: String,
+) {
+    MYPIU(
+        "Disconnect MyPIU?",
+        "This signs MyPIU out on this device. Your synced data and MyPIU account remain available.",
+        "Disconnect MyPIU",
+    ),
+    PIUGAME(
+        "Disconnect PIUGAME?",
+        "Saved PIUGAME credentials and on-device play data will be removed. Your PIUGAME account is not deleted.",
+        "Disconnect PIUGAME",
+    ),
 }
 
 private val ChartHistoryUiState?.orDefaultLoading: Boolean

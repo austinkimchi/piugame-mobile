@@ -34,7 +34,7 @@ struct RecentPlayPresentation: Equatable, Identifiable {
         grade = play.grade
         plate = play.plate ?? snapshotPlay?.plate
         stageBreak = play.stageBreak
-        judgments = snapshotPlay?.judgments ?? JudgmentCounts(
+        judgments = play.judgments ?? snapshotPlay?.judgments ?? JudgmentCounts(
             perfect: nil,
             great: nil,
             good: nil,
@@ -235,14 +235,11 @@ struct SongArtwork: View {
 
     var body: some View {
         Group {
-            if let url {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        placeholder
-                    }
+            if url != nil {
+                CachedRemoteImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    placeholder
                 }
             } else {
                 placeholder

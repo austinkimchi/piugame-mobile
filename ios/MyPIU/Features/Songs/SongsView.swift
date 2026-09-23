@@ -629,22 +629,12 @@ struct CatalogArtwork: View {
     let size: CGFloat
 
     var body: some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFill()
-            case .failure:
-                artworkPlaceholder(systemImage: "music.note")
-            case .empty:
-                ZStack {
-                    Color(uiColor: .secondarySystemBackground)
-                    ProgressView()
-                }
-            @unknown default:
-                artworkPlaceholder(systemImage: "music.note")
-            }
+        CachedRemoteImage(url: url) { image in
+            image
+                .resizable()
+                .scaledToFill()
+        } placeholder: {
+            artworkPlaceholder(systemImage: "music.note")
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 6))

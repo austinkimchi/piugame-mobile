@@ -136,11 +136,12 @@ class PerformanceViewModel(
                 )
             }
             try {
-                val session = repository.session()
+                val sessions = repository.sessions()
                 if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
                 mutableState.update {
                     it.copy(
-                        session = session,
+                        session = sessions.firstOrNull(),
+                        sessions = sessions,
                         isSessionLoading = false,
                         isSessionLoaded = true,
                         sessionError = null,
@@ -160,6 +161,7 @@ class PerformanceViewModel(
                     it.copy(
                         dashboard = if (sessionInvalidated) null else it.dashboard,
                         session = null,
+                        sessions = emptyList(),
                         isConnected = if (sessionInvalidated) false else it.isConnected,
                         isSessionLoading = false,
                         isSessionLoaded = false,
@@ -183,6 +185,7 @@ data class PerformanceUiState(
     val isConnected: Boolean = false,
     val dashboard: MyPiuPerformanceDashboard? = null,
     val session: MyPiuPerformanceSession? = null,
+    val sessions: List<MyPiuPerformanceSession> = emptyList(),
     val isLoading: Boolean = false,
     val isSessionLoading: Boolean = false,
     val isSessionLoaded: Boolean = false,

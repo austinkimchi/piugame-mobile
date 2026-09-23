@@ -18,10 +18,11 @@ actor CatalogCache {
         var songs: [CatalogSong]
         let nextCursor: String?
         var total: Int
+        let filterOptions: CatalogFilterOptions
         let cachedAt: Date
     }
 
-    private static let schemaVersion = 2
+    private static let schemaVersion = 3
     private static let maximumEntries = 12
 
     private let directory: URL
@@ -44,7 +45,12 @@ actor CatalogCache {
             return nil
         }
         return CachedListing(
-            listing: CatalogListing(songs: entry.songs, nextCursor: entry.nextCursor, total: entry.total),
+            listing: CatalogListing(
+                songs: entry.songs,
+                nextCursor: entry.nextCursor,
+                total: entry.total,
+                filterOptions: entry.filterOptions
+            ),
             cachedAt: entry.cachedAt
         )
     }
@@ -67,6 +73,7 @@ actor CatalogCache {
                 songs: listing.songs,
                 nextCursor: listing.nextCursor,
                 total: listing.total,
+                filterOptions: listing.filterOptions,
                 cachedAt: now
             )
         )
