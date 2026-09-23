@@ -220,7 +220,7 @@ fun MyPiuApp(
                                 AppDestination.ACTIVITY -> Icons.Default.History
                                 AppDestination.SONGS -> Icons.Default.MusicNote
                             },
-                            contentDescription = item.label,
+                            contentDescription = null,
                         )
                     },
                     label = { Text(item.label) },
