@@ -245,6 +245,9 @@ struct SongsView: View {
                         Label("Saved", systemImage: "arrow.down.circle")
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+                .background(Color(uiColor: .systemBackground))
             }
 
             if let refreshError = catalog.refreshError {
