@@ -351,6 +351,38 @@ final class CatalogTests: XCTestCase {
     }
 
     @MainActor
+    func testRecentDashboardPlayUsesCatalogArtworkWithoutLocalSnapshot() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fixturePage = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
+        let song = try XCTUnwrap(fixturePage.songs.first)
+        let catalog = SongCatalogModel(
+            cache: CatalogCache(directory: directory),
+            artworkSearchCatalog: { _, _, _ in
+                CatalogSearchPage(songs: [song], nextCursor: nil, total: 1)
+            }
+        )
+        // Dashboard responses deliberately omit artwork; Google-only sign-in has no local PIUGAME snapshot.
+        let play = try JSONDecoder().decode(MyPIUPerformanceDashboard.Play.self, from: Data(
+            #"{"id":"recent-play","songName":"battle no.1","songImageUrl":null,"chartToken":"battle-no-1:s:19","score":954848,"grade":"s","plate":"rg","mode":"S","level":"19","playedAt":"2026-09-22T07:20:00.000Z","stageBreak":false}"#.utf8
+        ))
+        XCTAssertNil(RecentPlayPresentation(play: play).songImageURL)
+
+        await catalog.preloadArtwork(version: .phoenix2)
+        let presentation = RecentPlayPresentation(
+            play: play,
+            catalogImageURL: catalog.artworkURL(for: play.songName)
+        )
+
+        XCTAssertEqual(presentation.songImageURL?.absoluteString, "https://mypiu.austin.kim/assets/piu/song.png")
+        XCTAssertEqual(presentation.id, play.id)
+        XCTAssertEqual(presentation.score, play.score)
+        XCTAssertEqual(presentation.chartToken, "S19")
+        XCTAssertFalse(presentation.hasJudgments)
+        XCTAssertNil(catalog.artworkURL(for: "Unknown song"))
+    }
+
+    @MainActor
     func testCatalogForwardsWebsiteStyleFilters() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }

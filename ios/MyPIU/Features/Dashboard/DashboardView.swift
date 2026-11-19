@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var songCatalog: SongCatalogModel
 
     var body: some View {
         Group {
@@ -103,12 +104,15 @@ struct DashboardView: View {
                     } else {
                         ForEach(recentPlays) { play in
                             let snapshotPlay = matchingRecentPlay(for: play, in: snapshotPlays)
+                            let presentation = RecentPlayPresentation(
+                                play: play,
+                                snapshotPlay: snapshotPlay,
+                                catalogImageURL: songCatalog.artworkURL(for: play.songName)
+                            )
                             NavigationLink {
-                                RecentPlayDetailView(
-                                    play: RecentPlayPresentation(play: play, snapshotPlay: snapshotPlay)
-                                )
+                                RecentPlayDetailView(play: presentation)
                             } label: {
-                                PerformanceRecentPlayRow(play: play, snapshotPlay: snapshotPlay)
+                                RecentPlayRowContent(play: presentation)
                             }
                             .buttonStyle(.plain)
                             .accessibilityHint("Shows score and judgment details")
