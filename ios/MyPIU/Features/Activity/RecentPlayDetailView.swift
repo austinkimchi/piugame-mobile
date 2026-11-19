@@ -278,13 +278,14 @@ private struct JudgmentDistributionBar: View {
 }
 
 struct SongArtwork: View {
+    @Environment(\.displayScale) private var displayScale
     let url: URL?
     let size: CGFloat
 
     var body: some View {
         Group {
             if url != nil {
-                CachedRemoteImage(url: url) { image in
+                CachedRemoteImage(url: url, pixelSize: size * displayScale) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
                     placeholder
