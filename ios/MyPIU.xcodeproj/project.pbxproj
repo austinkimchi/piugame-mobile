@@ -15,6 +15,7 @@
 		2D359B8FF48DE1FA83F0DAEC /* MyPIUSafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B6348BBD56B15849965ED611 /* MyPIUSafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		30BBA5AA3E8C46CEC830063E /* BackgroundRefreshScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED545ED632F235A4C3E4D722 /* BackgroundRefreshScheduler.swift */; };
 		33A9D7EBBC60D86DF9BF2CE2 /* KeychainCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECD849372AAD815E4A75343 /* KeychainCredentialStore.swift */; };
+		41211A61CB8881E4E84A9DA1 /* PublicCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D9B1C012CAD635F3EB4694 /* PublicCatalogTests.swift */; };
 		4B4416010A4A1C4D8D42D3B5 /* PerformanceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9DC3E1D3546740CE933255 /* PerformanceModels.swift */; };
 		512558457622871B9897CE4C /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B7D5C8D383EAEF50B35C49 /* ActivityView.swift */; };
 		615EAD497A9582BE13C9AF64 /* src in Resources */ = {isa = PBXBuildFile; fileRef = FD46C1391A1F1EE31ECB6F17 /* src */; };
@@ -29,6 +30,7 @@
 		797E16FC6C6E85B31E47C9B9 /* SongChartHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1BF6272B8AE31C96241D7EA /* SongChartHistoryView.swift */; };
 		821C8BA0854D14AC12504C09 /* CatalogModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B67C96AB5B8741854AB3133 /* CatalogModels.swift */; };
 		85B9B2DA3AB0802E4DBDF6D9 /* ApplicationInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584771ED77930A8C83189D75 /* ApplicationInfoTests.swift */; };
+		890729801776C2527D5DC000 /* PublicCatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A41A5412E4794E3961FB3C0 /* PublicCatalogStore.swift */; };
 		8C91E5DF0415D925B933E8E1 /* PIUGameClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60C7C2786874680F6E136DA7 /* PIUGameClientTests.swift */; };
 		8F83E2A8C63D0CC8DF8AF69D /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 7B4800AC28F6ACD06E194BE5 /* manifest.json */; };
 		92147823D9BFB2D5734E3561 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 152D26B2D531B0A3414CCF5E /* SafariWebExtensionHandler.swift */; };
@@ -48,6 +50,7 @@
 		D3EE9E86E439ED67C780C938 /* PIUHTMLParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39328F6CC046B1D91E5C225 /* PIUHTMLParserTests.swift */; };
 		D8D8AFC5658B33BE6982C818 /* MyPIUApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0466958E2CE15FE121EABE68 /* MyPIUApp.swift */; };
 		DD1AEC87B1BBF3BC15719C82 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A09895888A319485912D66 /* AppModel.swift */; };
+		E30587AFF8A0561D8F81F7DB /* MobileCatalogOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44AC1DF3970C0C744EEA07C1 /* MobileCatalogOverlay.swift */; };
 		E60AB033C8B844D8C0E7188C /* MobilePerformanceImportPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAD29DF449DB8C9A64485184 /* MobilePerformanceImportPayload.swift */; };
 		E88D5F7E44C0A13C93EC58AB /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43EB695E7D4CB654D1474518 /* AppTheme.swift */; };
 		EDFF23FC4A4C3B2E0A1DA000 /* PerformanceSessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ACB11FD2A23B7BBBCC86954 /* PerformanceSessionModels.swift */; };
@@ -101,7 +104,9 @@
 		332AAF4C49320D34591C3A86 /* SongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongsView.swift; sourceTree = "<group>"; };
 		43EB695E7D4CB654D1474518 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		44A09895888A319485912D66 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		44AC1DF3970C0C744EEA07C1 /* MobileCatalogOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileCatalogOverlay.swift; sourceTree = "<group>"; };
 		45C6B0F65770D601A3572838 /* CatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogTests.swift; sourceTree = "<group>"; };
+		4A41A5412E4794E3961FB3C0 /* PublicCatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicCatalogStore.swift; sourceTree = "<group>"; };
 		4B67C96AB5B8741854AB3133 /* CatalogModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogModels.swift; sourceTree = "<group>"; };
 		4F1C14F19FFD641C50E8A489 /* PIUModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIUModels.swift; sourceTree = "<group>"; };
 		5360BB00B9899BF19D054236 /* MyPIUTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MyPIUTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -139,6 +144,7 @@
 		EF5BB7AA8C3E6A02083C2A56 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F083A9F8C3C6F7D35E148D44 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F39328F6CC046B1D91E5C225 /* PIUHTMLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIUHTMLParserTests.swift; sourceTree = "<group>"; };
+		F4D9B1C012CAD635F3EB4694 /* PublicCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicCatalogTests.swift; sourceTree = "<group>"; };
 		FD46C1391A1F1EE31ECB6F17 /* src */ = {isa = PBXFileReference; lastKnownFileType = folder; name = src; path = MyPIUSafariExtension/Resources/src; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -231,6 +237,7 @@
 				1DD56B419659854CC1F1D214 /* MyPIUAPIClient.swift */,
 				CE0178D7D940058808BDECA9 /* MyPIUOAuthCoordinator.swift */,
 				00BD51E6E0A95977EB7ABDE7 /* PIUGameClient.swift */,
+				4A41A5412E4794E3961FB3C0 /* PublicCatalogStore.swift */,
 			);
 			path = Networking;
 			sourceTree = "<group>";
@@ -245,6 +252,7 @@
 				CB698BF79F8A8EA2BF773865 /* PerformanceTests.swift */,
 				60C7C2786874680F6E136DA7 /* PIUGameClientTests.swift */,
 				F39328F6CC046B1D91E5C225 /* PIUHTMLParserTests.swift */,
+				F4D9B1C012CAD635F3EB4694 /* PublicCatalogTests.swift */,
 				7C7E7B85DBE48E865CCE17E7 /* RemoteImageCacheTests.swift */,
 			);
 			path = MyPIUTests;
@@ -255,6 +263,7 @@
 			children = (
 				A2BB045593436C1AAFB1A96B /* ApplicationInfo.swift */,
 				4B67C96AB5B8741854AB3133 /* CatalogModels.swift */,
+				44AC1DF3970C0C744EEA07C1 /* MobileCatalogOverlay.swift */,
 				CAD29DF449DB8C9A64485184 /* MobilePerformanceImportPayload.swift */,
 				279AA41B8253E04E607A00EA /* MyPIUModels.swift */,
 				CD9DC3E1D3546740CE933255 /* PerformanceModels.swift */,
@@ -508,6 +517,7 @@
 				D3EE9E86E439ED67C780C938 /* PIUHTMLParserTests.swift in Sources */,
 				9AF206862ED5DD673957415F /* PerformanceSessionsTests.swift in Sources */,
 				6DA59ABB2F95A97E0E469FC7 /* PerformanceTests.swift in Sources */,
+				41211A61CB8881E4E84A9DA1 /* PublicCatalogTests.swift in Sources */,
 				9FAD5854A3ECBF9F83F2C8D3 /* RemoteImageCacheTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -537,6 +547,7 @@
 				CF9722369DC32C540D028430 /* InstallationIdentity.swift in Sources */,
 				33A9D7EBBC60D86DF9BF2CE2 /* KeychainCredentialStore.swift in Sources */,
 				EE05A51EBB956DEB2BD1959E /* KeychainTokenStore.swift in Sources */,
+				E30587AFF8A0561D8F81F7DB /* MobileCatalogOverlay.swift in Sources */,
 				E60AB033C8B844D8C0E7188C /* MobilePerformanceImportPayload.swift in Sources */,
 				F1128E1D831066D1BD67B0B0 /* MyPIUAPIClient.swift in Sources */,
 				D8D8AFC5658B33BE6982C818 /* MyPIUApp.swift in Sources */,
@@ -550,6 +561,7 @@
 				6F3156C3E9AD7C874A3E42A2 /* PerformanceSessionView.swift in Sources */,
 				19E18DBE83D74B818D71FADE /* PerformanceSessionsModel.swift in Sources */,
 				C6AF54993823A1A812850D28 /* PlayerProgressView.swift in Sources */,
+				890729801776C2527D5DC000 /* PublicCatalogStore.swift in Sources */,
 				C1FF918C7714948F4DCFFEFE /* RecentPlayDetailView.swift in Sources */,
 				671638399C9A5F3E591F9455 /* RootView.swift in Sources */,
 				BB0A613CC4DB08A79BD3B4A9 /* SongCatalogModel.swift in Sources */,

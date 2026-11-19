@@ -178,6 +178,14 @@ actor MyPIUAPIClient {
         )
     }
 
+    func catalogOverlay(version: PIUGameVersion, accessToken: String) async throws -> MobileCatalogOverlay {
+        var components = URLComponents(url: baseURL.appendingPathComponent("api/mobile/v1/catalog/overlay"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "version", value: version.rawValue)]
+        var request = URLRequest(url: components.url!)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        return try await send(request)
+    }
+
     func searchCatalog(
         query: String,
         cursor: String? = nil,

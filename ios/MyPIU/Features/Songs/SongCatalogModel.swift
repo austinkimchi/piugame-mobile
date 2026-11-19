@@ -27,6 +27,7 @@ final class SongCatalogModel: ObservableObject {
         _ version: PIUGameVersion,
         _ filters: CatalogFilters
     ) async throws -> CatalogSearchPage
+    typealias CatalogOverlaySearch = @MainActor (_ version: PIUGameVersion) async throws -> MobileCatalogOverlay
     typealias FavoriteUpdate = @MainActor (
         _ songSlug: String,
         _ saved: Bool,
@@ -44,13 +45,16 @@ final class SongCatalogModel: ObservableObject {
     @Published private(set) var state: LoadState = .idle
     @Published private(set) var isLoadingMore = false
     @Published private(set) var paginationError: String?
+    @Published private(set) var refreshError: String?
     @Published private(set) var isShowingCachedData = false
     @Published private(set) var paginationGeneration = 0
     @Published private(set) var favoriteError: String?
     @Published private(set) var artworkURLsByTitle: [String: URL] = [:]
 
     private let cache: CatalogCache
+    private let publicCatalog: PublicCatalogStore?
     private let artworkSearchCatalog: CatalogSearch
+    private var overlaySearch: CatalogOverlaySearch?
     private var searchCatalog: CatalogSearch
     private var filteredSearchCatalog: FilteredCatalogSearch
     private var requestID = UUID()
@@ -66,9 +70,11 @@ final class SongCatalogModel: ObservableObject {
     init(
         apiClient: MyPIUAPIClient = MyPIUAPIClient(),
         cache: CatalogCache = CatalogCache(),
-        artworkSearchCatalog: CatalogSearch? = nil
+        artworkSearchCatalog: CatalogSearch? = nil,
+        publicCatalog: PublicCatalogStore? = .shared
     ) {
         self.cache = cache
+        self.publicCatalog = artworkSearchCatalog == nil ? publicCatalog : nil
         let publicSearch: CatalogSearch = { query, cursor, version in
             try await apiClient.searchCatalog(query: query, cursor: cursor, version: version)
         }
@@ -91,7 +97,8 @@ final class SongCatalogModel: ObservableObject {
         cacheScope: String? = "public",
         debounce: Bool = true,
         using searchCatalog: CatalogSearch? = nil,
-        usingFiltered filteredSearchCatalog: FilteredCatalogSearch? = nil
+        usingFiltered filteredSearchCatalog: FilteredCatalogSearch? = nil,
+        usingOverlay overlaySearch: CatalogOverlaySearch? = nil
     ) async {
         let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if let searchCatalog {
@@ -100,6 +107,7 @@ final class SongCatalogModel: ObservableObject {
         if let filteredSearchCatalog {
             self.filteredSearchCatalog = filteredSearchCatalog
         }
+        if let overlaySearch { self.overlaySearch = overlaySearch }
         guard state != .loaded
             || normalizedQuery != currentQuery
             || version != currentVersion
@@ -119,7 +127,24 @@ final class SongCatalogModel: ObservableObject {
         )
     }
 
-    func preloadArtwork(version: PIUGameVersion) async {
+    func preloadArtwork(version: PIUGameVersion, preferred: Bool = true) async {
+        if let publicCatalog {
+            if let cached = await publicCatalog.cached(version: version) {
+                mergeArtworkIndex(cached.defaultPage.songs, overwrite: preferred)
+            }
+            do {
+                let snapshot = try await publicCatalog.refresh(version: version)
+                try Task.checkCancellation()
+                mergeArtworkIndex(snapshot.defaultPage.songs, overwrite: preferred)
+                var listing = CatalogListing()
+                listing.replace(with: snapshot.defaultPage)
+                try? await cache.save(listing, query: "", version: version, scope: "public")
+                return
+            } catch PublicCatalogError.unavailable {
+                // Older servers expose only search. Other failures keep cached artwork without a page storm.
+            } catch { return }
+        }
+
         let filters = CatalogFilters.empty
         let cacheScope = "public"
         let cached = await cache.load(
@@ -129,8 +154,8 @@ final class SongCatalogModel: ObservableObject {
             sortBy: filters.sortBy,
             sortDirection: filters.sortDirection
         )
-        if let cached, cached.listing.hasMore == false {
-            mergeArtworkIndex(cached.listing.songs)
+        if let cached, cached.listing.hasMore == false, cached.listing.total == cached.listing.songs.count {
+            mergeArtworkIndex(cached.listing.songs, overwrite: preferred)
             if Date().timeIntervalSince(cached.cachedAt) < Self.completeCatalogFreshness {
                 return
             }
@@ -141,14 +166,18 @@ final class SongCatalogModel: ObservableObject {
             var completeListing = CatalogListing()
             completeListing.replace(with: firstPage)
             var pageCount = 1
-            while let cursor = completeListing.nextCursor, pageCount < 200 {
+            var seenCursors = Set<String>()
+            while let cursor = completeListing.nextCursor {
+                guard pageCount < 200, seenCursors.insert(cursor).inserted else { throw PublicCatalogError.invalidSnapshot }
                 try Task.checkCancellation()
                 let page = try await artworkSearchCatalog("", cursor, version)
+                guard page.nextCursor != cursor else { throw PublicCatalogError.invalidSnapshot }
                 completeListing.append(page, requestedCursor: cursor)
                 pageCount += 1
             }
             try Task.checkCancellation()
-            mergeArtworkIndex(completeListing.songs)
+            guard completeListing.total == completeListing.songs.count else { throw PublicCatalogError.invalidSnapshot }
+            mergeArtworkIndex(completeListing.songs, overwrite: preferred)
             try? await cache.save(
                 completeListing,
                 query: "",
@@ -176,9 +205,13 @@ final class SongCatalogModel: ObservableObject {
         debounce: Bool = true,
         useFreshCompleteCache: Bool = false,
         using searchCatalog: CatalogSearch? = nil,
-        usingFiltered filteredSearchCatalog: FilteredCatalogSearch? = nil
+        usingFiltered filteredSearchCatalog: FilteredCatalogSearch? = nil,
+        usingOverlay overlaySearch: CatalogOverlaySearch? = nil
     ) async {
         let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sameListing = normalizedQuery == currentQuery && version == currentVersion
+            && filters == currentFilters && cacheScope == currentCacheScope
+        let retainedListing = sameListing ? listing : CatalogListing()
         let requestID = UUID()
         self.requestID = requestID
         if let searchCatalog {
@@ -187,6 +220,7 @@ final class SongCatalogModel: ObservableObject {
         if let filteredSearchCatalog {
             self.filteredSearchCatalog = filteredSearchCatalog
         }
+        if let overlaySearch { self.overlaySearch = overlaySearch }
         if cacheScope != currentCacheScope || version != currentVersion {
             favoriteMutations.removeAll()
             confirmedFavorites.removeAll()
@@ -200,7 +234,16 @@ final class SongCatalogModel: ObservableObject {
         currentCacheScope = cacheScope
         isLoadingMore = false
         paginationError = nil
+        refreshError = nil
+        listing = retainedListing
+        isShowingCachedData = !retainedListing.songs.isEmpty
         state = .loading
+        defer {
+            if self.requestID == requestID, state == .loading {
+                state = .idle
+                listingRequestID = nil
+            }
+        }
 
         if debounce, !normalizedQuery.isEmpty {
             do {
@@ -224,16 +267,17 @@ final class SongCatalogModel: ObservableObject {
             cached = nil
         }
         guard !Task.isCancelled, self.requestID == requestID else { return }
-        listing = listingApplyingCurrentFavorites(cached?.listing ?? CatalogListing())
+        listing = listingApplyingCurrentFavorites(cached?.listing ?? retainedListing)
         if normalizedQuery.isEmpty, filters.isEmpty, cached?.listing.hasMore == false {
             mergeArtworkIndex(cached?.listing.songs ?? [])
         }
-        isShowingCachedData = cached != nil
-        if useFreshCompleteCache,
+        isShowingCachedData = cached != nil || !retainedListing.songs.isEmpty
+        if useFreshCompleteCache, overlaySearch == nil, self.overlaySearch == nil, cacheScope == "public",
            normalizedQuery.isEmpty,
            filters.isEmpty,
            let cached,
            cached.listing.hasMore == false,
+           cached.listing.total == cached.listing.songs.count,
            Date().timeIntervalSince(cached.cachedAt) < Self.completeCatalogFreshness {
             listingRequestID = requestID
             state = .loaded
@@ -245,7 +289,13 @@ final class SongCatalogModel: ObservableObject {
                 try await performCompleteSearch(
                     query: normalizedQuery,
                     version: version,
-                    filters: filters
+                    filters: filters,
+                    onProgress: { [weak self] partial in
+                        guard let self, self.requestID == requestID, !Task.isCancelled,
+                              cached == nil, retainedListing.songs.isEmpty else { return }
+                        self.listing.replace(with: self.pageApplyingFavorites(partial, confirmedAfter: startingFavoriteRevision))
+                        self.mergeArtworkIndex(partial.songs)
+                    }
                 )
             } else {
                 try await performSearch(
@@ -283,7 +333,8 @@ final class SongCatalogModel: ObservableObject {
             return
         } catch {
             guard self.requestID == requestID else { return }
-            if cached != nil {
+            if cached != nil || !listing.songs.isEmpty {
+                refreshError = error.localizedDescription
                 listingRequestID = requestID
                 paginationGeneration += 1
                 state = .loaded
@@ -462,6 +513,7 @@ final class SongCatalogModel: ObservableObject {
                 filters: currentFilters
             )
             guard !Task.isCancelled, self.requestID == requestID else { return }
+            guard page.nextCursor != cursor else { throw PublicCatalogError.invalidSnapshot }
             listing.append(
                 pageApplyingFavorites(page, confirmedAfter: startingFavoriteRevision),
                 requestedCursor: cursor
@@ -547,8 +599,25 @@ final class SongCatalogModel: ObservableObject {
     private func performCompleteSearch(
         query: String,
         version: PIUGameVersion,
-        filters: CatalogFilters
+        filters: CatalogFilters,
+        onProgress: (CatalogSearchPage) -> Void
     ) async throws -> CatalogSearchPage {
+        if query.isEmpty, filters.isEmpty, filters.usesDefaultSort,
+           let publicCatalog, let overlaySearch {
+            do {
+                async let snapshotRequest = publicCatalog.refresh(version: version)
+                if currentCacheScope == "public" {
+                    return try await snapshotRequest.defaultPage
+                }
+                if currentCacheScope?.hasPrefix("account:") == true {
+                    let overlay = try await overlaySearch(version)
+                    return try await overlay.applying(to: snapshotRequest)
+                }
+            } catch PublicCatalogError.unavailable {
+                // Rollout compatibility: only a missing endpoint permits the legacy page walk.
+            } catch MyPIUAPIError.server(status: 404, code: _) {
+            }
+        }
         let firstPage = try await performSearch(
             query: query,
             cursor: nil,
@@ -558,8 +627,11 @@ final class SongCatalogModel: ObservableObject {
         var listing = CatalogListing()
         listing.replace(with: firstPage)
         var pageCount = 1
+        var seenCursors = Set<String>()
+        onProgress(firstPage)
 
-        while let cursor = listing.nextCursor, pageCount < 200 {
+        while let cursor = listing.nextCursor {
+            guard pageCount < 200, seenCursors.insert(cursor).inserted else { throw PublicCatalogError.invalidSnapshot }
             try Task.checkCancellation()
             let page = try await performSearch(
                 query: query,
@@ -567,9 +639,13 @@ final class SongCatalogModel: ObservableObject {
                 version: version,
                 filters: filters
             )
+            guard page.nextCursor != cursor else { throw PublicCatalogError.invalidSnapshot }
             listing.append(page, requestedCursor: cursor)
             pageCount += 1
+            onProgress(CatalogSearchPage(songs: listing.songs, nextCursor: listing.nextCursor,
+                                        total: listing.total, filterOptions: listing.filterOptions))
         }
+        guard listing.total == listing.songs.count else { throw PublicCatalogError.invalidSnapshot }
 
         return CatalogSearchPage(
             songs: listing.songs,
@@ -593,11 +669,12 @@ final class SongCatalogModel: ObservableObject {
         return cacheListing
     }
 
-    private func mergeArtworkIndex(_ songs: [CatalogSong]) {
+    private func mergeArtworkIndex(_ songs: [CatalogSong], overwrite: Bool = true) {
         var updated = artworkURLsByTitle
         for song in songs {
             guard let imageURL = song.imageURL else { continue }
-            updated[Self.artworkKey(song.title)] = imageURL
+            let key = Self.artworkKey(song.title)
+            if overwrite || updated[key] == nil { updated[key] = imageURL }
         }
         artworkURLsByTitle = updated
     }

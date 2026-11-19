@@ -54,6 +54,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var performance: MyPIUPerformanceDashboard?
     @Published private(set) var performanceState: PerformanceState = .idle
     let favoriteChanges = PassthroughSubject<FavoriteChange, Never>()
+    @Published private(set) var catalogRefreshGeneration = 0
     @Published private var favoriteUpdateAccounts: [String: String] = [:]
     @Published var selectedVersion: PIUGameVersion = .phoenix2
 
@@ -401,6 +402,25 @@ final class AppModel: ObservableObject {
         [lastPIUGameSyncAttemptAt, snapshot?.fetchedAt]
             .compactMap { $0 }
             .max()
+    }
+
+    func catalogOverlay(version: PIUGameVersion) async throws -> MobileCatalogOverlay {
+        guard let token = accessToken, !token.isExpired else {
+            clearMyPIUSession()
+            throw MyPIUAPIError.server(status: 401, code: "invalid_token")
+        }
+        do {
+            let overlay = try await apiClient.catalogOverlay(version: version, accessToken: token.value)
+            guard accessToken?.value == token.value else { throw CancellationError() }
+            return overlay
+        } catch {
+            if let apiError = error as? MyPIUAPIError,
+               apiError.isUnauthorized || apiError.isAccountNotFound,
+               accessToken?.value == token.value {
+                clearMyPIUSession()
+            }
+            throw error
+        }
     }
 
     func searchCatalog(
@@ -752,6 +772,7 @@ final class AppModel: ObservableObject {
             )
             guard accessToken?.value == token.value else { return }
             sessionsModel.invalidate()
+            catalogRefreshGeneration += 1
             myPIUState = .synced(
                 imported: result.importedRecentPlays,
                 duplicates: result.duplicateRecentPlays

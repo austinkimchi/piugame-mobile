@@ -1,5 +1,7 @@
 package com.austinkimchi.mypiu.core.catalog
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import com.austinkimchi.mypiu.core.model.CatalogListing
 import com.austinkimchi.mypiu.core.model.CatalogSearchPage
 import com.austinkimchi.mypiu.core.model.CatalogSortDirection
@@ -11,6 +13,9 @@ import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.security.SessionStore
 
 interface CatalogDataSource {
+    val supportsSnapshot: Boolean get() = false
+    suspend fun snapshot(version: PiuGameVersion, authenticated: Boolean): CatalogSearchPage? = null
+    suspend fun cachedPublic(version: PiuGameVersion): CatalogSearchPage? = null
     suspend fun search(
         query: String,
         cursor: String?,
@@ -31,7 +36,27 @@ class CatalogRepository(
     private val sessionStore: SessionStore,
     private val apiClient: MyPiuApiClient,
     private val cache: CatalogCache,
+    private val publicCatalog: PublicCatalogStore? = null,
 ) : CatalogDataSource {
+    override val supportsSnapshot: Boolean get() = publicCatalog != null
+
+    override suspend fun cachedPublic(version: PiuGameVersion): CatalogSearchPage? = publicCatalog?.cached(version)?.defaultPage()
+
+    override suspend fun snapshot(version: PiuGameVersion, authenticated: Boolean): CatalogSearchPage? {
+        val store = publicCatalog ?: return null
+        return try {
+            kotlinx.coroutines.coroutineScope {
+                val snapshot = async { store.refresh(version) }
+                if (authenticated) {
+                    val overlay = withSession { apiClient.catalogOverlay(version, it) }
+                    overlay.apply(snapshot.await())
+                } else snapshot.await().defaultPage()
+            }
+        } catch (error: MyPiuApiException) {
+            if (error.status == 404) null else throw error
+        }
+    }
+
     override suspend fun search(
         query: String,
         cursor: String?,
@@ -47,7 +72,9 @@ class CatalogRepository(
     }
 
     override suspend fun setFavorite(slug: String, saved: Boolean, version: PiuGameVersion): Boolean {
-        return withSession { token ->
+        // The ViewModel reconciles successful writes into their original account scope and
+        // refreshes a matching replacement session; only stale reads should be discarded.
+        return withSession(requireCurrentSession = false) { token ->
             apiClient.setFavorite(slug, saved, version, token)
         }
     }
@@ -95,7 +122,7 @@ class CatalogRepository(
 
     override fun resolveUrl(value: String?): String? = apiClient.resolveUrl(value)
 
-    private suspend fun <Value> withSession(operation: suspend (String) -> Value): Value {
+    private suspend fun <Value> withSession(requireCurrentSession: Boolean = true, operation: suspend (String) -> Value): Value {
         val storedToken = sessionStore.accessToken()
         val token = when {
             storedToken == null -> throw MyPiuApiException(401, "invalid_token")
@@ -106,7 +133,9 @@ class CatalogRepository(
             else -> storedToken.value
         }
         return try {
-            operation(token)
+            operation(token).also {
+                if (requireCurrentSession && sessionStore.accessToken()?.value != token) throw CancellationException("Account changed")
+            }
         } catch (error: MyPiuApiException) {
             if (
                 (error.isUnauthorized || error.isAccountNotFound) &&

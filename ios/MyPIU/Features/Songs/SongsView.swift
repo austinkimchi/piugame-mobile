@@ -46,7 +46,7 @@ struct SongsView: View {
     var body: some View {
         Group {
             switch catalog.state {
-            case .idle, .loading where catalog.listing.songs.isEmpty:
+            case .idle where catalog.listing.songs.isEmpty, .loading where catalog.listing.songs.isEmpty:
                 ProgressView("Loading songs")
             case .failed(let message) where catalog.listing.songs.isEmpty:
                 ContentUnavailableView {
@@ -63,7 +63,7 @@ struct SongsView: View {
                     ContentUnavailableView {
                         Label("No cached results", systemImage: "arrow.down.circle")
                     } description: {
-                        Text("Catalog is offline.")
+                        Text(catalog.refreshError ?? "No matching songs are available in the saved catalog.")
                     } actions: {
                         Button("Try Again", systemImage: "arrow.clockwise") {
                             Task { await catalog.retry() }
@@ -169,8 +169,15 @@ struct SongsView: View {
                         version: version,
                         filters: filters
                     )
+                },
+                usingOverlay: { [scope = appModel.catalogCacheScope] version in
+                    guard appModel.catalogCacheScope == scope else { throw CancellationError() }
+                    return try await appModel.catalogOverlay(version: version)
                 }
             )
+        }
+        .onChange(of: appModel.catalogRefreshGeneration) { _, _ in
+            Task { await catalog.retry() }
         }
         .onReceive(appModel.favoriteChanges) { change in
             guard change.accountID == appModel.myPIUAccount?.id,
@@ -217,12 +224,20 @@ struct SongsView: View {
                     Text("\(catalog.listing.total.formatted()) \(feed.resultLabel)")
                     if catalog.isShowingCachedData {
                         Spacer()
-                        Label("Offline", systemImage: "arrow.down.circle")
+                        Label("Saved", systemImage: "arrow.down.circle")
                     }
                 }
             }
 
-            if catalog.isLoadingMore {
+            if let refreshError = catalog.refreshError {
+                Section {
+                    Text(refreshError).font(.footnote).foregroundStyle(.secondary)
+                    Button("Retry refresh", systemImage: "arrow.clockwise") {
+                        Task { await catalog.retry() }
+                    }
+                }
+            }
+            if catalog.state == .loading || catalog.isLoadingMore {
                 HStack {
                     Spacer()
                     ProgressView()
