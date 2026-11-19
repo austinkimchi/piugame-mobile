@@ -233,7 +233,6 @@ class CatalogViewModel(
                     isCurrentMutation &&
                         mutationSessionGeneration != sessionGeneration &&
                         current.isMyPiuConnected &&
-                        current.version == version &&
                         current.cacheScope == scope
                 if (
                     isCurrentMutation &&
@@ -272,11 +271,12 @@ class CatalogViewModel(
                     shouldReconcileReplacementSession &&
                     mutationSessionGeneration != sessionGeneration &&
                     mutableState.value.isMyPiuConnected &&
-                    mutableState.value.version == version &&
                     mutableState.value.cacheScope == scope
                 ) {
                     // Token A's successful write is not applied to token B's retained overlay.
-                    // Reconcile the same account with an authoritative read, not that stale dataset.
+                    // Clear every retained version even when a private feed is currently displayed;
+                    // refreshing that feed alone would leave the ordinary catalog stale.
+                    repository.invalidateLocal()
                     reload(debounce = false, useFreshCompleteCache = false)
                 }
             } catch (error: CancellationException) {

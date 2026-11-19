@@ -297,6 +297,55 @@ class CatalogViewModelTest {
     }
 
     @Test
+    fun oldFavoriteSuccessInvalidatesRetainedCatalogWhileAnotherFeedOrVersionIsDisplayed() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            for ((feed, version) in listOf(
+                CatalogFeed.FAVORITES to PiuGameVersion.PHOENIX_2,
+                CatalogFeed.CATALOG to PiuGameVersion.PHOENIX,
+                CatalogFeed.FAVORITES to PiuGameVersion.PHOENIX,
+            )) {
+                val result = CompletableDeferred<Boolean>()
+                var serverFavorite = false
+                val source = FakeCatalogDataSource(cacheLocalQueries = true, favoriteHandler = { _, _, _ ->
+                    result.await().also { serverFavorite = it }
+                })
+                source.searchHandler = { _, _, selectedVersion, _ ->
+                    CatalogSearchPage(listOf(favoriteSong().copy(
+                        isFavorite = selectedVersion == PiuGameVersion.PHOENIX_2 && serverFavorite,
+                    )), null, 1)
+                }
+                val viewModel = CatalogViewModel(source)
+                viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+                viewModel.start()
+                advanceUntilIdle()
+                viewModel.toggleFavorite(viewModel.state.value.listing.songs.single())
+                runCurrent()
+                viewModel.updateSession(null, connected = false, preferredVersion = null)
+                advanceUntilIdle()
+                viewModel.updateSession("one", connected = true, preferredVersion = PiuGameVersion.PHOENIX_2)
+                advanceUntilIdle()
+                assertFalse(viewModel.state.value.listing.songs.single().isFavorite)
+                viewModel.setVersion(version)
+                viewModel.setFeed(feed)
+                advanceUntilIdle()
+                val invalidationsBeforeSuccess = source.localInvalidations
+
+                result.complete(true)
+                advanceUntilIdle()
+                assertTrue(source.localInvalidations > invalidationsBeforeSuccess)
+                viewModel.setFeed(CatalogFeed.CATALOG)
+                viewModel.setVersion(PiuGameVersion.PHOENIX_2)
+                advanceUntilIdle()
+                assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+                assertEquals(listOf(true), source.cachedSongFavorites.last())
+            }
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun refavoritingFromRemovedFavoritesDetailReinsertsSong() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
@@ -645,13 +694,15 @@ private class FakeCatalogDataSource(
     val cachedFavoriteWrites = mutableListOf<CachedFavoriteWrite>()
     var searchHandler: (suspend (String, String?, PiuGameVersion, Boolean) -> CatalogSearchPage)? = null
 
-    private var localPage: CatalogSearchPage? = null
-    override fun invalidateLocal() { localPage = null }
+    private val localPages = mutableMapOf<PiuGameVersion, CatalogSearchPage>()
+    var localInvalidations = 0
+        private set
+    override fun invalidateLocal() { localPages.clear(); localInvalidations += 1 }
     override suspend fun localQuery(query: String, version: PiuGameVersion, authenticated: Boolean,
         sortBy: CatalogSortOption, sortDirection: CatalogSortDirection, reuse: Boolean): CatalogSearchPage? {
         if (!cacheLocalQueries) return null
-        if (reuse) localPage?.let { return it }
-        return search(query, null, version, authenticated, sortBy, sortDirection).also { localPage = it }
+        if (reuse) localPages[version]?.let { return it }
+        return search(query, null, version, authenticated, sortBy, sortDirection).also { localPages[version] = it }
     }
 
     override suspend fun search(
