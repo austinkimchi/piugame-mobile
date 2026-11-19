@@ -4,6 +4,9 @@ import com.austinkimchi.mypiu.core.model.MobileCatalogOverlay
 import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.PublicCatalogSnapshot
 import java.nio.file.Files
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
@@ -61,11 +64,14 @@ class PublicCatalogStoreTest {
     }
 
     @Test fun invalidOrPartialSnapshotsNeverBecomeCompleteCaches() = runTest {
+        // Match the production store's supervised downloads: a deliberately rejected response
+        // must reach the awaiting caller without also failing runTest's background parent.
+        val downloads = CoroutineScope(backgroundScope.coroutineContext + SupervisorJob(backgroundScope.coroutineContext[Job]))
         val directory = Files.createTempDirectory("public-catalog").toFile()
         try {
             for (bad in listOf(snapshot().copy(total = 2), snapshot().copy(view = "removed"),
                 snapshot().copy(songs = snapshot().songs + snapshot().songs, total = 2))) {
-                val store = PublicCatalogStore(directory, { _, _ -> PublicCatalogResponse(bad, null) }, backgroundScope)
+                val store = PublicCatalogStore(directory, { _, _ -> PublicCatalogResponse(bad, null) }, downloads)
                 var failed = false
                 try { store.refresh(version) } catch (_: IllegalArgumentException) { failed = true }
                 assertTrue(failed)
