@@ -33,7 +33,7 @@ final class CatalogLocalQueryTests: XCTestCase {
 
     func testSharedWebParityForLiteralTextLevelsIntersectionsAndEverySort() throws {
         let fixture = try fixture()
-        XCTAssertEqual(fixture.cases.count, 36)
+        XCTAssertEqual(fixture.cases.count, 42)
         for item in fixture.cases {
             let page = try CatalogLocalQuery.page(snapshot: fixture.snapshot, overlay: nil, query: item.query, filters: item.filters)
             XCTAssertEqual(page.songs.map(\.slug), item.expectedSlugs, item.name)

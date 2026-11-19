@@ -1600,6 +1600,135 @@
           "co-op"
         ]
       }
+    },
+    {
+      "name": "unicode-whitespace-36",
+      "query": " alpha ",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "single",
+        "all"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "unicode-whitespace-37",
+      "query": "﻿alpha﻿",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "single",
+        "all"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "unicode-whitespace-38",
+      "query": "C 2",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "all",
+        "double"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original",
+          "World"
+        ],
+        "series": [
+          "PHOENIX",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "2",
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "unicode-whitespace-39",
+      "query": "C2",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [],
+      "expectedOptions": {
+        "folders": [],
+        "series": [],
+        "levels": [],
+        "charts": []
+      }
+    },
+    {
+      "name": "unicode-whitespace-40",
+      "query": "alpha​",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [],
+      "expectedOptions": {
+        "folders": [],
+        "series": [],
+        "levels": [],
+        "charts": []
+      }
+    },
+    {
+      "name": "unicode-whitespace-41",
+      "query": "alpha",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [],
+      "expectedOptions": {
+        "folders": [],
+        "series": [],
+        "levels": [],
+        "charts": []
+      }
     }
   ]
 }

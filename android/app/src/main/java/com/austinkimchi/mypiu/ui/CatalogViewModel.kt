@@ -275,7 +275,9 @@ class CatalogViewModel(
                     mutableState.value.version == version &&
                     mutableState.value.cacheScope == scope
                 ) {
-                    reload(debounce = false)
+                    // Token A's successful write is not applied to token B's retained overlay.
+                    // Reconcile the same account with an authoritative read, not that stale dataset.
+                    reload(debounce = false, useFreshCompleteCache = false)
                 }
             } catch (error: CancellationException) {
                 if (finishFavoriteMutation(mutationKey, mutation)) {

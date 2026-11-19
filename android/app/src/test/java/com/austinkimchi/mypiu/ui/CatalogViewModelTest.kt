@@ -253,14 +253,14 @@ class CatalogViewModelTest {
     }
 
     @Test
-    fun oldFavoriteSuccessReloadsMatchingReplacementSession() = runTest {
+    fun oldFavoriteSuccessRefreshesRetainedCatalogForMatchingReplacementSession() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         try {
             val requestStarted = CompletableDeferred<Unit>()
             val requestResult = CompletableDeferred<Boolean>()
             var serverFavorite = false
-            val source = FakeCatalogDataSource(favoriteHandler = { _, _, _ ->
+            val source = FakeCatalogDataSource(cacheLocalQueries = true, favoriteHandler = { _, _, _ ->
                 requestStarted.complete(Unit)
                 requestResult.await().also { serverFavorite = it }
             })
@@ -288,6 +288,7 @@ class CatalogViewModelTest {
 
             assertTrue(source.searches.size > searchesBeforeSuccess)
             assertTrue(viewModel.state.value.listing.songs.single().isFavorite)
+            assertEquals(listOf(true), source.cachedSongFavorites.last())
             assertTrue(viewModel.state.value.isMyPiuConnected)
             assertTrue(viewModel.state.value.updatingFavorites.isEmpty())
         } finally {
@@ -630,6 +631,7 @@ private data class CachedFavoriteWrite(
 )
 
 private class FakeCatalogDataSource(
+    private val cacheLocalQueries: Boolean = false,
     private val favoriteFailure: Exception? = null,
     private val song: CatalogSong = favoriteSong().copy(isFavorite = false),
     private val chartFailure: Exception? = null,
@@ -642,6 +644,15 @@ private class FakeCatalogDataSource(
     val cachedSongFavorites = mutableListOf<List<Boolean>>()
     val cachedFavoriteWrites = mutableListOf<CachedFavoriteWrite>()
     var searchHandler: (suspend (String, String?, PiuGameVersion, Boolean) -> CatalogSearchPage)? = null
+
+    private var localPage: CatalogSearchPage? = null
+    override fun invalidateLocal() { localPage = null }
+    override suspend fun localQuery(query: String, version: PiuGameVersion, authenticated: Boolean,
+        sortBy: CatalogSortOption, sortDirection: CatalogSortDirection, reuse: Boolean): CatalogSearchPage? {
+        if (!cacheLocalQueries) return null
+        if (reuse) localPage?.let { return it }
+        return search(query, null, version, authenticated, sortBy, sortDirection).also { localPage = it }
+    }
 
     override suspend fun search(
         query: String,

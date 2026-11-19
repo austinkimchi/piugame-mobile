@@ -24,7 +24,7 @@ enum CatalogLocalQuery {
         }
         let query = clean(query)
         let text = query.isEmpty ? nil : regex(NSRegularExpression.escapedPattern(for: query))
-        let compactQuery = query.replacingOccurrences(of: #"\s+"#, with: "", options: .regularExpression)
+        let compactQuery = query.replacingOccurrences(of: " ", with: "")
         let tokenQuery = matches(#"^C(?:X)?[2-5]$"#, compactQuery)
             ? regex("^C(?:X)?\(compactQuery.last!)$") : text
         let folders = unique(filters.folders), series = unique(filters.series)
@@ -88,10 +88,10 @@ enum CatalogLocalQuery {
     private static func levelPatterns(_ level: String, chart: String?) -> [NSRegularExpression] {
         if chart == "co-op" { return matches(#"^[2-5]$"#, level) ? [regex("^C(?:X)?\(level)$")] : [] }
         if let prefix = ["singles": "S", "doubles": "D"][chart ?? ""] {
-            return [regex(level == "+" ? "^\(prefix)(?!(?:[1-9]|1\\d|2[0-7])$).+$" : "^\(prefix)\(NSRegularExpression.escapedPattern(for: level))$")]
+            return [regex(level == "+" ? "^\(prefix)(?!(?:[1-9]|1[0-9]|2[0-7])$).+$" : "^\(prefix)\(NSRegularExpression.escapedPattern(for: level))$")]
         }
         var patterns = matches(#"^[2-5]$"#, level) ? [regex("^C\(level)$")] : []
-        patterns.append(regex(level == "+" ? #"^(?!C(?:O-?OP|[2-5])?$)\D+(?!(?:[1-9]|1\d|2[0-7])$).+$"# : "\\D\(NSRegularExpression.escapedPattern(for: level))$"))
+        patterns.append(regex(level == "+" ? #"^(?!C(?:O-?OP|[2-5])?$)[^0-9]+(?!(?:[1-9]|1[0-9]|2[0-7])$).+$"# : "[^0-9]\(NSRegularExpression.escapedPattern(for: level))$"))
         return patterns
     }
 
@@ -102,7 +102,7 @@ enum CatalogLocalQuery {
                 return matches(#"^C[2-5]$"#, token) ? String(token.last!) : nil
             }
             if matches(#"^C(?:O-?OP|[2-5])?$"#, token) { return nil }
-            let range = regex(#"(\d{1,2})$"#).firstMatch(in: token, range: NSRange(token.startIndex..., in: token))?.range(at: 1)
+            let range = regex(#"([0-9]{1,2})$"#).firstMatch(in: token, range: NSRange(token.startIndex..., in: token))?.range(at: 1)
             let value = range.flatMap { Range($0, in: token) }.flatMap { Int(token[$0]) }
             return value.map { (1...27).contains($0) ? String($0) : "+" } ?? "+"
         }).sorted { ($0 == "+" ? Int.max : Int($0) ?? 0) < ($1 == "+" ? Int.max : Int($1) ?? 0) }
@@ -134,7 +134,13 @@ enum CatalogLocalQuery {
         return matches("^\(NSRegularExpression.escapedPattern(for: label))$", series)
     }
     private static func chartPattern(_ value: String) -> String? { ["singles": "^S", "doubles": "^D", "co-op": "^C"][value] }
-    private static func clean(_ value: String) -> String { value.split(whereSeparator: \.isWhitespace).joined(separator: " ") }
+    private static func clean(_ value: String) -> String {
+        value.unicodeScalars.split { scalar in
+            let code = scalar.value
+            return (0x09...0x0D).contains(code) || code == 0x20 || code == 0xA0 || code == 0x1680
+                || (0x2000...0x200A).contains(code) || [0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF].contains(code)
+        }.map(String.init).joined(separator: " ")
+    }
     private static func unique(_ values: [String]) -> [String] {
         var seen = Set<String>()
         return values.map(clean).filter { !$0.isEmpty && seen.insert($0).inserted }

@@ -20,7 +20,7 @@ object CatalogLocalQuery {
     fun query(snapshot: PublicCatalogSnapshot, overlay: MobileCatalogOverlay?, query: String, filters: Filters = Filters()): Result {
         require(overlay == null || overlay.schemaVersion == 1 && overlay.version == snapshot.selectedVersion) { "Invalid account catalog response." }
         val text = clean(query).takeIf { it.isNotEmpty() }?.let { regex(Regex.escape(it)) }
-        val compact = clean(query).replace(Regex("\\s+"), "")
+        val compact = clean(query).replace(" ", "")
         val tokenQuery = if (regex("^C(?:X)?[2-5]$").containsMatchIn(compact)) regex("^C(?:X)?${compact.last()}$") else text
         val folders = unique(filters.folders)
         val series = unique(filters.series)
@@ -61,16 +61,16 @@ object CatalogLocalQuery {
     private fun levelPatterns(level: String, chart: String?): List<Regex> {
         if (chart == "co-op") return if (Regex("^[2-5]$").matches(level)) listOf(regex("^C(?:X)?$level$")) else emptyList()
         val prefix = prefixes[chart]?.takeIf { chart != "co-op" }
-        if (prefix != null) return listOf(regex(if (level == "+") "^$prefix(?!(?:[1-9]|1\\d|2[0-7])$).+$" else "^$prefix${Regex.escape(level)}$"))
+        if (prefix != null) return listOf(regex(if (level == "+") "^$prefix(?!(?:[1-9]|1[0-9]|2[0-7])$).+$" else "^$prefix${Regex.escape(level)}$"))
         return (if (Regex("^[2-5]$").matches(level)) listOf(regex("^C$level$")) else emptyList()) +
-            regex(if (level == "+") "^(?!C(?:O-?OP|[2-5])?$)\\D+(?!(?:[1-9]|1\\d|2[0-7])$).+$" else "\\D${Regex.escape(level)}$")
+            regex(if (level == "+") "^(?!C(?:O-?OP|[2-5])?$)[^0-9]+(?!(?:[1-9]|1[0-9]|2[0-7])$).+$" else "[^0-9]${Regex.escape(level)}$")
     }
     private fun filterOptions(songs: List<PublicCatalogSong>, charts: List<String>): PublicCatalogFilterOptions {
         val tokens = unique(songs.flatMap { it.chartSummary })
         val levels = tokens.mapNotNull { token ->
             if (charts == listOf("co-op")) regex("^C([2-5])$").find(token)?.groupValues?.get(1)
             else if (regex("^C(?:O-?OP|[2-5])?$").containsMatchIn(token)) null
-            else Regex("(\\d{1,2})$").find(token)?.groupValues?.get(1)?.toIntOrNull().let { if (it != null && it in 1..27) it.toString() else "+" }
+            else Regex("([0-9]{1,2})$").find(token)?.groupValues?.get(1)?.toIntOrNull().let { if (it != null && it in 1..27) it.toString() else "+" }
         }.distinct().sortedBy { it.toIntOrNull() ?: Int.MAX_VALUE }
         fun rank(value: String) = seriesOrder.indexOf(value.lowercase(Locale.ROOT).replace(Regex("[^a-z0-9]"), "")).let { if (it < 0) Int.MAX_VALUE else it }
         val series = unique(songs.mapNotNull { it.series }.map(::normalizeSeries)).sortedWith(compareBy<String> { rank(it) }.thenBy { it.lowercase(Locale.ROOT) })
@@ -88,7 +88,22 @@ object CatalogLocalQuery {
             else -> regex("^${Regex.escape(label)}$").containsMatchIn(value)
         }
     }
-    private fun clean(value: String) = value.replace(Regex("(?U)\\s+"), " ").trim()
+    // ECMAScript whitespace, explicitly enumerated: no JVM-only inline regex flags.
+    // ICU's Unicode whitespace also includes NEL, while JavaScript excludes it and includes BOM.
+    private fun clean(value: String) = buildString {
+        var pendingSpace = false
+        for (character in value) {
+            val code = character.code
+            val whitespace = code in 0x09..0x0D || code == 0x20 || code == 0xA0 || code == 0x1680 ||
+                code in 0x2000..0x200A || code in listOf(0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF)
+            if (whitespace) pendingSpace = isNotEmpty()
+            else {
+                if (pendingSpace) append(' ')
+                append(character)
+                pendingSpace = false
+            }
+        }
+    }
     private fun unique(values: List<String>) = values.map(::clean).filter { it.isNotEmpty() }.distinct()
     private fun regex(pattern: String) = Regex(pattern, RegexOption.IGNORE_CASE)
     private fun binary(left: String?, right: String?): Int {

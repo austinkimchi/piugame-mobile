@@ -18,7 +18,7 @@ class CatalogLocalQueryTest {
 
     @Test fun sharedWebParityForLiteralTextLevelsIntersectionsAndEverySort() {
         val fixture = fixture()
-        assertEquals(36, fixture.cases.size)
+        assertEquals(42, fixture.cases.size)
         fixture.cases.forEach { case ->
             val result = CatalogLocalQuery.query(fixture.snapshot, null, case.query, CatalogLocalQuery.Filters(
                 case.folders, case.series, case.levels, case.charts, case.levelMode,
