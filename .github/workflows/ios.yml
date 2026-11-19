@@ -3,11 +3,32 @@ name: iOS
 on:
   push:
     branches: [main]
+    paths:
+      - 'ios/**'
+      - 'browser-extension/**'
+      - 'scripts/*ios*.sh'
+      - 'scripts/prepare-app-store-connect-key.sh'
+      - '.github/workflows/ios.yml'
+      - '.github/workflows/ios-testflight.yml'
+      - '!**/*.md'
   pull_request:
+    paths:
+      - 'ios/**'
+      - 'browser-extension/**'
+      - 'scripts/*ios*.sh'
+      - 'scripts/prepare-app-store-connect-key.sh'
+      - '.github/workflows/ios.yml'
+      - '.github/workflows/ios-testflight.yml'
+      - '!**/*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: macos-26
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
       - name: Validate App Store metadata
