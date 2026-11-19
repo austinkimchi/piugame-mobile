@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.austinkimchi.mypiu.AppContainer
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceSession
+import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.performance.PerformanceDataSource
 import com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal
@@ -40,26 +41,34 @@ class PerformanceViewModel(
             refreshSignal.revision.collect { revision ->
                 if (revision == observedRefreshRevision) return@collect
                 observedRefreshRevision = revision
+                repository.invalidateSessionCache()
                 if (started) refresh()
             }
         }
     }
 
-    fun updateSession(accountId: String?, connected: Boolean) {
+    fun updateSession(accountId: String?, connected: Boolean, preferredVersion: PiuGameVersion? = null) {
         val scope = accountId?.takeIf { connected }?.let { "account:$it" }
         val isConnected = scope != null
         val current = mutableState.value
-        if (current.accountScope == scope && current.isConnected == isConnected) return
+        if (current.accountScope == scope && current.isConnected == isConnected &&
+            current.preferredVersion == preferredVersion) return
+        val restartHistory = current.accountScope == scope &&
+            current.preferredVersion != preferredVersion && sessionJob != null
 
         sessionGeneration += 1
+        if (current.accountScope != null) repository.invalidateSessionCache()
         loadJob?.cancel()
         sessionJob?.cancel()
         sessionPaginationJob?.cancel()
         mutableState.value = PerformanceUiState(
             accountScope = scope,
             isConnected = isConnected,
+            preferredVersion = preferredVersion,
         )
         if (started && isConnected) reload()
+        // The mounted screen's account effect does not restart for a preference-only change.
+        if (restartHistory && isConnected) reloadSession()
     }
 
     fun start() {
@@ -86,7 +95,7 @@ class PerformanceViewModel(
         val snapshot = mutableState.value
         val offset = snapshot.nextSessionOffset ?: return
         val scope = snapshot.accountScope ?: return
-        if (!snapshot.isConnected || sessionJob?.isActive == true || snapshot.isSessionLoading || snapshot.isSessionLoadingMore || sessionPaginationJob?.isActive == true) return
+        if (!snapshot.isConnected || snapshot.isSessionLoading || snapshot.isSessionLoadingMore || sessionPaginationJob?.isActive == true) return
         val generation = sessionGeneration
         val loadGeneration = sessionLoadGeneration
         sessionPaginationJob = viewModelScope.launch {
@@ -201,22 +210,38 @@ class PerformanceViewModel(
                 )
             }
             try {
-                val page = repository.sessionPage()
-                currentCoroutineContext().ensureActive()
-                if (generation != sessionGeneration || loadGeneration != sessionLoadGeneration ||
-                    mutableState.value.accountScope != scope) return@launch
-                mutableState.update {
-                    it.copy(
-                        session = page.sessions.firstOrNull(),
-                        sessions = page.sessions.distinctBy { session -> session.id },
-                        nextSessionOffset = page.nextOffset?.takeIf { offset -> offset > 0 },
-                        isSessionLoading = false,
-                        isSessionLoaded = true,
-                        sessionError = null,
-                        sessionPaginationError = null,
-                    )
-                }
+                repository.firstSessionPage(scope.removePrefix("account:"), onCached = { cached ->
+                    if (generation == sessionGeneration && loadGeneration == sessionLoadGeneration &&
+                        mutableState.value.accountScope == scope) mutableState.update {
+                        if (it.isSessionLoaded) it else it.copy(
+                            session = cached.page.sessions.firstOrNull(),
+                            sessions = cached.page.sessions.distinctBy { session -> session.id },
+                            nextSessionOffset = null,
+                            isSessionLoaded = true,
+                            sessionSavedAtEpochMillis = cached.savedAtEpochMillis,
+                        )
+                    }
+                }, onFresh = { page ->
+                    if (generation == sessionGeneration && loadGeneration == sessionLoadGeneration &&
+                        mutableState.value.accountScope == scope) mutableState.update {
+                        it.copy(
+                            session = page.sessions.firstOrNull(),
+                            sessions = page.sessions.distinctBy { session -> session.id },
+                            nextSessionOffset = page.nextOffset?.takeIf { offset -> offset > 0 },
+                            isSessionLoading = false,
+                            isSessionLoaded = true,
+                            sessionError = null,
+                            sessionPaginationError = null,
+                            sessionSavedAtEpochMillis = null,
+                        )
+                    }
+                })
             } catch (error: CancellationException) {
+                if (generation == sessionGeneration && loadGeneration == sessionLoadGeneration &&
+                    mutableState.value.accountScope == scope) mutableState.update {
+                    it.copy(isSessionLoading = false,
+                        sessionError = if (it.isSessionLoaded) it.sessionError else "Loading was interrupted. Try again.")
+                }
                 throw error
             } catch (error: Exception) {
                 currentCoroutineContext().ensureActive()
@@ -253,6 +278,7 @@ class PerformanceViewModel(
 }
 
 data class PerformanceUiState(
+    val preferredVersion: PiuGameVersion? = null,
     val accountScope: String? = null,
     val isConnected: Boolean = false,
     val dashboard: MyPiuPerformanceDashboard? = null,
@@ -265,6 +291,7 @@ data class PerformanceUiState(
     val isSessionLoadingMore: Boolean = false,
     val sessionPaginationError: String? = null,
     val sessionError: String? = null,
+    val sessionSavedAtEpochMillis: Long? = null,
     val error: String? = null,
     val sessionInvalidated: Boolean = false,
 )

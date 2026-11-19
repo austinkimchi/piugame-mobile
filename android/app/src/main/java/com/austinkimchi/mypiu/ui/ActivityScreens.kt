@@ -188,6 +188,12 @@ fun PerformanceSessionsScreen(
             modifier = Modifier.fillMaxSize().widthIn(max = 860.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         ) {
+            state.sessionSavedAtEpochMillis?.let { savedAt ->
+                item {
+                    Text("Saved history from ${java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(java.util.Date(savedAt))}",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            }
             if (state.isSessionLoading) {
                 item {
                     Row(

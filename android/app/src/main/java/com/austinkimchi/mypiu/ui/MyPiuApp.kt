@@ -186,6 +186,7 @@ fun MyPiuApp(
         performanceViewModel.updateSession(
             accountId = catalogAccountId,
             connected = state.isMyPiuConnected,
+            preferredVersion = preferredCatalogVersion,
         )
     }
     LaunchedEffect(selectedSongSlug, selectedSongVersion, catalogState.version) {

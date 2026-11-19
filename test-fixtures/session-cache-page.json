@@ -1,0 +1,966 @@
+{
+  "sessions": [
+    {
+      "id": "fixture-session-0",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-0-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-0-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-1",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-1-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-1-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-2",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-2-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-2-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-3",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-3-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-3-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-4",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-4-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-4-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-5",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-5-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-5-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-6",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-6-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-6-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-7",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-7-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-7-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-8",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-8-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-8-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-9",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-9-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-9-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-10",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-10-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-10-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-11",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-11-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-11-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-12",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-12-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-12-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-13",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-13-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-13-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-14",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-14-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-14-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-15",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-15-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-15-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-16",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-16-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-16-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-17",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-17-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-17-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-18",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-18-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-18-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    },
+    {
+      "id": "fixture-session-19",
+      "arcadeName": "Fixture Arcade",
+      "summary": {
+        "playCount": 2,
+        "clearCount": 2,
+        "failedCount": 0,
+        "stageBreakCount": 0,
+        "averageScore": 950000,
+        "bestScore": 950000,
+        "distinctCharts": 1,
+        "startedAt": "2026-11-19T10:00:00Z",
+        "endedAt": "2026-11-19T11:00:00Z",
+        "durationMinutes": 60
+      },
+      "plays": [
+        {
+          "id": "fixture-19-0",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        },
+        {
+          "id": "fixture-19-1",
+          "songName": "Fixture Song",
+          "chartToken": "S16",
+          "score": 950000,
+          "grade": "SSS",
+          "plate": "M",
+          "mode": "S",
+          "level": "16",
+          "playedAt": "2026-11-19T10:00:00Z",
+          "stageBreak": false,
+          "arcadeName": "Fixture Arcade",
+          "judgments": null,
+          "songImageUrl": "https://example.test/artwork.png"
+        }
+      ]
+    }
+  ],
+  "nextOffset": 20,
+  "selectedVersion": "phoenix2"
+}
