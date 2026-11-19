@@ -438,11 +438,13 @@ final class SongCatalogModel: ObservableObject {
         do {
             let authoritativeValue = try await update(song.slug, saved, version)
             guard favoriteMutations[song.slug]?.id == mutation.id else {
-                try? await cache.setFavorite(
+                // Reauthentication removed this mutation, but its successful write
+                // still belongs to the original account. Reconcile only matching UI.
+                await applyConfirmedFavorite(
                     authoritativeValue,
-                    forSlug: song.slug,
+                    slug: song.slug,
                     version: version,
-                    scope: cacheScope
+                    cacheScope: cacheScope
                 )
                 return
             }

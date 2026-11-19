@@ -495,8 +495,13 @@ final class AppModel: ObservableObject {
                 version: version,
                 accessToken: token.value
             )
-            guard accessToken?.value == token.value, myPIUAccount?.id == accountID else {
+            guard let currentToken = accessToken, myPIUAccount?.id == accountID else {
                 throw CancellationError()
+            }
+            if currentToken.value != token.value {
+                // This write succeeded for the same account before reauthentication.
+                // Refresh the replacement session's retained overlay; stale reads still cancel.
+                catalogRefreshGeneration += 1
             }
             favoriteChanges.send(FavoriteChange(
                 id: UUID(),

@@ -97,6 +97,34 @@ final class CatalogLocalLoadingTests: XCTestCase {
     }
 
     @MainActor
+    func testLateSuccessfulFavoriteReconcilesOnlyMatchingReplacementAccount() async throws {
+        for replacementScope in ["account:a", "account:b"] {
+            let directory = directory(); defer { try? FileManager.default.removeItem(at: directory) }
+            let fixture = try fixture()
+            let store = PublicCatalogStore(directory: directory.appendingPathComponent("public")) { request in
+                (fixture, HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            }
+            let model = SongCatalogModel(cache: CatalogCache(directory: directory), publicCatalog: store)
+            await model.reload(query: "", version: .phoenix2, cacheScope: "account:a", debounce: false,
+                usingOverlay: { _ in self.overlay() })
+            let song = try XCTUnwrap(model.song(slug: "all"))
+            let gate = LocalQueryGate()
+            let oldWrite = Task {
+                await model.setFavorite(true, for: song, using: { _, _, _ in await gate.wait(); return true })
+            }
+            await gate.waitForStart()
+            model.invalidateAccount()
+            await model.loadIfNeeded(query: "", version: .phoenix2, cacheScope: replacementScope, debounce: false,
+                usingOverlay: { _ in self.overlay(false, hint: "replacement") })
+            XCTAssertFalse(try XCTUnwrap(model.song(slug: "all")).isFavorite)
+            await gate.release(); await oldWrite.value
+            await model.loadIfNeeded(query: "alpha", version: .phoenix2, cacheScope: replacementScope, debounce: false)
+            XCTAssertEqual(try XCTUnwrap(model.song(slug: "all")).isFavorite, replacementScope == "account:a")
+            XCTAssertEqual(model.song(slug: "all")?.recommendedChartToken, "replacement")
+        }
+    }
+
+    @MainActor
     func testImportInvalidationRefreshesHintsAnd404AloneAllowsLegacyFilteredSearch() async throws {
         let directory = directory(); defer { try? FileManager.default.removeItem(at: directory) }
         let fixture = try fixture()
