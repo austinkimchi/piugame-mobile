@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'ios/**'
+      - 'test-fixtures/**'
       - 'browser-extension/**'
       - 'scripts/*ios*.sh'
       - 'scripts/prepare-app-store-connect-key.sh'
@@ -14,6 +15,7 @@ on:
   pull_request:
     paths:
       - 'ios/**'
+      - 'test-fixtures/**'
       - 'browser-extension/**'
       - 'scripts/*ios*.sh'
       - 'scripts/prepare-app-store-connect-key.sh'

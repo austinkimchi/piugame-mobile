@@ -12,10 +12,14 @@
 		164FC7D22967F83D63294F5B /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D63B5D74E06EFCFFFF47B8E7 /* AccountView.swift */; };
 		19E18DBE83D74B818D71FADE /* PerformanceSessionsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001C6F4F6CEA53B70013B44 /* PerformanceSessionsModel.swift */; };
 		207CBCE3CEC2D7D1D56F4133 /* MyPIUOAuthCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0178D7D940058808BDECA9 /* MyPIUOAuthCoordinator.swift */; };
+		2420DC1B1276C73F83A53376 /* CatalogLocalLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0FA0255D002682B60E890F /* CatalogLocalLoadingTests.swift */; };
+		2A78697C122A519125C5C6F5 /* test-fixtures in Resources */ = {isa = PBXBuildFile; fileRef = 149FD2E7A4CED4659C6F77DF /* test-fixtures */; };
 		2D359B8FF48DE1FA83F0DAEC /* MyPIUSafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B6348BBD56B15849965ED611 /* MyPIUSafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2ECFCDAC6B0B21A65E1E9FE8 /* CatalogLocalQueryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 983ACCAB1D8C57BCBB44731E /* CatalogLocalQueryTests.swift */; };
 		30BBA5AA3E8C46CEC830063E /* BackgroundRefreshScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED545ED632F235A4C3E4D722 /* BackgroundRefreshScheduler.swift */; };
 		33A9D7EBBC60D86DF9BF2CE2 /* KeychainCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECD849372AAD815E4A75343 /* KeychainCredentialStore.swift */; };
 		41211A61CB8881E4E84A9DA1 /* PublicCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D9B1C012CAD635F3EB4694 /* PublicCatalogTests.swift */; };
+		464371D5ECCB17F6D989A6CB /* CatalogLocalQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8174D991F622D12530E50A3 /* CatalogLocalQuery.swift */; };
 		4B4416010A4A1C4D8D42D3B5 /* PerformanceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9DC3E1D3546740CE933255 /* PerformanceModels.swift */; };
 		512558457622871B9897CE4C /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B7D5C8D383EAEF50B35C49 /* ActivityView.swift */; };
 		615EAD497A9582BE13C9AF64 /* src in Resources */ = {isa = PBXBuildFile; fileRef = FD46C1391A1F1EE31ECB6F17 /* src */; };
@@ -96,9 +100,11 @@
 		04577B2370D1BB0FD94A771B /* PerformanceSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceSessionView.swift; sourceTree = "<group>"; };
 		0466958E2CE15FE121EABE68 /* MyPIUApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPIUApp.swift; sourceTree = "<group>"; };
 		04CB8F684F01B570D0340B5B /* RecentPlayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentPlayDetailView.swift; sourceTree = "<group>"; };
+		149FD2E7A4CED4659C6F77DF /* test-fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "test-fixtures"; path = "../test-fixtures"; sourceTree = SOURCE_ROOT; };
 		152D26B2D531B0A3414CCF5E /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
 		1560C7931D256F67F857EE9B /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		1DD56B419659854CC1F1D214 /* MyPIUAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPIUAPIClient.swift; sourceTree = "<group>"; };
+		1F0FA0255D002682B60E890F /* CatalogLocalLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogLocalLoadingTests.swift; sourceTree = "<group>"; };
 		24107F978E8A8690DD6E622A /* MobileSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSyncTests.swift; sourceTree = "<group>"; };
 		279AA41B8253E04E607A00EA /* MyPIUModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPIUModels.swift; sourceTree = "<group>"; };
 		332AAF4C49320D34591C3A86 /* SongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongsView.swift; sourceTree = "<group>"; };
@@ -119,6 +125,7 @@
 		7C7E7B85DBE48E865CCE17E7 /* RemoteImageCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteImageCacheTests.swift; sourceTree = "<group>"; };
 		7ECD849372AAD815E4A75343 /* KeychainCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainCredentialStore.swift; sourceTree = "<group>"; };
 		85B7D5C8D383EAEF50B35C49 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		983ACCAB1D8C57BCBB44731E /* CatalogLocalQueryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogLocalQueryTests.swift; sourceTree = "<group>"; };
 		9ACB11FD2A23B7BBBCC86954 /* PerformanceSessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceSessionModels.swift; sourceTree = "<group>"; };
 		9FD459FC724F3E051B78545E /* CatalogSongDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogSongDetailView.swift; sourceTree = "<group>"; };
 		A079318A1DE5D35F4C0870CA /* MyPIU.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MyPIU.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -145,6 +152,7 @@
 		F083A9F8C3C6F7D35E148D44 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F39328F6CC046B1D91E5C225 /* PIUHTMLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIUHTMLParserTests.swift; sourceTree = "<group>"; };
 		F4D9B1C012CAD635F3EB4694 /* PublicCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicCatalogTests.swift; sourceTree = "<group>"; };
+		F8174D991F622D12530E50A3 /* CatalogLocalQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogLocalQuery.swift; sourceTree = "<group>"; };
 		FD46C1391A1F1EE31ECB6F17 /* src */ = {isa = PBXFileReference; lastKnownFileType = folder; name = src; path = MyPIUSafariExtension/Resources/src; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -186,6 +194,7 @@
 			children = (
 				D9A178C94033FE3F8C417CFC /* assets */,
 				FD46C1391A1F1EE31ECB6F17 /* src */,
+				149FD2E7A4CED4659C6F77DF /* test-fixtures */,
 				023CFDFF5E0A12819F34D834 /* MyPIU */,
 				00211DFEBB3EFFBFA233BBFA /* MyPIUSafariExtension */,
 				87B6CA98368286E4ED46B656 /* MyPIUTests */,
@@ -246,6 +255,8 @@
 			isa = PBXGroup;
 			children = (
 				584771ED77930A8C83189D75 /* ApplicationInfoTests.swift */,
+				1F0FA0255D002682B60E890F /* CatalogLocalLoadingTests.swift */,
+				983ACCAB1D8C57BCBB44731E /* CatalogLocalQueryTests.swift */,
 				45C6B0F65770D601A3572838 /* CatalogTests.swift */,
 				24107F978E8A8690DD6E622A /* MobileSyncTests.swift */,
 				D71941FA901BC63A4E3E2032 /* PerformanceSessionsTests.swift */,
@@ -262,6 +273,7 @@
 			isa = PBXGroup;
 			children = (
 				A2BB045593436C1AAFB1A96B /* ApplicationInfo.swift */,
+				F8174D991F622D12530E50A3 /* CatalogLocalQuery.swift */,
 				4B67C96AB5B8741854AB3133 /* CatalogModels.swift */,
 				44AC1DF3970C0C744EEA07C1 /* MobileCatalogOverlay.swift */,
 				CAD29DF449DB8C9A64485184 /* MobilePerformanceImportPayload.swift */,
@@ -407,6 +419,7 @@
 			buildConfigurationList = 172A3C0B88443C87463B7C67 /* Build configuration list for PBXNativeTarget "MyPIUTests" */;
 			buildPhases = (
 				11982AE9B5D1BEF834FFEA51 /* Sources */,
+				6B51B5BE717F85C2DC98E625 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -494,6 +507,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6B51B5BE717F85C2DC98E625 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2A78697C122A519125C5C6F5 /* test-fixtures in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FB45B3C895155DD352594942 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -511,6 +532,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				85B9B2DA3AB0802E4DBDF6D9 /* ApplicationInfoTests.swift in Sources */,
+				2420DC1B1276C73F83A53376 /* CatalogLocalLoadingTests.swift in Sources */,
+				2ECFCDAC6B0B21A65E1E9FE8 /* CatalogLocalQueryTests.swift in Sources */,
 				665BAE9AA3F04B1DB07C147C /* CatalogTests.swift in Sources */,
 				C584BA78962B4E1843083ECF /* MobileSyncTests.swift in Sources */,
 				8C91E5DF0415D925B933E8E1 /* PIUGameClientTests.swift in Sources */,
@@ -541,6 +564,7 @@
 				73035DAB1119D5EAD73F35DF /* ApplicationInfo.swift in Sources */,
 				30BBA5AA3E8C46CEC830063E /* BackgroundRefreshScheduler.swift in Sources */,
 				94DFAD7BF781BC3A1F7DB009 /* CatalogCache.swift in Sources */,
+				464371D5ECCB17F6D989A6CB /* CatalogLocalQuery.swift in Sources */,
 				821C8BA0854D14AC12504C09 /* CatalogModels.swift in Sources */,
 				9576CAD50B59C047B77B3CC9 /* CatalogSongDetailView.swift in Sources */,
 				7686EE0DC48AD68BBB84135C /* DashboardView.swift in Sources */,

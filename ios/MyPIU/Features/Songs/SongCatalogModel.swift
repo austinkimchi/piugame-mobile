@@ -66,6 +66,33 @@ final class SongCatalogModel: ObservableObject {
     private var favoriteMutations: [String: PendingFavoriteMutation] = [:]
     private var confirmedFavorites: [String: ConfirmedFavorite] = [:]
     private var favoriteRevision = 0
+    private struct LocalDataset {
+        let snapshot: PublicCatalogSnapshot
+        var overlay: MobileCatalogOverlay?
+    }
+    // Private overlays live only in this account-scoped model, never the public disk cache.
+    private var localDatasets: [PIUGameVersion: LocalDataset] = [:]
+
+    func invalidateCatalog() {
+        requestID = UUID()
+        localDatasets.removeAll()
+        listingRequestID = nil
+        state = .idle
+    }
+
+    func invalidateAccount() {
+        requestID = UUID()
+        localDatasets.removeAll()
+        overlaySearch = nil
+        favoriteMutations.removeAll()
+        confirmedFavorites.removeAll()
+        favoriteRevision = 0
+        listing = CatalogListing()
+        listingRequestID = nil
+        state = .idle
+        refreshError = nil
+        isShowingCachedData = false
+    }
 
     init(
         apiClient: MyPIUAPIClient = MyPIUAPIClient(),
@@ -222,6 +249,7 @@ final class SongCatalogModel: ObservableObject {
         }
         if let overlaySearch { self.overlaySearch = overlaySearch }
         if cacheScope != currentCacheScope || version != currentVersion {
+            if cacheScope != currentCacheScope { localDatasets.removeAll() }
             favoriteMutations.removeAll()
             confirmedFavorites.removeAll()
             favoriteRevision = 0
@@ -245,7 +273,8 @@ final class SongCatalogModel: ObservableObject {
             }
         }
 
-        if debounce, !normalizedQuery.isEmpty {
+        if debounce, !normalizedQuery.isEmpty,
+           !CatalogLocalQuery.isOrdinary(normalizedQuery) || localDatasets[version] == nil {
             do {
                 try await Task.sleep(nanoseconds: 300_000_000)
             } catch {
@@ -272,7 +301,7 @@ final class SongCatalogModel: ObservableObject {
             mergeArtworkIndex(cached?.listing.songs ?? [])
         }
         isShowingCachedData = cached != nil || !retainedListing.songs.isEmpty
-        if useFreshCompleteCache, overlaySearch == nil, self.overlaySearch == nil, cacheScope == "public",
+        if useFreshCompleteCache, publicCatalog == nil, overlaySearch == nil, self.overlaySearch == nil, cacheScope == "public",
            normalizedQuery.isEmpty,
            filters.isEmpty,
            let cached,
@@ -285,7 +314,12 @@ final class SongCatalogModel: ObservableObject {
         }
         let startingFavoriteRevision = favoriteRevision
         do {
-            let page = if normalizedQuery.isEmpty {
+            let localPage = try await performLocalSearch(query: normalizedQuery, version: version,
+                filters: filters, reuse: useFreshCompleteCache, requestID: requestID,
+                startingFavoriteRevision: startingFavoriteRevision)
+            let page = if let localPage {
+                localPage
+            } else if normalizedQuery.isEmpty {
                 try await performCompleteSearch(
                     query: normalizedQuery,
                     version: version,
@@ -404,11 +438,13 @@ final class SongCatalogModel: ObservableObject {
         do {
             let authoritativeValue = try await update(song.slug, saved, version)
             guard favoriteMutations[song.slug]?.id == mutation.id else {
-                try? await cache.setFavorite(
+                // Reauthentication removed this mutation, but its successful write
+                // still belongs to the original account. Reconcile only matching UI.
+                await applyConfirmedFavorite(
                     authoritativeValue,
-                    forSlug: song.slug,
+                    slug: song.slug,
                     version: version,
-                    scope: cacheScope
+                    cacheScope: cacheScope
                 )
                 return
             }
@@ -457,6 +493,10 @@ final class SongCatalogModel: ObservableObject {
         cacheScope: String
     ) async {
         var removedFromFavoriteFeed = false
+        if currentCacheScope == cacheScope, var dataset = localDatasets[version] {
+            dataset.overlay = dataset.overlay?.settingFavorite(isFavorite, slug: slug)
+            localDatasets[version] = dataset
+        }
         if currentVersion == version, currentCacheScope == cacheScope {
             if confirmedFavorites[slug]?.value != isFavorite {
                 favoriteRevision += 1
@@ -602,22 +642,6 @@ final class SongCatalogModel: ObservableObject {
         filters: CatalogFilters,
         onProgress: (CatalogSearchPage) -> Void
     ) async throws -> CatalogSearchPage {
-        if query.isEmpty, filters.isEmpty, filters.usesDefaultSort,
-           let publicCatalog, let overlaySearch {
-            do {
-                async let snapshotRequest = publicCatalog.refresh(version: version)
-                if currentCacheScope == "public" {
-                    return try await snapshotRequest.defaultPage
-                }
-                if currentCacheScope?.hasPrefix("account:") == true {
-                    let overlay = try await overlaySearch(version)
-                    return try await overlay.applying(to: snapshotRequest)
-                }
-            } catch PublicCatalogError.unavailable {
-                // Rollout compatibility: only a missing endpoint permits the legacy page walk.
-            } catch MyPIUAPIError.server(status: 404, code: _) {
-            }
-        }
         let firstPage = try await performSearch(
             query: query,
             cursor: nil,
@@ -653,6 +677,34 @@ final class SongCatalogModel: ObservableObject {
             total: listing.total,
             filterOptions: listing.filterOptions
         )
+    }
+
+    private func performLocalSearch(query: String, version: PIUGameVersion, filters: CatalogFilters,
+                                    reuse: Bool, requestID: UUID, startingFavoriteRevision: Int) async throws -> CatalogSearchPage? {
+        guard CatalogLocalQuery.isOrdinary(query), let publicCatalog,
+              currentCacheScope == "public" || (currentCacheScope?.hasPrefix("account:") == true && overlaySearch != nil)
+        else { return nil }
+        if reuse, let dataset = localDatasets[version] {
+            return try CatalogLocalQuery.page(snapshot: dataset.snapshot, overlay: dataset.overlay, query: query, filters: filters)
+        }
+        do {
+            async let snapshotRequest = publicCatalog.refresh(version: version)
+            var overlay = currentCacheScope == "public" ? nil : try await overlaySearch?(version)
+            let snapshot = try await snapshotRequest
+            try Task.checkCancellation()
+            guard self.requestID == requestID else { throw CancellationError() }
+            // A GET started before a completed favorite write must not undo that write.
+            for (slug, favorite) in confirmedFavorites where favorite.revision > startingFavoriteRevision {
+                overlay = overlay?.settingFavorite(favorite.value, slug: slug)
+            }
+            let page = try CatalogLocalQuery.page(snapshot: snapshot, overlay: overlay, query: query, filters: filters)
+            localDatasets[version] = LocalDataset(snapshot: snapshot, overlay: overlay)
+            return page
+        } catch PublicCatalogError.unavailable {
+            return nil // Only a missing endpoint permits legacy search during rollout.
+        } catch MyPIUAPIError.server(status: 404, code: _) {
+            return nil
+        }
     }
 
     private func listingForCache() -> CatalogListing {

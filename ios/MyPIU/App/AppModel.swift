@@ -55,6 +55,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var performanceState: PerformanceState = .idle
     let favoriteChanges = PassthroughSubject<FavoriteChange, Never>()
     @Published private(set) var catalogRefreshGeneration = 0
+    @Published private(set) var catalogAuthGeneration = 0
     @Published private var favoriteUpdateAccounts: [String: String] = [:]
     @Published var selectedVersion: PIUGameVersion = .phoenix2
 
@@ -69,6 +70,7 @@ final class AppModel: ObservableObject {
     private var accessToken: MyPIUAccessToken? {
         didSet {
             if oldValue?.value != accessToken?.value {
+                catalogAuthGeneration += 1
                 // An account fetched with the previous token cannot scope new private requests.
                 myPIUAccount = nil
                 sessionsModel.updateScope(nil)
@@ -493,8 +495,13 @@ final class AppModel: ObservableObject {
                 version: version,
                 accessToken: token.value
             )
-            guard accessToken?.value == token.value, myPIUAccount?.id == accountID else {
+            guard let currentToken = accessToken, myPIUAccount?.id == accountID else {
                 throw CancellationError()
+            }
+            if currentToken.value != token.value {
+                // This write succeeded for the same account before reauthentication.
+                // Refresh the replacement session's retained overlay; stale reads still cancel.
+                catalogRefreshGeneration += 1
             }
             favoriteChanges.send(FavoriteChange(
                 id: UUID(),

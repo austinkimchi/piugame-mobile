@@ -53,6 +53,9 @@ data class MobileCatalogOverlay(
     val favoriteSlugs: List<String>,
     val recommendations: Map<String, Map<String, String?>>,
 ) {
+    fun settingFavorite(saved: Boolean, slug: String) = copy(favoriteSlugs =
+        favoriteSlugs.toMutableSet().also { if (saved) it.add(slug) else it.remove(slug) }.sorted())
+
     fun apply(snapshot: PublicCatalogSnapshot): CatalogSearchPage {
         require(schemaVersion == 1 && version == snapshot.selectedVersion) { "Invalid account catalog response." }
         val favorites = favoriteSlugs.toSet()

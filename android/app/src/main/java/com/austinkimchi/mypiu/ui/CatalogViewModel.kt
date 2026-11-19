@@ -61,6 +61,7 @@ class CatalogViewModel(
             refreshSignal.revision.collect { revision ->
                 if (revision == observedRefreshRevision) return@collect
                 observedRefreshRevision = revision
+                repository.invalidateLocal()
                 if (started && mutableState.value.isMyPiuConnected) refresh()
             }
         }
@@ -84,7 +85,10 @@ class CatalogViewModel(
         val preferredVersionChanged = preferredVersion != null && current.version != preferredVersion
         if (current.cacheScope == scope && current.isMyPiuConnected == accountConnected && !preferredVersionChanged) return
 
-        if (sessionIdentityChanged) sessionGeneration += 1
+        if (sessionIdentityChanged) {
+            sessionGeneration += 1
+            repository.invalidateLocal()
+        }
         confirmedFavorites.clear()
         historyJob?.cancel()
         mutableState.update { state ->
@@ -229,7 +233,6 @@ class CatalogViewModel(
                     isCurrentMutation &&
                         mutationSessionGeneration != sessionGeneration &&
                         current.isMyPiuConnected &&
-                        current.version == version &&
                         current.cacheScope == scope
                 if (
                     isCurrentMutation &&
@@ -268,10 +271,13 @@ class CatalogViewModel(
                     shouldReconcileReplacementSession &&
                     mutationSessionGeneration != sessionGeneration &&
                     mutableState.value.isMyPiuConnected &&
-                    mutableState.value.version == version &&
                     mutableState.value.cacheScope == scope
                 ) {
-                    reload(debounce = false)
+                    // Token A's successful write is not applied to token B's retained overlay.
+                    // Clear every retained version even when a private feed is currently displayed;
+                    // refreshing that feed alone would leave the ordinary catalog stale.
+                    repository.invalidateLocal()
+                    reload(debounce = false, useFreshCompleteCache = false)
                 }
             } catch (error: CancellationException) {
                 if (finishFavoriteMutation(mutationKey, mutation)) {
@@ -438,9 +444,8 @@ class CatalogViewModel(
             }
             val requestId = ++latestSearchRequestId
             try {
-                val bulkPage = if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank() &&
-                    sortBy == CatalogSortOption.SERIES && sortDirection == CatalogSortDirection.DESCENDING
-                ) repository.snapshot(version, authenticated) else null
+                val bulkPage = if (snapshot.feed == CatalogFeed.CATALOG)
+                    repository.localQuery(query, version, authenticated, sortBy, sortDirection, useFreshCompleteCache) else null
                 val page = bulkPage ?: run {
                     val firstPage = repository.search(query, null, version, authenticated, sortBy, sortDirection)
                     if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank()) {
