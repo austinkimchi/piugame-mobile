@@ -53,6 +53,8 @@ class PerformanceViewModel(
         val current = mutableState.value
         if (current.accountScope == scope && current.isConnected == isConnected &&
             current.preferredVersion == preferredVersion) return
+        val restartHistory = current.accountScope == scope &&
+            current.preferredVersion != preferredVersion && sessionJob != null
 
         sessionGeneration += 1
         if (current.accountScope != null) repository.invalidateSessionCache()
@@ -65,6 +67,8 @@ class PerformanceViewModel(
             preferredVersion = preferredVersion,
         )
         if (started && isConnected) reload()
+        // The mounted screen's account effect does not restart for a preference-only change.
+        if (restartHistory && isConnected) reloadSession()
     }
 
     fun start() {
