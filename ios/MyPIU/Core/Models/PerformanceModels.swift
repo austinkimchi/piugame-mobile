@@ -54,7 +54,7 @@ struct MyPIUPerformanceDashboard: Decodable, Equatable, Sendable {
         let recentlyPlayed: Int
     }
 
-    struct Play: Decodable, Equatable, Identifiable, Sendable {
+    struct Play: Codable, Equatable, Identifiable, Sendable {
         let id: String
         let songName: String
         let chartToken: String

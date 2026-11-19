@@ -142,6 +142,7 @@ data class PerformanceSessionResponse(val session: MyPiuPerformanceSession? = nu
 data class PerformanceSessionsResponse(
     val sessions: List<MyPiuPerformanceSession> = emptyList(),
     val nextOffset: Int? = null,
+    val selectedVersion: String? = null,
 )
 
 data class PerformanceProgressSummary(

@@ -10,6 +10,7 @@
 		08D371B2E66865A594D6A898 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F083A9F8C3C6F7D35E148D44 /* Assets.xcassets */; };
 		0C75B4963C0849C02C365B0E /* SongChartPerformance.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA51101ABEED0BBAE7A00F1D /* SongChartPerformance.swift */; };
 		164FC7D22967F83D63294F5B /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D63B5D74E06EFCFFFF47B8E7 /* AccountView.swift */; };
+		17FBEB112D539CD637166DEB /* PerformanceSessionsCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4102119DC473D8531BAA4688 /* PerformanceSessionsCache.swift */; };
 		19E18DBE83D74B818D71FADE /* PerformanceSessionsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001C6F4F6CEA53B70013B44 /* PerformanceSessionsModel.swift */; };
 		207CBCE3CEC2D7D1D56F4133 /* MyPIUOAuthCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0178D7D940058808BDECA9 /* MyPIUOAuthCoordinator.swift */; };
 		2420DC1B1276C73F83A53376 /* CatalogLocalLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0FA0255D002682B60E890F /* CatalogLocalLoadingTests.swift */; };
@@ -22,6 +23,7 @@
 		464371D5ECCB17F6D989A6CB /* CatalogLocalQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8174D991F622D12530E50A3 /* CatalogLocalQuery.swift */; };
 		4B4416010A4A1C4D8D42D3B5 /* PerformanceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9DC3E1D3546740CE933255 /* PerformanceModels.swift */; };
 		512558457622871B9897CE4C /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B7D5C8D383EAEF50B35C49 /* ActivityView.swift */; };
+		5B870FE929926FD779D84739 /* PerformanceSessionsCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A79F4027E5F544D064351E29 /* PerformanceSessionsCacheTests.swift */; };
 		615EAD497A9582BE13C9AF64 /* src in Resources */ = {isa = PBXBuildFile; fileRef = FD46C1391A1F1EE31ECB6F17 /* src */; };
 		665BAE9AA3F04B1DB07C147C /* CatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C6B0F65770D601A3572838 /* CatalogTests.swift */; };
 		671638399C9A5F3E591F9455 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD6147A2453AC65580D8F77F /* RootView.swift */; };
@@ -112,6 +114,7 @@
 		24107F978E8A8690DD6E622A /* MobileSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSyncTests.swift; sourceTree = "<group>"; };
 		279AA41B8253E04E607A00EA /* MyPIUModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPIUModels.swift; sourceTree = "<group>"; };
 		332AAF4C49320D34591C3A86 /* SongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongsView.swift; sourceTree = "<group>"; };
+		4102119DC473D8531BAA4688 /* PerformanceSessionsCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceSessionsCache.swift; sourceTree = "<group>"; };
 		43EB695E7D4CB654D1474518 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		44A09895888A319485912D66 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		44AC1DF3970C0C744EEA07C1 /* MobileCatalogOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileCatalogOverlay.swift; sourceTree = "<group>"; };
@@ -134,6 +137,7 @@
 		9FD459FC724F3E051B78545E /* CatalogSongDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogSongDetailView.swift; sourceTree = "<group>"; };
 		A079318A1DE5D35F4C0870CA /* MyPIU.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MyPIU.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2BB045593436C1AAFB1A96B /* ApplicationInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationInfo.swift; sourceTree = "<group>"; };
+		A79F4027E5F544D064351E29 /* PerformanceSessionsCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceSessionsCacheTests.swift; sourceTree = "<group>"; };
 		AD6147A2453AC65580D8F77F /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		B6348BBD56B15849965ED611 /* MyPIUSafariExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = MyPIUSafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C31B4EF72D06DFA714032DFD /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
@@ -211,6 +215,7 @@
 			isa = PBXGroup;
 			children = (
 				6E733E3EFB171AE02B3FA4E7 /* CatalogCache.swift */,
+				4102119DC473D8531BAA4688 /* PerformanceSessionsCache.swift */,
 			);
 			path = Persistence;
 			sourceTree = "<group>";
@@ -264,6 +269,7 @@
 				983ACCAB1D8C57BCBB44731E /* CatalogLocalQueryTests.swift */,
 				45C6B0F65770D601A3572838 /* CatalogTests.swift */,
 				24107F978E8A8690DD6E622A /* MobileSyncTests.swift */,
+				A79F4027E5F544D064351E29 /* PerformanceSessionsCacheTests.swift */,
 				D71941FA901BC63A4E3E2032 /* PerformanceSessionsTests.swift */,
 				CB698BF79F8A8EA2BF773865 /* PerformanceTests.swift */,
 				60C7C2786874680F6E136DA7 /* PIUGameClientTests.swift */,
@@ -545,6 +551,7 @@
 				C584BA78962B4E1843083ECF /* MobileSyncTests.swift in Sources */,
 				8C91E5DF0415D925B933E8E1 /* PIUGameClientTests.swift in Sources */,
 				D3EE9E86E439ED67C780C938 /* PIUHTMLParserTests.swift in Sources */,
+				5B870FE929926FD779D84739 /* PerformanceSessionsCacheTests.swift in Sources */,
 				9AF206862ED5DD673957415F /* PerformanceSessionsTests.swift in Sources */,
 				6DA59ABB2F95A97E0E469FC7 /* PerformanceTests.swift in Sources */,
 				41211A61CB8881E4E84A9DA1 /* PublicCatalogTests.swift in Sources */,
@@ -591,6 +598,7 @@
 				4B4416010A4A1C4D8D42D3B5 /* PerformanceModels.swift in Sources */,
 				EDFF23FC4A4C3B2E0A1DA000 /* PerformanceSessionModels.swift in Sources */,
 				6F3156C3E9AD7C874A3E42A2 /* PerformanceSessionView.swift in Sources */,
+				17FBEB112D539CD637166DEB /* PerformanceSessionsCache.swift in Sources */,
 				19E18DBE83D74B818D71FADE /* PerformanceSessionsModel.swift in Sources */,
 				C6AF54993823A1A812850D28 /* PlayerProgressView.swift in Sources */,
 				890729801776C2527D5DC000 /* PublicCatalogStore.swift in Sources */,

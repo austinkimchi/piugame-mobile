@@ -56,6 +56,11 @@ private struct PerformanceSessionsContent: View {
 
     private var sessionsList: some View {
         List {
+            if let savedAt = model.savedAt {
+                Text("Saved history from \(savedAt.formatted(date: .abbreviated, time: .shortened))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             if model.isRefreshing {
                 ProgressView("Updating sessions")
                     .listRowSeparator(.hidden)
@@ -104,7 +109,9 @@ private struct PerformanceSessionsContent: View {
     }
 
     private func refresh() async {
-        await model.refresh(scope: appModel.catalogCacheScope) { offset in
+        await model.refresh(scope: appModel.catalogCacheScope, cacheContext: {
+            try await appModel.verifiedSessionsCacheContext()
+        }) { offset in
             try await appModel.performanceSessions(offset: offset)
         }
     }

@@ -1,12 +1,12 @@
 import Foundation
 
-struct MyPIUPerformanceSession: Decodable, Equatable, Identifiable, Sendable {
+struct MyPIUPerformanceSession: Codable, Equatable, Identifiable, Sendable {
     let id: String
     let arcadeName: String?
     let summary: Summary
     let plays: [MyPIUPerformanceDashboard.Play]
 
-    struct Summary: Decodable, Equatable, Sendable {
+    struct Summary: Codable, Equatable, Sendable {
         let playCount: Int
         let clearCount: Int
         let failedCount: Int
@@ -25,7 +25,8 @@ struct MyPIUPerformanceSession: Decodable, Equatable, Identifiable, Sendable {
     }
 }
 
-struct MyPIUPerformanceSessionsPage: Decodable, Equatable, Sendable {
+struct MyPIUPerformanceSessionsPage: Codable, Equatable, Sendable {
     let sessions: [MyPIUPerformanceSession]
     let nextOffset: Int?
+    var selectedVersion: String? = nil
 }

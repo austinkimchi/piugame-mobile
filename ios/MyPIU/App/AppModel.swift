@@ -47,9 +47,15 @@ final class AppModel: ObservableObject {
     @Published private(set) var state: SyncState = .restoring
     @Published private(set) var snapshot: PIUSnapshot?
     @Published private(set) var myPIUAccount: MyPIUAccount? {
-        didSet { sessionsModel.updateScope(catalogCacheScope) }
+        didSet {
+            sessionsModel.updateScope(catalogCacheScope)
+            if let oldValue, let myPIUAccount, oldValue.id == myPIUAccount.id,
+               oldValue.piuGameVersion != myPIUAccount.piuGameVersion {
+                sessionsModel.resetVersion()
+            }
+        }
     }
-    let sessionsModel = PerformanceSessionsModel()
+    let sessionsModel = PerformanceSessionsModel(cache: PerformanceSessionsCache())
     @Published private(set) var myPIUState: MyPIUState = .restoring
     @Published private(set) var performance: MyPIUPerformanceDashboard?
     @Published private(set) var performanceState: PerformanceState = .idle
@@ -79,6 +85,7 @@ final class AppModel: ObservableObject {
     }
     private var volatilePendingRevocations: [MyPIUAccessToken] = []
     private var performanceRequestID = UUID()
+    private var sessionsIdentityRequestID = UUID()
     private var hasRestored = false
     private var restorationOperation: RestorationOperation?
     private var isPIUGameSyncInFlight = false
@@ -580,6 +587,28 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func verifiedSessionsCacheContext() async throws -> PerformanceSessionsCacheContext? {
+        guard let token = accessToken, !token.isExpired, let accountID = myPIUAccount?.id else {
+            return nil
+        }
+        let requestID = UUID()
+        sessionsIdentityRequestID = requestID
+        do {
+            let account = try await apiClient.account(accessToken: token.value)
+            guard accessToken?.value == token.value, myPIUAccount?.id == accountID,
+                  account.id == accountID, sessionsIdentityRequestID == requestID,
+                  !Task.isCancelled else { throw CancellationError() }
+            myPIUAccount = account
+            return PerformanceSessionsCacheContext(origin: apiClient.cacheOrigin,
+                accountID: account.id, version: account.piuGameVersion, token: token.value)
+        } catch {
+            if let apiError = error as? MyPIUAPIError,
+               apiError.isUnauthorized || apiError.isAccountNotFound,
+               accessToken?.value == token.value { clearMyPIUSession() }
+            throw error
+        }
+    }
+
     func performanceSessions(
         offset: Int = 0,
         limit: Int = 20
@@ -825,6 +854,7 @@ final class AppModel: ObservableObject {
         }
         accessToken = nil
         myPIUAccount = nil
+        sessionsModel.clearPrivateCache()
         performance = nil
         performanceState = .idle
         performanceRequestID = UUID()

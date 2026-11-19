@@ -43,6 +43,7 @@ actor MyPIUAPIClient {
     static let redirectURI = "mypiu://oauth/callback"
 
     nonisolated private let baseURL: URL
+    nonisolated var cacheOrigin: String { baseURL.absoluteString }
     private let session: URLSession
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -174,7 +175,8 @@ actor MyPIUAPIClient {
         let response: PerformanceSessionsResponse = try await send(request)
         return MyPIUPerformanceSessionsPage(
             sessions: response.sessions,
-            nextOffset: response.nextOffset
+            nextOffset: response.nextOffset,
+            selectedVersion: response.selectedVersion
         )
     }
 
@@ -397,6 +399,7 @@ private struct PerformanceSessionResponse: Decodable {
 private struct PerformanceSessionsResponse: Decodable {
     let sessions: [MyPIUPerformanceSession]
     let nextOffset: Int?
+    let selectedVersion: String?
 }
 
 private struct FavoriteUpdatePayload: Encodable {

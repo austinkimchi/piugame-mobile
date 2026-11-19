@@ -44,6 +44,7 @@ App source lives in `ios/` and `android/`; shared extension source lives in `bro
 ## Documentation
 
 - [Architecture](docs/architecture.md) and [mobile sync contract](docs/mobile-sync-contract.md)
+- [Session caching](docs/session-caching.md), [catalog loading](docs/catalog-loading.md), and [artwork loading](docs/artwork-loading.md)
 - [Delivery milestones](docs/milestones.md) and [local qualification results](docs/qualification-2026-11-19.md)
 - [Accessibility checks](docs/accessibility-audit.md)
 - [iOS / TestFlight release](docs/testflight.md) and [App Store metadata](ios/AppStore/README.md)
