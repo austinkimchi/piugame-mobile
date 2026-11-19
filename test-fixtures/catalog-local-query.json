@@ -1,0 +1,1605 @@
+{
+  "schemaVersion": 1,
+  "source": "piugame-web PR46 b7fc34c queryCatalog; native levelMode default is explicit and",
+  "snapshot": {
+    "schemaVersion": 1,
+    "selectedVersion": "phoenix2",
+    "view": "supported",
+    "total": 12,
+    "filterOptions": {
+      "folders": [
+        "K-Pop",
+        "Original",
+        "World"
+      ],
+      "series": [
+        "1ST",
+        "NX",
+        "Fiesta",
+        "PRIME 2",
+        "XX",
+        "PHOENIX",
+        "PHOENIX 2",
+        "Future"
+      ],
+      "levels": [
+        "1",
+        "2",
+        "4",
+        "17",
+        "18",
+        "19",
+        "20",
+        "22",
+        "27",
+        "+"
+      ],
+      "charts": [
+        "singles",
+        "doubles",
+        "co-op"
+      ]
+    },
+    "songs": [
+      {
+        "slug": "all",
+        "title": "Alpha",
+        "artist": "Artist",
+        "series": "PHOENIX 2",
+        "folder": "Original",
+        "folderPosition": 1,
+        "chartSummary": [
+          "S17",
+          "D17",
+          "C2",
+          "S28"
+        ],
+        "songKey": "key-all",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "single",
+        "title": "alpha",
+        "artist": "Artist",
+        "series": "PHOENIX2",
+        "folder": "Original",
+        "folderPosition": 2,
+        "chartSummary": [
+          "S17"
+        ],
+        "songKey": "key-single",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [
+          "tagged"
+        ],
+        "isPremium": false
+      },
+      {
+        "slug": "double",
+        "title": "Zeta",
+        "artist": "Other",
+        "series": "PHOENIX",
+        "folder": "World",
+        "folderPosition": null,
+        "chartSummary": [
+          "D17",
+          "CX2"
+        ],
+        "songKey": "key-double",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "old",
+        "title": "10",
+        "artist": "Artist",
+        "series": "1ST",
+        "folder": "K-Pop",
+        "folderPosition": 1,
+        "chartSummary": [
+          "S1",
+          "D2",
+          "C3"
+        ],
+        "songKey": "key-old",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "unknown",
+        "title": "2",
+        "artist": "Other",
+        "series": "Future",
+        "folder": "World",
+        "folderPosition": 3,
+        "chartSummary": [
+          "S??",
+          "D28",
+          "CO-OP"
+        ],
+        "songKey": "key-unknown",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "null",
+        "title": "No series",
+        "artist": "Artist",
+        "series": null,
+        "folder": null,
+        "folderPosition": null,
+        "chartSummary": [],
+        "songKey": "key-null",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "unicode",
+        "title": "😀",
+        "artist": "한국",
+        "series": "XX",
+        "folder": "World",
+        "folderPosition": 4,
+        "chartSummary": [
+          "S27",
+          "D27",
+          "C5"
+        ],
+        "songKey": "key-unicode",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "bmp",
+        "title": "",
+        "artist": "日本",
+        "series": "PRIME 2",
+        "folder": "World",
+        "folderPosition": 4,
+        "chartSummary": [
+          "S18",
+          "D19",
+          "CX4"
+        ],
+        "songKey": "key-bmp",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "special",
+        "title": "A.* [Mix]",
+        "artist": "Artist",
+        "series": "Fiesta",
+        "folder": "Original",
+        "folderPosition": 5,
+        "chartSummary": [
+          "S18",
+          "D18"
+        ],
+        "songKey": "key-special",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "tie-b",
+        "title": "Tie",
+        "artist": "Same",
+        "series": "NX",
+        "folder": "Original",
+        "folderPosition": 5,
+        "chartSummary": [
+          "S2"
+        ],
+        "songKey": "key-tie-b",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "tie-a",
+        "title": "Tie",
+        "artist": "Same",
+        "series": "NX",
+        "folder": "Original",
+        "folderPosition": 5,
+        "chartSummary": [
+          "S2"
+        ],
+        "songKey": "key-tie-a",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      },
+      {
+        "slug": "alias",
+        "title": "Becouse of You",
+        "artist": "Srav3R & USAO",
+        "series": "PHOENIX 2",
+        "folder": "Original",
+        "folderPosition": 6,
+        "chartSummary": [
+          "S20",
+          "D22"
+        ],
+        "songKey": "key-alias",
+        "version": "phoenix2",
+        "supportedVersions": [
+          "phoenix2"
+        ],
+        "imageUrl": null,
+        "bpm": null,
+        "tags": [],
+        "isPremium": false
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "series-asc",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "asc",
+      "expectedSlugs": [
+        "old",
+        "tie-a",
+        "tie-b",
+        "special",
+        "bmp",
+        "unicode",
+        "double",
+        "all",
+        "alias",
+        "single",
+        "null",
+        "unknown"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "NX",
+          "Fiesta",
+          "PRIME 2",
+          "XX",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "20",
+          "22",
+          "27",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "series-desc",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "single",
+        "alias",
+        "all",
+        "double",
+        "unicode",
+        "bmp",
+        "special",
+        "tie-a",
+        "tie-b",
+        "old",
+        "unknown",
+        "null"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "NX",
+          "Fiesta",
+          "PRIME 2",
+          "XX",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "20",
+          "22",
+          "27",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "title-asc",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "title",
+      "sortDirection": "asc",
+      "expectedSlugs": [
+        "old",
+        "unknown",
+        "special",
+        "all",
+        "alias",
+        "null",
+        "tie-a",
+        "tie-b",
+        "double",
+        "single",
+        "bmp",
+        "unicode"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "NX",
+          "Fiesta",
+          "PRIME 2",
+          "XX",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "20",
+          "22",
+          "27",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "title-desc",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "title",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "unicode",
+        "bmp",
+        "single",
+        "double",
+        "tie-a",
+        "tie-b",
+        "null",
+        "alias",
+        "all",
+        "special",
+        "unknown",
+        "old"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "NX",
+          "Fiesta",
+          "PRIME 2",
+          "XX",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "20",
+          "22",
+          "27",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "artist-asc",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "artist",
+      "sortDirection": "asc",
+      "expectedSlugs": [
+        "old",
+        "special",
+        "all",
+        "null",
+        "single",
+        "unknown",
+        "double",
+        "tie-a",
+        "tie-b",
+        "alias",
+        "bmp",
+        "unicode"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "NX",
+          "Fiesta",
+          "PRIME 2",
+          "XX",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "20",
+          "22",
+          "27",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "artist-desc",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "artist",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "unicode",
+        "bmp",
+        "alias",
+        "tie-a",
+        "tie-b",
+        "double",
+        "unknown",
+        "single",
+        "null",
+        "all",
+        "special",
+        "old"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "NX",
+          "Fiesta",
+          "PRIME 2",
+          "XX",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "20",
+          "22",
+          "27",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "folder-asc",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "folder",
+      "sortDirection": "asc",
+      "expectedSlugs": [
+        "null",
+        "double",
+        "old",
+        "all",
+        "single",
+        "unknown",
+        "bmp",
+        "unicode",
+        "tie-a",
+        "tie-b",
+        "special",
+        "alias"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "NX",
+          "Fiesta",
+          "PRIME 2",
+          "XX",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "20",
+          "22",
+          "27",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "folder-desc",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "folder",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "alias",
+        "special",
+        "tie-a",
+        "tie-b",
+        "unicode",
+        "bmp",
+        "unknown",
+        "single",
+        "all",
+        "old",
+        "double",
+        "null"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "NX",
+          "Fiesta",
+          "PRIME 2",
+          "XX",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "20",
+          "22",
+          "27",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "query:  alpha  ",
+      "query": "  alpha  ",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "single",
+        "all"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "query:key-single",
+      "query": "key-single",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "single"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "17"
+        ],
+        "charts": [
+          "singles"
+        ]
+      }
+    },
+    {
+      "name": "query:artist",
+      "query": "artist",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "single",
+        "all",
+        "special",
+        "old",
+        "null"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original"
+        ],
+        "series": [
+          "1ST",
+          "Fiesta",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "17",
+          "18",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "query:tagged",
+      "query": "tagged",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "single"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "17"
+        ],
+        "charts": [
+          "singles"
+        ]
+      }
+    },
+    {
+      "name": "query:A.*",
+      "query": "A.*",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "special"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "Fiesta"
+        ],
+        "levels": [
+          "18"
+        ],
+        "charts": [
+          "singles",
+          "doubles"
+        ]
+      }
+    },
+    {
+      "name": "query:[Mix]",
+      "query": "[Mix]",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "special"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "Fiesta"
+        ],
+        "levels": [
+          "18"
+        ],
+        "charts": [
+          "singles",
+          "doubles"
+        ]
+      }
+    },
+    {
+      "name": "query:CX2",
+      "query": "CX2",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "all",
+        "double"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original",
+          "World"
+        ],
+        "series": [
+          "PHOENIX",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "2",
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "query:C 2",
+      "query": "C 2",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "all",
+        "double"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original",
+          "World"
+        ],
+        "series": [
+          "PHOENIX",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "2",
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "query:because of you",
+      "query": "because of you",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "alias"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "20",
+          "22"
+        ],
+        "charts": [
+          "singles",
+          "doubles"
+        ]
+      }
+    },
+    {
+      "name": "query:because.*",
+      "query": "because.*",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [],
+      "expectedOptions": {
+        "folders": [],
+        "series": [],
+        "levels": [],
+        "charts": []
+      }
+    },
+    {
+      "name": "query:한국",
+      "query": "한국",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [
+        "unicode"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "World"
+        ],
+        "series": [
+          "XX"
+        ],
+        "levels": [
+          "27"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "query:does not exist",
+      "query": "does not exist",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "expectedSlugs": [],
+      "expectedOptions": {
+        "folders": [],
+        "series": [],
+        "levels": [],
+        "charts": []
+      }
+    },
+    {
+      "name": "filter:20",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "folders": [
+        "Original"
+      ],
+      "expectedSlugs": [
+        "single",
+        "alias",
+        "all",
+        "special",
+        "tie-a",
+        "tie-b"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "NX",
+          "Fiesta",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "2",
+          "17",
+          "18",
+          "20",
+          "22",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:21",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "folders": [
+        "original"
+      ],
+      "expectedSlugs": [],
+      "expectedOptions": {
+        "folders": [],
+        "series": [],
+        "levels": [],
+        "charts": []
+      }
+    },
+    {
+      "name": "filter:22",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "series": [
+        "phoenix2"
+      ],
+      "expectedSlugs": [
+        "single",
+        "alias",
+        "all"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "17",
+          "20",
+          "22",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:23",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "series": [
+        "PHOENIX"
+      ],
+      "expectedSlugs": [
+        "double"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "World"
+        ],
+        "series": [
+          "PHOENIX"
+        ],
+        "levels": [
+          "2",
+          "17"
+        ],
+        "charts": [
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:24",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "17"
+      ],
+      "expectedSlugs": [
+        "single",
+        "all",
+        "double"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original",
+          "World"
+        ],
+        "series": [
+          "PHOENIX",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "2",
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:25",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "+"
+      ],
+      "expectedSlugs": [
+        "all",
+        "double",
+        "bmp",
+        "unknown"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original",
+          "World"
+        ],
+        "series": [
+          "PRIME 2",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:26",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "2"
+      ],
+      "charts": [
+        "co-op"
+      ],
+      "expectedSlugs": [
+        "all",
+        "double"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original",
+          "World"
+        ],
+        "series": [
+          "PHOENIX",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "2"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:27",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "2"
+      ],
+      "expectedSlugs": [
+        "all",
+        "double",
+        "tie-a",
+        "tie-b",
+        "old"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "NX",
+          "PHOENIX",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:28",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "+"
+      ],
+      "charts": [
+        "singles"
+      ],
+      "expectedSlugs": [
+        "all",
+        "unknown"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original",
+          "World"
+        ],
+        "series": [
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:29",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "+"
+      ],
+      "charts": [
+        "co-op"
+      ],
+      "expectedSlugs": [],
+      "expectedOptions": {
+        "folders": [],
+        "series": [],
+        "levels": [],
+        "charts": []
+      }
+    },
+    {
+      "name": "filter:30",
+      "query": "",
+      "levelMode": "or",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "17",
+        "18"
+      ],
+      "expectedSlugs": [
+        "single",
+        "all",
+        "double",
+        "bmp",
+        "special"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original",
+          "World"
+        ],
+        "series": [
+          "Fiesta",
+          "PRIME 2",
+          "PHOENIX",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:31",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "17",
+        "18"
+      ],
+      "expectedSlugs": [],
+      "expectedOptions": {
+        "folders": [],
+        "series": [],
+        "levels": [],
+        "charts": []
+      }
+    },
+    {
+      "name": "filter:32",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "17"
+      ],
+      "charts": [
+        "singles",
+        "doubles"
+      ],
+      "expectedSlugs": [
+        "all"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original"
+        ],
+        "series": [
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:33",
+      "query": "",
+      "levelMode": "or",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "levels": [
+        "17"
+      ],
+      "charts": [
+        "singles",
+        "doubles"
+      ],
+      "expectedSlugs": [
+        "single",
+        "all",
+        "double"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "Original",
+          "World"
+        ],
+        "series": [
+          "PHOENIX",
+          "PHOENIX 2"
+        ],
+        "levels": [
+          "2",
+          "17",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:34",
+      "query": "",
+      "levelMode": "and",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "charts": [
+        "doubles",
+        "singles"
+      ],
+      "expectedSlugs": [
+        "alias",
+        "all",
+        "unicode",
+        "bmp",
+        "special",
+        "old",
+        "unknown"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "Fiesta",
+          "PRIME 2",
+          "XX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "1",
+          "2",
+          "4",
+          "17",
+          "18",
+          "19",
+          "20",
+          "22",
+          "27",
+          "+"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    },
+    {
+      "name": "filter:35",
+      "query": "",
+      "levelMode": "or",
+      "sortBy": "series",
+      "sortDirection": "desc",
+      "charts": [
+        "co-op"
+      ],
+      "expectedSlugs": [
+        "all",
+        "double",
+        "unicode",
+        "bmp",
+        "old",
+        "unknown"
+      ],
+      "expectedOptions": {
+        "folders": [
+          "K-Pop",
+          "Original",
+          "World"
+        ],
+        "series": [
+          "1ST",
+          "PRIME 2",
+          "XX",
+          "PHOENIX",
+          "PHOENIX 2",
+          "Future"
+        ],
+        "levels": [
+          "2",
+          "3",
+          "5"
+        ],
+        "charts": [
+          "singles",
+          "doubles",
+          "co-op"
+        ]
+      }
+    }
+  ]
+}

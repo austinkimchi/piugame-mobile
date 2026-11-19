@@ -5,12 +5,14 @@ on:
     branches: [main]
     paths:
       - 'android/**'
+      - 'test-fixtures/**'
       - '.github/workflows/android.yml'
       - '.github/workflows/android-beta.yml'
       - '!**/*.md'
   pull_request:
     paths:
       - 'android/**'
+      - 'test-fixtures/**'
       - '.github/workflows/android.yml'
       - '.github/workflows/android-beta.yml'
       - '!**/*.md'

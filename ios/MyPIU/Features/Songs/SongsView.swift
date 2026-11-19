@@ -147,7 +147,8 @@ struct SongsView: View {
             query: query,
             version: catalogVersion,
             filters: filters,
-            cacheScope: appModel.catalogCacheScope
+            cacheScope: appModel.catalogCacheScope,
+            authGeneration: appModel.catalogAuthGeneration
         )) {
             await catalog.loadIfNeeded(
                 query: query,
@@ -372,6 +373,7 @@ private struct CatalogRequest: Hashable {
     let version: PIUGameVersion
     let filters: CatalogFilters
     let cacheScope: String?
+    let authGeneration: Int
 }
 
 private struct SongFilterSheet: View {

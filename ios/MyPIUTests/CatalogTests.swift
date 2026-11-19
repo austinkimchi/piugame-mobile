@@ -218,7 +218,7 @@ final class CatalogTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: CatalogCache(directory: directory))
+        let catalog = SongCatalogModel(cache: CatalogCache(directory: directory), publicCatalog: nil)
         var requestCount = 0
         let search: SongCatalogModel.CatalogSearch = { _, _, _ in
             requestCount += 1
@@ -274,7 +274,7 @@ final class CatalogTests: XCTestCase {
             isFavorite: false,
             recommendedChartToken: nil
         )
-        let catalog = SongCatalogModel(cache: cache)
+        let catalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         var requestedCursors: [String?] = []
 
         await catalog.loadIfNeeded(
@@ -305,7 +305,7 @@ final class CatalogTests: XCTestCase {
         XCTAssertEqual(catalog.listing.songs.map(\.slug), ["battle-no-1", "second-song"])
         XCTAssertFalse(catalog.listing.hasMore)
 
-        let restoredCatalog = SongCatalogModel(cache: cache)
+        let restoredCatalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         var restoredRequestCount = 0
         await restoredCatalog.loadIfNeeded(
             query: "",
@@ -387,7 +387,7 @@ final class CatalogTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: CatalogCache(directory: directory))
+        let catalog = SongCatalogModel(cache: CatalogCache(directory: directory), publicCatalog: nil)
         let filters = CatalogFilters(
             folders: ["Original"],
             series: ["PHOENIX 2"],
@@ -417,7 +417,7 @@ final class CatalogTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: CatalogCache(directory: directory))
+        let catalog = SongCatalogModel(cache: CatalogCache(directory: directory), publicCatalog: nil)
         var requestedQueries: [String] = []
         let search: SongCatalogModel.CatalogSearch = { query, _, _ in
             requestedQueries.append(query)
@@ -457,7 +457,7 @@ final class CatalogTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = CatalogCache(directory: directory)
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: cache)
+        let catalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         await catalog.loadIfNeeded(
             query: "battle",
             version: .phoenix2,
@@ -492,7 +492,7 @@ final class CatalogTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = CatalogCache(directory: directory)
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: cache)
+        let catalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         let search: SongCatalogModel.CatalogSearch = { _, _, _ in page }
         await catalog.loadIfNeeded(
             query: "battle",
@@ -535,7 +535,7 @@ final class CatalogTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = CatalogCache(directory: directory)
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: cache)
+        let catalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         await catalog.loadIfNeeded(
             query: "battle",
             version: .phoenix2,
@@ -584,8 +584,8 @@ final class CatalogTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = CatalogCache(directory: directory)
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let firstCatalog = SongCatalogModel(cache: cache)
-        let secondCatalog = SongCatalogModel(cache: cache)
+        let firstCatalog = SongCatalogModel(cache: cache, publicCatalog: nil)
+        let secondCatalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         let search: SongCatalogModel.CatalogSearch = { _, _, _ in page }
         await firstCatalog.loadIfNeeded(
             query: "battle",
@@ -625,7 +625,7 @@ final class CatalogTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = CatalogCache(directory: directory)
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: cache)
+        let catalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         await catalog.loadIfNeeded(
             query: "favorites",
             version: .phoenix2,
@@ -658,7 +658,7 @@ final class CatalogTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = CatalogCache(directory: directory)
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: cache)
+        let catalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         let search: SongCatalogModel.CatalogSearch = { _, _, _ in page }
         await catalog.loadIfNeeded(
             query: "battle",
@@ -690,7 +690,7 @@ final class CatalogTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = CatalogCache(directory: directory)
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: cache)
+        let catalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         let search: SongCatalogModel.CatalogSearch = { _, _, _ in page }
         await catalog.loadIfNeeded(
             query: "battle",
@@ -728,7 +728,7 @@ final class CatalogTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = CatalogCache(directory: directory)
         let page = try JSONDecoder().decode(CatalogSearchPage.self, from: Data(Self.fixture.utf8))
-        let catalog = SongCatalogModel(cache: cache)
+        let catalog = SongCatalogModel(cache: cache, publicCatalog: nil)
         let search: SongCatalogModel.CatalogSearch = { _, _, _ in page }
         await catalog.loadIfNeeded(
             query: "battle",

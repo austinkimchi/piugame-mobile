@@ -7,6 +7,13 @@ struct MobileCatalogOverlay: Decodable, Sendable {
     let favoriteSlugs: [String]
     let recommendations: [String: [String: String?]]
 
+    func settingFavorite(_ saved: Bool, slug: String) -> MobileCatalogOverlay {
+        var favorites = Set(favoriteSlugs)
+        if saved { favorites.insert(slug) } else { favorites.remove(slug) }
+        return MobileCatalogOverlay(schemaVersion: schemaVersion, version: version,
+                                    favoriteSlugs: favorites.sorted(), recommendations: recommendations)
+    }
+
     func applying(to snapshot: PublicCatalogSnapshot) throws -> CatalogSearchPage {
         guard schemaVersion == 1, version == snapshot.selectedVersion else {
             throw PublicCatalogError.invalidSnapshot

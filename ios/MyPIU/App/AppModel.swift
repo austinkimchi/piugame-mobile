@@ -55,6 +55,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var performanceState: PerformanceState = .idle
     let favoriteChanges = PassthroughSubject<FavoriteChange, Never>()
     @Published private(set) var catalogRefreshGeneration = 0
+    @Published private(set) var catalogAuthGeneration = 0
     @Published private var favoriteUpdateAccounts: [String: String] = [:]
     @Published var selectedVersion: PIUGameVersion = .phoenix2
 
@@ -69,6 +70,7 @@ final class AppModel: ObservableObject {
     private var accessToken: MyPIUAccessToken? {
         didSet {
             if oldValue?.value != accessToken?.value {
+                catalogAuthGeneration += 1
                 // An account fetched with the previous token cannot scope new private requests.
                 myPIUAccount = nil
                 sessionsModel.updateScope(nil)

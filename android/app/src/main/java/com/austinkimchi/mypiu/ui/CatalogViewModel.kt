@@ -61,6 +61,7 @@ class CatalogViewModel(
             refreshSignal.revision.collect { revision ->
                 if (revision == observedRefreshRevision) return@collect
                 observedRefreshRevision = revision
+                repository.invalidateLocal()
                 if (started && mutableState.value.isMyPiuConnected) refresh()
             }
         }
@@ -84,7 +85,10 @@ class CatalogViewModel(
         val preferredVersionChanged = preferredVersion != null && current.version != preferredVersion
         if (current.cacheScope == scope && current.isMyPiuConnected == accountConnected && !preferredVersionChanged) return
 
-        if (sessionIdentityChanged) sessionGeneration += 1
+        if (sessionIdentityChanged) {
+            sessionGeneration += 1
+            repository.invalidateLocal()
+        }
         confirmedFavorites.clear()
         historyJob?.cancel()
         mutableState.update { state ->
@@ -438,9 +442,8 @@ class CatalogViewModel(
             }
             val requestId = ++latestSearchRequestId
             try {
-                val bulkPage = if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank() &&
-                    sortBy == CatalogSortOption.SERIES && sortDirection == CatalogSortDirection.DESCENDING
-                ) repository.snapshot(version, authenticated) else null
+                val bulkPage = if (snapshot.feed == CatalogFeed.CATALOG)
+                    repository.localQuery(query, version, authenticated, sortBy, sortDirection, useFreshCompleteCache) else null
                 val page = bulkPage ?: run {
                     val firstPage = repository.search(query, null, version, authenticated, sortBy, sortDirection)
                     if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank()) {

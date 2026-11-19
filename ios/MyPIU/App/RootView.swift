@@ -43,10 +43,17 @@ struct RootView: View {
         }
         .onChange(of: appModel.catalogCacheScope) { oldScope, newScope in
             guard oldScope != newScope else { return }
+            songCatalog.invalidateAccount()
             homePath = NavigationPath()
             songsPath = NavigationPath()
             progressPath = NavigationPath()
             activityPath = NavigationPath()
+        }
+        .onReceive(appModel.$catalogAuthGeneration.dropFirst()) { _ in
+            songCatalog.invalidateAccount()
+        }
+        .onReceive(appModel.$catalogRefreshGeneration.dropFirst()) { _ in
+            songCatalog.invalidateCatalog()
         }
         .onReceive(appModel.favoriteChanges) { change in
             guard change.accountID == appModel.myPIUAccount?.id else { return }

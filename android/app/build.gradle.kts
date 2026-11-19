@@ -38,6 +38,8 @@ android {
         buildConfigField("String", "MYPIU_BASE_URL", "\"https://mypiu.austin.kim\"")
     }
 
+    sourceSets.getByName("test").resources.srcDir("../../test-fixtures")
+
     buildFeatures {
         buildConfig = true
         compose = true
