@@ -196,7 +196,12 @@ final class PerformanceTests: XCTestCase {
         )
 
         let match = matchingRecentPlay(for: serverPlay, in: [snapshotPlay])
-        let presentation = RecentPlayPresentation(play: serverPlay, snapshotPlay: match)
+        let catalogImageURL = URL(string: "https://mypiu.austin.kim/assets/piu/battle.png")
+        let presentation = RecentPlayPresentation(
+            play: serverPlay,
+            snapshotPlay: match,
+            catalogImageURL: catalogImageURL
+        )
 
         XCTAssertEqual(match, snapshotPlay)
         XCTAssertEqual(presentation.songImageURL, snapshotPlay.songImageURL)
@@ -209,6 +214,17 @@ final class PerformanceTests: XCTestCase {
         )
         XCTAssertEqual(presentation.judgmentValues[0].tint, AppTheme.info)
         XCTAssertEqual(presentation.judgmentValues[1].tint, AppTheme.accent)
+
+        var playWithServerArtwork = serverPlay
+        playWithServerArtwork.songImageUrl = URL(string: "https://mypiu.austin.kim/assets/piu/server.png")
+        XCTAssertEqual(
+            RecentPlayPresentation(
+                play: playWithServerArtwork,
+                snapshotPlay: match,
+                catalogImageURL: catalogImageURL
+            ).songImageURL,
+            playWithServerArtwork.songImageURL
+        )
     }
 
     func testStoredPerformancePlayPrefersServerJudgments() {
