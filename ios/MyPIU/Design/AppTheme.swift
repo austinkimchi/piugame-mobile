@@ -40,26 +40,31 @@ enum AppTheme {
 }
 
 @MainActor
-private final class RemoteImageCache {
+final class RemoteImageCache {
+    typealias DataLoader = @MainActor @Sendable (URLRequest) async throws -> (Data, URLResponse)
     static let shared = RemoteImageCache()
 
     private let images = NSCache<NSURL, UIImage>()
     private let responseCache: URLCache
-    private let session: URLSession
+    private let loadData: DataLoader
+    private var inFlight: [URL: Task<UIImage?, Never>] = [:]
 
-    private init() {
+    init(responseCache: URLCache? = nil, loadData: DataLoader? = nil) {
         images.countLimit = 400
         images.totalCostLimit = 96 * 1_024 * 1_024
 
         let configuration = URLSessionConfiguration.default
-        responseCache = URLCache(
+        self.responseCache = responseCache ?? URLCache(
             memoryCapacity: 64 * 1_024 * 1_024,
             diskCapacity: 512 * 1_024 * 1_024,
             diskPath: "mypiu-artwork"
         )
-        configuration.urlCache = responseCache
+        configuration.urlCache = self.responseCache
         configuration.requestCachePolicy = .returnCacheDataElseLoad
-        session = URLSession(configuration: configuration)
+        configuration.timeoutIntervalForRequest = 20
+        configuration.timeoutIntervalForResource = 45
+        let session = URLSession(configuration: configuration)
+        self.loadData = loadData ?? { request in try await session.data(for: request) }
     }
 
     func cachedImage(for url: URL) -> UIImage? {
@@ -78,23 +83,35 @@ private final class RemoteImageCache {
             return image
         }
 
-        do {
-            let (data, response) = try await session.data(for: request)
-            guard
-                ((response as? HTTPURLResponse)?.statusCode ?? 200) < 400,
-                let image = UIImage(data: data)
-            else {
+        if let existing = inFlight[url] {
+            return await existing.value
+        }
+
+        // A view leaving the screen must not cancel a jacket still needed by another row.
+        // This shared, bounded request finishes independently and populates both caches.
+        let task = Task { @MainActor in
+            do {
+                let (data, response) = try await loadData(request)
+                guard
+                    ((response as? HTTPURLResponse)?.statusCode ?? 200) < 400,
+                    let image = UIImage(data: data)
+                else {
+                    return nil as UIImage?
+                }
+                responseCache.storeCachedResponse(
+                    CachedURLResponse(response: response, data: data),
+                    for: request
+                )
+                images.setObject(image, forKey: url as NSURL, cost: data.count)
+                return image
+            } catch {
                 return nil
             }
-            responseCache.storeCachedResponse(
-                CachedURLResponse(response: response, data: data),
-                for: request
-            )
-            images.setObject(image, forKey: url as NSURL, cost: data.count)
-            return image
-        } catch {
-            return nil
         }
+        inFlight[url] = task
+        let result = await task.value
+        inFlight[url] = nil
+        return result
     }
 }
 

@@ -2,6 +2,7 @@ package com.austinkimchi.mypiu.ui
 
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceSession
+import com.austinkimchi.mypiu.core.model.PerformanceSessionsResponse
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.performance.PerformanceDataSource
 import com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal
@@ -20,6 +21,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -287,6 +289,140 @@ class PerformanceViewModelTest {
             Dispatchers.resetMain()
         }
     }
+    @Test
+    fun refreshKeepsCachedSessionsAndTransientFailureDoesNotEraseThem() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = PendingSessionDataSource()
+            val model = PerformanceViewModel(source)
+            model.updateSession("one", true)
+            model.loadSession()
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("cached", 20))
+            runCurrent()
+            model.loadSession(force = true)
+            runCurrent()
+            assertEquals(listOf("cached"), model.state.value.sessions.map { it.id })
+            assertTrue(model.state.value.isSessionLoading)
+            assertTrue(model.state.value.isSessionLoaded)
+            source.requests.removeFirst().resumeWithException(java.io.IOException("Offline"))
+            runCurrent()
+            assertEquals(listOf("cached"), model.state.value.sessions.map { it.id })
+            assertEquals(20, model.state.value.nextSessionOffset)
+            assertTrue(model.state.value.isSessionLoaded)
+            assertFalse(model.state.value.isSessionLoading)
+            assertEquals("Offline", model.state.value.sessionError)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun supersededRefreshAndPaginationCannotOverwriteNewerSameAccountHistory() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = PendingSessionDataSource()
+            val model = PerformanceViewModel(source)
+            model.updateSession("one", true)
+            model.loadSession()
+            runCurrent()
+            val oldRefresh = source.requests.removeFirst()
+            model.loadSession(force = true)
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("fresh", 20))
+            runCurrent()
+            oldRefresh.resume(sessionPage("old"))
+            runCurrent()
+            assertEquals(listOf("fresh"), model.state.value.sessions.map { it.id })
+
+            model.loadMoreSessions()
+            runCurrent()
+            val oldPage = source.requests.removeFirst()
+            model.loadSession(force = true)
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("newest", 40))
+            runCurrent()
+            oldPage.resume(sessionPage("stale-page", 60))
+            runCurrent()
+            assertEquals(listOf("newest"), model.state.value.sessions.map { it.id })
+            assertEquals(40, model.state.value.nextSessionOffset)
+            assertFalse(model.state.value.isSessionLoadingMore)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun signOutClearsPrivateRowsAndLateResponseCannotRepopulateThem() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = PendingSessionDataSource()
+            val model = PerformanceViewModel(source)
+            model.updateSession("one", true)
+            model.loadSession()
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("private", 20))
+            runCurrent()
+            model.loadMoreSessions()
+            runCurrent()
+            val oldPage = source.requests.removeFirst()
+            model.updateSession(null, false)
+            assertTrue(model.state.value.sessions.isEmpty())
+            assertNull(model.state.value.nextSessionOffset)
+            oldPage.resume(sessionPage("old-private"))
+            runCurrent()
+            assertTrue(model.state.value.sessions.isEmpty())
+            assertFalse(model.state.value.isSessionLoadingMore)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun paginationFailureRetainsHistoryAndRetryDeduplicatesWithoutBackwardCursor() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = PendingSessionDataSource()
+            val model = PerformanceViewModel(source)
+            model.updateSession("one", true)
+            model.loadSession()
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("first", 20))
+            runCurrent()
+            model.loadMoreSessions()
+            model.loadMoreSessions()
+            runCurrent()
+            assertEquals(1, source.requests.size)
+            source.requests.removeFirst().resumeWithException(java.io.IOException("Offline"))
+            runCurrent()
+            assertEquals(listOf("first"), model.state.value.sessions.map { it.id })
+            assertEquals("Offline", model.state.value.sessionPaginationError)
+            assertFalse(model.state.value.isSessionLoadingMore)
+            model.loadMoreSessions()
+            runCurrent()
+            source.requests.removeFirst().resume(PerformanceSessionsResponse(
+                sessions = sessionPage("first").sessions + sessionPage("second").sessions,
+                nextOffset = 10,
+            ))
+            runCurrent()
+            assertEquals(listOf("first", "second"), model.state.value.sessions.map { it.id })
+            assertNull(model.state.value.nextSessionOffset)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun dashboardAuthorizationFailureAlsoClearsSessionListAndCursor() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = PendingSessionDataSource(dashboardFailure = MyPiuApiException(401, "invalid_token"))
+            val model = PerformanceViewModel(source)
+            model.updateSession("one", true)
+            model.loadSession()
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("private", 20))
+            runCurrent()
+            model.start()
+            runCurrent()
+            assertFalse(model.state.value.isConnected)
+            assertTrue(model.state.value.sessions.isEmpty())
+            assertNull(model.state.value.nextSessionOffset)
+        } finally { Dispatchers.resetMain() }
+    }
+
 }
 
 private class FakePerformanceDataSource(
@@ -337,4 +473,20 @@ private fun session(playCount: Int) = MyPiuPerformanceSession(
         endedAt = "2026-09-22T07:00:00Z",
         durationMinutes = 60,
     ),
+)
+
+// Deliberately non-cancellable callbacks exercise late responses after refresh/sign-out.
+private class PendingSessionDataSource(private val dashboardFailure: Exception? = null) : PerformanceDataSource {
+    val requests = ArrayDeque<Continuation<PerformanceSessionsResponse>>()
+    override suspend fun dashboard(): MyPiuPerformanceDashboard {
+        dashboardFailure?.let { throw it }
+        return dashboard("Player")
+    }
+    override suspend fun session(): MyPiuPerformanceSession? = null
+    override suspend fun sessionPage(offset: Int, limit: Int): PerformanceSessionsResponse =
+        suspendCoroutine { requests.addLast(it) }
+}
+
+private fun sessionPage(id: String, next: Int? = null) = PerformanceSessionsResponse(
+    sessions = listOf(session(4).copy(id = id)), nextOffset = next,
 )
