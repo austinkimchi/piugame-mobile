@@ -3,7 +3,21 @@ name: Browser extension
 on:
   push:
     branches: [main]
+    paths:
+      - 'browser-extension/**'
+      - '.github/workflows/browser-extension.yml'
+      - '.github/workflows/browser-extension-release.yml'
+      - '!**/*.md'
   pull_request:
+    paths:
+      - 'browser-extension/**'
+      - '.github/workflows/browser-extension.yml'
+      - '.github/workflows/browser-extension-release.yml'
+      - '!**/*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -11,6 +25,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: browser-extension
@@ -33,4 +48,4 @@ jobs:
             browser-extension/dist/*.zip
             browser-extension/dist/*.sha256
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7

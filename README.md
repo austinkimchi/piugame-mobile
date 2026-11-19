@@ -39,7 +39,7 @@ npm --prefix browser-extension test
 npm --prefix browser-extension run check:syntax
 ```
 
-App source lives in `ios/` and `android/`; shared extension source lives in `browser-extension/`. CI checks generated artifacts, builds, tests, and unsigned release packaging. Unsigned archives do not qualify as installable or TestFlight builds.
+App source lives in `ios/` and `android/`; shared extension source lives in `browser-extension/`. [CI](docs/continuous-integration.md) checks generated artifacts, builds, tests, and unsigned release packaging for relevant changes. Unsigned archives do not qualify as installable or TestFlight builds.
 
 ## Documentation
 
