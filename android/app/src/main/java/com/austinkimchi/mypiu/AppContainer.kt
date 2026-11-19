@@ -38,6 +38,8 @@ class AppContainer(context: Context) {
         sessionStore = sessionStore,
         apiClient = apiClient,
         cache = CatalogCache(File(context.cacheDir, "catalog")),
+        publicCatalog = com.austinkimchi.mypiu.core.catalog.PublicCatalogStore(
+            File(context.cacheDir, "public-catalog-v1"), apiClient::publicCatalog),
     )
     val performanceRepository = PerformanceRepository(sessionStore, apiClient)
     val scheduler = SyncScheduler(context)

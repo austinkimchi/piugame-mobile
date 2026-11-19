@@ -539,6 +539,78 @@ class CatalogViewModelTest {
             Dispatchers.resetMain()
         }
     }
+    @Test
+    fun legacyCatalogShowsFirstPageWhileNextPageIsPending() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val gate = CompletableDeferred<Unit>()
+            val source = FakeCatalogDataSource()
+            source.searchHandler = { _, cursor, _, _ ->
+                if (cursor == null) CatalogSearchPage(listOf(favoriteSong()), "two", 1)
+                else { gate.await(); CatalogSearchPage(emptyList(), null, 1) }
+            }
+            val model = CatalogViewModel(source)
+            model.start()
+            runCurrent()
+            assertEquals(1, model.state.value.listing.songs.size)
+            assertTrue(model.state.value.isLoading)
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertFalse(model.state.value.isLoading)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun repeatedCursorCannotBeCachedAsComplete() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = FakeCatalogDataSource()
+            source.searchHandler = { _, _, _, _ -> CatalogSearchPage(listOf(favoriteSong()), "again", 2) }
+            val model = CatalogViewModel(source)
+            model.start()
+            advanceUntilIdle()
+            assertTrue(source.cacheWrites.isEmpty())
+            assertNotNull(model.state.value.error)
+            assertFalse(model.state.value.isLoading)
+            assertEquals(1, model.state.value.listing.songs.size)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun refreshFailureKeepsExistingSongsAndOffersAnError() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = FakeCatalogDataSource()
+            val model = CatalogViewModel(source)
+            model.start()
+            advanceUntilIdle()
+            val old = model.state.value.listing
+            source.searchHandler = { _, _, _, _ -> throw IllegalStateException("Offline") }
+            model.refresh()
+            advanceUntilIdle()
+            assertEquals(old, model.state.value.listing)
+            assertEquals("Offline", model.state.value.error)
+            assertFalse(model.state.value.isLoading)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun successfulImportRefreshesCatalogHints() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = FakeCatalogDataSource()
+            val signal = com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal()
+            val model = CatalogViewModel(source, signal)
+            model.updateSession("one", true, PiuGameVersion.PHOENIX_2)
+            model.start()
+            advanceUntilIdle()
+            source.searches.clear()
+            signal.notifyUploadCompleted()
+            advanceUntilIdle()
+            assertEquals(1, source.searches.size)
+        } finally { Dispatchers.resetMain() }
+    }
+
 }
 
 private data class Search(

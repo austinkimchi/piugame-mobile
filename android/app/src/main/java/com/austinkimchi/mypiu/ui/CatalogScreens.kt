@@ -192,7 +192,7 @@ fun CatalogScreen(
                     CatalogFeed.FAVORITES -> "No favorite songs"
                 },
                 message = when {
-                    state.isShowingCachedData -> "No matching songs are available in the offline cache."
+                    state.isShowingCachedData -> "No matching songs are available in the saved catalog."
                     state.feed == CatalogFeed.RECOMMENDATIONS -> "Sync more plays to build recommendations."
                     state.feed == CatalogFeed.FAVORITES -> "Favorite songs will appear here."
                     else -> "Try a different search."
@@ -216,11 +216,19 @@ fun CatalogScreen(
                         )
                         if (state.isShowingCachedData) {
                             Text(
-                                "OFFLINE",
+                                "SAVED",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.secondary,
                                 fontWeight = FontWeight.Bold,
                             )
+                        }
+                    }
+                }
+                if (state.error != null) {
+                    item {
+                        Text(state.error, modifier = Modifier.padding(horizontal = 18.dp), style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = onRefresh, modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                            Text("Retry refresh")
                         }
                     }
                 }

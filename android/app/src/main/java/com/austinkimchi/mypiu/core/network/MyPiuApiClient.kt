@@ -1,5 +1,9 @@
 package com.austinkimchi.mypiu.core.network
 
+import com.austinkimchi.mypiu.core.catalog.PublicCatalogResponse
+import com.austinkimchi.mypiu.core.catalog.PublicCatalogStore
+import com.austinkimchi.mypiu.core.model.PublicCatalogSnapshot
+import com.austinkimchi.mypiu.core.model.MobileCatalogOverlay
 import com.austinkimchi.mypiu.core.model.AccountResponse
 import com.austinkimchi.mypiu.core.model.ApiErrorResponse
 import com.austinkimchi.mypiu.core.model.CatalogSearchPage
@@ -163,6 +167,25 @@ class MyPiuApiClient(
             .get()
             .build()
         return send(request)
+    }
+
+    suspend fun publicCatalog(version: PiuGameVersion, etag: String?): PublicCatalogResponse = withContext(Dispatchers.IO) {
+        val builder = Request.Builder().url(url("api/catalog/v1/${version.serialName}"))
+            .header("Accept", "application/json")
+        etag?.let { builder.header("If-None-Match", it) }
+        client.newCall(builder.build()).execute().use { response ->
+            if (response.code == 304) return@withContext PublicCatalogResponse(null, etag, true)
+            if (!response.isSuccessful) throw MyPiuApiException(response.code, "catalog_unavailable")
+            val bytes = response.body.bytes()
+            require(bytes.size <= PublicCatalogStore.MAX_BYTES) { "Catalog response too large." }
+            PublicCatalogResponse(json.decodeFromString<PublicCatalogSnapshot>(bytes.decodeToString()), response.header("ETag"))
+        }
+    }
+
+    suspend fun catalogOverlay(version: PiuGameVersion, accessToken: String): MobileCatalogOverlay {
+        val requestUrl = url("api/mobile/v1/catalog/overlay").newBuilder()
+            .addQueryParameter("version", version.serialName).build()
+        return send(Request.Builder().url(requestUrl).header("Authorization", "Bearer $accessToken").build())
     }
 
     suspend fun searchCatalog(

@@ -31,7 +31,7 @@ struct RootView: View {
             let preferredVersion = appModel.myPIUAccount?.piuGameVersion ?? appModel.selectedVersion
             let versions = [preferredVersion] + PIUGameVersion.allCases.filter { $0 != preferredVersion }
             for version in versions {
-                await songCatalog.preloadArtwork(version: version)
+                await songCatalog.preloadArtwork(version: version, preferred: version == preferredVersion)
             }
         }
         .onChange(of: selectedDestination) { _, destination in

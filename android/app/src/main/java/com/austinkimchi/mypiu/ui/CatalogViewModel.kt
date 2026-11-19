@@ -21,11 +21,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() {
+class CatalogViewModel(
+    private val repository: CatalogDataSource,
+    refreshSignal: com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal = com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal(),
+) : ViewModel() {
     private data class PendingFavorite(val id: UUID, val previous: Boolean, val requested: Boolean)
     private data class ConfirmedFavorite(val saved: Boolean, val protectThroughRequestId: Long)
     private data class FavoriteWriteKey(val scope: String, val slug: String)
@@ -49,6 +53,18 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
     private var paginationJob: Job? = null
     private var historyJob: Job? = null
     private var started = false
+
+    private var observedRefreshRevision = refreshSignal.revision.value
+
+    init {
+        viewModelScope.launch {
+            refreshSignal.revision.collect { revision ->
+                if (revision == observedRefreshRevision) return@collect
+                observedRefreshRevision = revision
+                if (started && mutableState.value.isMyPiuConnected) refresh()
+            }
+        }
+    }
 
     fun start() {
         if (started) return
@@ -377,7 +393,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             val sortDirection = snapshot.sortDirection
             mutableState.update {
                 it.copy(
-                    listing = CatalogListing(),
+                    listing = if (useFreshCompleteCache) CatalogListing() else it.listing,
                     isLoading = true,
                     isLoadingMore = false,
                     isShowingCachedData = false,
@@ -386,6 +402,14 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 )
             }
             val cached = scope?.let { repository.cached(query, version, it, sortBy, sortDirection) }
+            if (generation != requestGeneration) return@launch
+            if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank()) {
+                repository.cachedPublic(version)?.let { publicPage ->
+                    if (generation == requestGeneration) mutableState.update {
+                        it.copy(artworkByTitle = it.artworkByTitle + artworkIndex(publicPage.songs))
+                    }
+                }
+            }
             if (generation != requestGeneration) return@launch
             if (cached != null) {
                 mutableState.update {
@@ -403,7 +427,8 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 }
                 val cacheIsFresh = System.currentTimeMillis() - cached.cachedAtEpochMillis < COMPLETE_CATALOG_FRESHNESS_MILLIS
                 if (
-                    useFreshCompleteCache && snapshot.feed == CatalogFeed.CATALOG && query.isBlank() &&
+                    useFreshCompleteCache && !authenticated && !repository.supportsSnapshot &&
+                    snapshot.feed == CatalogFeed.CATALOG && query.isBlank() &&
                     cached.listing.nextCursor == null && cacheIsFresh
                 ) {
                     mutableState.update { it.copy(isLoading = false) }
@@ -412,11 +437,22 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
             }
             val requestId = ++latestSearchRequestId
             try {
-                val firstPage = repository.search(query, null, version, authenticated, sortBy, sortDirection)
-                val page = if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank()) {
-                    completeCatalogPage(firstPage, query, version, authenticated, sortBy, sortDirection)
-                } else {
-                    firstPage
+                val bulkPage = if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank() &&
+                    sortBy == CatalogSortOption.SERIES && sortDirection == CatalogSortDirection.DESCENDING
+                ) repository.snapshot(version, authenticated) else null
+                val page = bulkPage ?: run {
+                    val firstPage = repository.search(query, null, version, authenticated, sortBy, sortDirection)
+                    if (snapshot.feed == CatalogFeed.CATALOG && query.isBlank()) {
+                        completeCatalogPage(firstPage, query, version, authenticated, sortBy, sortDirection) { partial ->
+                            if (generation == requestGeneration && cached == null &&
+                                (useFreshCompleteCache || snapshot.listing.songs.isEmpty())) {
+                                mutableState.update { it.copy(
+                                    listing = applyFavoriteOverrides(partial, requestId, scope, version),
+                                    artworkByTitle = it.artworkByTitle + artworkIndex(partial.songs),
+                                ) }
+                            }
+                        }
+                    } else firstPage
                 }
                 if (generation != requestGeneration) return@launch
                 val listing = applyFavoriteOverrides(
@@ -445,6 +481,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                     }
                 }
             } catch (error: CancellationException) {
+                if (generation == requestGeneration) mutableState.update { it.copy(isLoading = false) }
                 throw error
             } catch (error: Exception) {
                 if (generation != requestGeneration) return@launch
@@ -452,7 +489,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
                 mutableState.update {
                     it.copy(
                         isLoading = false,
-                        error = if (cached == null) error.message ?: "The catalog could not be loaded." else null,
+                        error = error.message ?: "The catalog could not be loaded.",
                     )
                 }
             }
@@ -466,15 +503,22 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
         authenticated: Boolean,
         sortBy: CatalogSortOption,
         sortDirection: CatalogSortDirection,
+        onProgress: (CatalogListing) -> Unit,
     ): CatalogSearchPage {
         var listing = CatalogListing(firstPage.songs, firstPage.nextCursor, firstPage.total)
         var pageCount = 1
-        while (listing.nextCursor != null && pageCount < 200) {
+        val seenCursors = mutableSetOf<String>()
+        onProgress(listing)
+        while (listing.nextCursor != null) {
             val cursor = listing.nextCursor ?: break
+            check(pageCount < 200 && seenCursors.add(cursor)) { "The catalog response was incomplete. Please retry." }
             val page = repository.search(query, cursor, version, authenticated, sortBy, sortDirection)
+            check(page.nextCursor != cursor) { "The catalog response repeated a page. Please retry." }
             listing = listing.append(page, cursor)
             pageCount += 1
+            onProgress(listing)
         }
+        check(listing.total == listing.songs.size) { "The catalog response was incomplete. Please retry." }
         return CatalogSearchPage(
             songs = listing.songs,
             nextCursor = null,
@@ -566,7 +610,7 @@ class CatalogViewModel(private val repository: CatalogDataSource) : ViewModel() 
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            CatalogViewModel(container.catalogRepository) as T
+            CatalogViewModel(container.catalogRepository, container.performanceRefreshSignal) as T
     }
 
     private companion object {
