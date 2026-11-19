@@ -64,6 +64,12 @@ assert app_info["CFBundleShortVersionString"] == expected_marketing_version
 assert app_info["CFBundleVersion"] == expected_build_number
 assert app_info["ITSAppUsesNonExemptEncryption"] is False
 assert "fetch" in app_info["UIBackgroundModes"]
+assert set(app_info.get("UISupportedInterfaceOrientations~ipad", [])) == {
+    "UIInterfaceOrientationPortrait",
+    "UIInterfaceOrientationPortraitUpsideDown",
+    "UIInterfaceOrientationLandscapeLeft",
+    "UIInterfaceOrientationLandscapeRight",
+}, "iPad multitasking requires all interface orientations"
 assert any(
     "mypiu" in url_type.get("CFBundleURLSchemes", [])
     for url_type in app_info["CFBundleURLTypes"]

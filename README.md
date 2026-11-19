@@ -1,38 +1,50 @@
 # MyPIU Mobile
 
-Native clients for MyPIU. The iOS app is the production baseline, and Android now has native device sync, catalog, progress, activity history, and recent-session summaries on the same contract.
+[![iOS](https://github.com/austinkimchi/piugame-mobile/actions/workflows/ios.yml/badge.svg)](https://github.com/austinkimchi/piugame-mobile/actions/workflows/ios.yml)
+[![Android](https://github.com/austinkimchi/piugame-mobile/actions/workflows/android.yml/badge.svg)](https://github.com/austinkimchi/piugame-mobile/actions/workflows/android.yml)
+[![Browser extension](https://github.com/austinkimchi/piugame-mobile/actions/workflows/browser-extension.yml/badge.svg)](https://github.com/austinkimchi/piugame-mobile/actions/workflows/browser-extension.yml)
+[![Safari extension](https://github.com/austinkimchi/piugame-mobile/actions/workflows/safari-extension.yml/badge.svg)](https://github.com/austinkimchi/piugame-mobile/actions/workflows/safari-extension.yml)
 
-The mobile clients fetch PIUGAME data from the user's device, normalize it locally, and send only normalized performance data to MyPIU. PIUGAME credentials remain in the device keychain and are never uploaded to MyPIU.
+Native iOS and Android clients, plus companion browser extensions, for [MyPIU](https://mypiu.austin.kim). Track your Pump It Up progress and explore songs, charts, and recommendations.
 
-## Repository layout
+This private project is **pre-release**. Device qualification and store distribution remain in progress.
 
-- `ios/` - SwiftUI iPhone and iPad app plus native PIUGAME client.
-- `browser-extension/` - tested and reproducibly packaged Manifest V3 Chromium extension for toolbar and first-party MyPIU page sync.
-- `docs/` - architecture, security boundaries, contracts, and delivery milestones.
-- `android/` - Kotlin/Compose client, native PIUGAME parser, Android Keystore storage, and WorkManager refresh.
+## Features
 
-## iOS development
+- Searchable song catalog, chart details, favorites, recommendations, and offline catalog caching.
+- Personal bests, Pumbility, completion progress, recent plays, and session history.
+- On-device PIUGAME sync with credentials held in Keychain or Android Keystore; only normalized performance data is uploaded to MyPIU.
+- Chromium and Safari extensions for syncing from an existing PIUGAME browser session.
 
-Requirements:
+## iOS setup
 
-- Xcode 26 or newer
-- XcodeGen 2.46 or newer
-- Node.js 22 or newer
+Requires **Xcode 26+**, **XcodeGen 2.46+**, and **Node.js 22+** on macOS.
 
-```bash
+```sh
 ./scripts/generate-ios-project.sh
 open ios/MyPIU.xcodeproj
 ```
 
-The generation script installs the pinned extension build dependencies, creates the Safari-compatible runtime from the shared browser-extension sources, and embeds the Safari Web Extension target in MyPIU.
-The generated project and Safari runtime are checked in so Xcode Cloud can discover and build `ios/MyPIU.xcodeproj` from a clean clone. Run the script after changing `ios/project.yml` or the shared extension sources; CI verifies that the checked-in artifacts remain current.
+The generator stages the shared Safari extension and regenerates the checked-in Xcode project. Keep local signing changes separate before regenerating. For Android setup, see [android/README.md](android/README.md); for the browser extension, see [browser-extension/README.md](browser-extension/README.md).
 
-The first vertical slice connects directly to PIUGAME PHOENIX 2, stores credentials in Keychain, parses the profile and recent-play pages on-device, and renders a native SwiftUI dashboard.
+## Development
 
-For the unsigned iOS archive gate, protected signed-IPA workflow, privacy, App Store metadata, and beta-distribution steps, see [the TestFlight checklist](docs/testflight.md). The companion macOS wrapper has a separate [Safari release checklist](docs/macos-release.md).
+Run the `MyPIU` scheme's tests on an available iPhone simulator in Xcode. Portable checks:
 
-Android upload-key signing and Play internal-test preparation are documented in the [Android beta checklist](docs/android-beta.md).
+```sh
+./scripts/verify-ios-store-metadata.sh
+./scripts/test-ios-release-helpers.sh
+npm --prefix browser-extension ci
+npm --prefix browser-extension test
+npm --prefix browser-extension run check:syntax
+```
 
-## Status
+App source lives in `ios/` and `android/`; shared extension source lives in `browser-extension/`. CI checks generated artifacts, builds, tests, and unsigned release packaging. Unsigned archives do not qualify as installable or TestFlight builds.
 
-This repository is pre-release and private. See [the delivery milestones](docs/milestones.md) for remaining distribution and physical-device qualification work.
+## Documentation
+
+- [Architecture](docs/architecture.md) and [mobile sync contract](docs/mobile-sync-contract.md)
+- [Delivery milestones](docs/milestones.md) and [local qualification results](docs/qualification-2026-11-19.md)
+- [Accessibility checks](docs/accessibility-audit.md)
+- [iOS / TestFlight release](docs/testflight.md) and [App Store metadata](ios/AppStore/README.md)
+- [Android beta](docs/android-beta.md), [iOS Safari extension](docs/safari-extension.md), and [macOS Safari release](docs/macos-release.md)
