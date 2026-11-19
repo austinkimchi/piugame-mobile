@@ -2,12 +2,26 @@ import SwiftUI
 
 struct PerformanceSessionsView: View {
     @EnvironmentObject private var appModel: AppModel
+
+    var body: some View {
+        PerformanceSessionsContent(model: appModel.sessionsModel)
+    }
+}
+
+private struct PerformanceSessionsContent: View {
+    @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var songCatalog: SongCatalogModel
-    @State private var state: LoadState = .idle
-    @State private var sessions: [MyPIUPerformanceSession] = []
-    @State private var nextOffset: Int?
-    @State private var isLoadingMore = false
-    @State private var paginationError: String?
+    @ObservedObject var model: PerformanceSessionsModel
+
+    private struct LoadKey: Equatable {
+        let scope: String?
+        let revision: Int
+    }
+
+    private struct PaginationKey: Equatable {
+        let offset: Int?
+        let isRefreshing: Bool
+    }
 
     var body: some View {
         Group {
@@ -17,127 +31,94 @@ struct PerformanceSessionsView: View {
                     systemImage: "person.crop.circle.badge.plus",
                     description: Text("Session history is available after you connect your MyPIU account.")
                 )
+            } else if model.scope != appModel.catalogCacheScope ||
+                        (!model.hasLoaded && model.isRefreshing) {
+                ProgressView("Loading sessions")
+            } else if !model.hasLoaded {
+                ContentUnavailableView {
+                    Label("Sessions unavailable", systemImage: "wifi.exclamationmark")
+                } description: {
+                    Text(model.error ?? "Loading was interrupted. Try again.")
+                } actions: {
+                    Button("Try Again", systemImage: "arrow.clockwise") {
+                        Task { await refresh() }
+                    }
+                }
             } else {
-                loadedContent
+                sessionsList
             }
         }
         .navigationTitle("Sessions")
-        .task(id: appModel.catalogCacheScope) {
-            await load()
+        .task(id: LoadKey(scope: appModel.catalogCacheScope, revision: model.revision)) {
+            await refresh()
         }
     }
 
-    @ViewBuilder
-    private var loadedContent: some View {
-        switch state {
-        case .idle where sessions.isEmpty,
-             .loading where sessions.isEmpty:
-            ProgressView("Loading sessions")
-        case .failed(let message) where sessions.isEmpty:
-            ContentUnavailableView {
-                Label("Sessions unavailable", systemImage: "wifi.exclamationmark")
-            } description: {
-                Text(message)
-            } actions: {
-                Button("Try Again", systemImage: "arrow.clockwise") {
-                    Task { await load() }
+    private var sessionsList: some View {
+        List {
+            if model.isRefreshing {
+                ProgressView("Updating sessions")
+                    .listRowSeparator(.hidden)
+            }
+            if let message = model.error {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Couldn’t update sessions. Showing the last loaded history.")
+                    Text(message).font(.caption).foregroundStyle(.secondary)
+                    Button("Try Again", systemImage: "arrow.clockwise") {
+                        Task { await refresh() }
+                    }
                 }
             }
-        default:
-            if sessions.isEmpty {
+            if model.sessions.isEmpty {
                 ContentUnavailableView("No sessions yet", systemImage: "clock.arrow.circlepath")
-            } else {
-                List {
-                    ForEach(sessions) { session in
-                        SessionRow(
-                            session: session,
-                            snapshotPlays: appModel.snapshot?.recentPlays ?? [],
-                            catalogArtworkURL: songCatalog.artworkURL
-                        )
-                        .task {
-                            await loadMoreIfNeeded(after: session)
-                        }
-                    }
-
-                    if isLoadingMore {
-                        HStack {
-                            Spacer()
-                            ProgressView()
-                            Spacer()
-                        }
-                        .listRowSeparator(.hidden)
-                    } else if paginationError != nil {
-                        Button("Retry loading more", systemImage: "arrow.clockwise") {
-                            Task { await loadMore() }
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
+                    .listRowSeparator(.hidden)
+            }
+            ForEach(model.sessions) { session in
+                SessionRow(
+                    session: session,
+                    snapshotPlays: appModel.snapshot?.recentPlays ?? [],
+                    catalogArtworkURL: songCatalog.artworkURL
+                )
+                .task(id: PaginationKey(offset: model.nextOffset, isRefreshing: model.isRefreshing)) {
+                    await loadMoreIfNeeded(after: session)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .background(AppTheme.pageBackground)
-                .refreshable { await load() }
+            }
+            if model.isLoadingMore {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+                .listRowSeparator(.hidden)
+            } else if model.paginationError != nil {
+                Button("Retry loading more", systemImage: "arrow.clockwise") {
+                    Task { await loadMore() }
+                }
+                .frame(maxWidth: .infinity)
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(AppTheme.pageBackground)
+        .refreshable { await refresh() }
     }
 
-    @MainActor
-    private func load() async {
-        guard let scope = appModel.catalogCacheScope, scope.hasPrefix("account:") else {
-            sessions = []
-            nextOffset = nil
-            paginationError = nil
-            state = .idle
-            return
-        }
-
-        state = .loading
-        do {
-            let page = try await appModel.performanceSessions()
-            try Task.checkCancellation()
-            guard appModel.catalogCacheScope == scope else { return }
-            sessions = page.sessions
-            nextOffset = page.nextOffset
-            paginationError = nil
-            state = .loaded
-        } catch is CancellationError {
-            return
-        } catch {
-            guard appModel.catalogCacheScope == scope else { return }
-            state = .failed(error.localizedDescription)
+    private func refresh() async {
+        await model.refresh(scope: appModel.catalogCacheScope) { offset in
+            try await appModel.performanceSessions(offset: offset)
         }
     }
 
-    @MainActor
     private func loadMoreIfNeeded(after session: MyPIUPerformanceSession) async {
-        guard let index = sessions.firstIndex(where: { $0.id == session.id }),
-              index >= max(0, sessions.count - 4) else { return }
+        guard model.paginationError == nil,
+              let index = model.sessions.firstIndex(where: { $0.id == session.id }),
+              index >= max(0, model.sessions.count - 4) else { return }
         await loadMore()
     }
 
-    @MainActor
     private func loadMore() async {
-        guard !isLoadingMore,
-              let offset = nextOffset,
-              let scope = appModel.catalogCacheScope,
-              scope.hasPrefix("account:") else { return }
-
-        isLoadingMore = true
-        paginationError = nil
-        defer { isLoadingMore = false }
-
-        do {
-            let page = try await appModel.performanceSessions(offset: offset)
-            try Task.checkCancellation()
-            guard appModel.catalogCacheScope == scope else { return }
-            var knownIDs = Set(sessions.map(\.id))
-            sessions.append(contentsOf: page.sessions.filter { knownIDs.insert($0.id).inserted })
-            nextOffset = page.nextOffset == offset ? nil : page.nextOffset
-        } catch is CancellationError {
-            return
-        } catch {
-            guard appModel.catalogCacheScope == scope else { return }
-            paginationError = error.localizedDescription
+        await model.loadMore { offset in
+            try await appModel.performanceSessions(offset: offset)
         }
     }
 }
@@ -334,13 +315,6 @@ private struct SessionPlayArtwork: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(play.songName), \(performanceChartTokenAccessibilityLabel(play.displayChartToken))")
     }
-}
-
-private enum LoadState: Equatable {
-    case idle
-    case loading
-    case loaded
-    case failed(String)
 }
 
 private func scoreLabel(_ score: Int?) -> String {

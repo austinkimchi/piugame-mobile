@@ -46,7 +46,10 @@ final class AppModel: ObservableObject {
 
     @Published private(set) var state: SyncState = .restoring
     @Published private(set) var snapshot: PIUSnapshot?
-    @Published private(set) var myPIUAccount: MyPIUAccount?
+    @Published private(set) var myPIUAccount: MyPIUAccount? {
+        didSet { sessionsModel.updateScope(catalogCacheScope) }
+    }
+    let sessionsModel = PerformanceSessionsModel()
     @Published private(set) var myPIUState: MyPIUState = .restoring
     @Published private(set) var performance: MyPIUPerformanceDashboard?
     @Published private(set) var performanceState: PerformanceState = .idle
@@ -62,7 +65,15 @@ final class AppModel: ObservableObject {
     private let oauthCoordinator: MyPIUOAuthCoordinator
     private var client: PIUGameClient?
     private var credentials: PIUCredentials?
-    private var accessToken: MyPIUAccessToken?
+    private var accessToken: MyPIUAccessToken? {
+        didSet {
+            if oldValue?.value != accessToken?.value {
+                // An account fetched with the previous token cannot scope new private requests.
+                myPIUAccount = nil
+                sessionsModel.updateScope(nil)
+            }
+        }
+    }
     private var volatilePendingRevocations: [MyPIUAccessToken] = []
     private var performanceRequestID = UUID()
     private var hasRestored = false
@@ -740,6 +751,7 @@ final class AppModel: ObservableObject {
                 appVersion: appVersion
             )
             guard accessToken?.value == token.value else { return }
+            sessionsModel.invalidate()
             myPIUState = .synced(
                 imported: result.importedRecentPlays,
                 duplicates: result.duplicateRecentPlays

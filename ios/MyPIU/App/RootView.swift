@@ -46,6 +46,7 @@ struct RootView: View {
             homePath = NavigationPath()
             songsPath = NavigationPath()
             progressPath = NavigationPath()
+            activityPath = NavigationPath()
         }
         .onReceive(appModel.favoriteChanges) { change in
             guard change.accountID == appModel.myPIUAccount?.id else { return }

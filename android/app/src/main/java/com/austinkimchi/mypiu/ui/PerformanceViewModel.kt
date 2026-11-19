@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 class PerformanceViewModel(
     private val repository: PerformanceDataSource,
@@ -26,6 +28,7 @@ class PerformanceViewModel(
     val state: StateFlow<PerformanceUiState> = mutableState.asStateFlow()
 
     private var sessionGeneration = 0L
+    private var sessionLoadGeneration = 0L
     private var loadJob: Job? = null
     private var sessionJob: Job? = null
     private var sessionPaginationJob: Job? = null
@@ -75,7 +78,7 @@ class PerformanceViewModel(
     fun loadSession(force: Boolean = false) {
         val snapshot = mutableState.value
         if (!snapshot.isConnected || snapshot.accountScope == null) return
-        if (!force && (snapshot.isSessionLoading || snapshot.isSessionLoaded)) return
+        if (!force && snapshot.isSessionLoading) return
         reloadSession()
     }
 
@@ -83,18 +86,21 @@ class PerformanceViewModel(
         val snapshot = mutableState.value
         val offset = snapshot.nextSessionOffset ?: return
         val scope = snapshot.accountScope ?: return
-        if (!snapshot.isConnected || snapshot.isSessionLoadingMore || sessionPaginationJob?.isActive == true) return
+        if (!snapshot.isConnected || sessionJob?.isActive == true || snapshot.isSessionLoading || snapshot.isSessionLoadingMore || sessionPaginationJob?.isActive == true) return
         val generation = sessionGeneration
+        val loadGeneration = sessionLoadGeneration
         sessionPaginationJob = viewModelScope.launch {
             mutableState.update { it.copy(isSessionLoadingMore = true, sessionPaginationError = null) }
             try {
                 val page = repository.sessionPage(offset)
-                if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
+                currentCoroutineContext().ensureActive()
+                if (generation != sessionGeneration || loadGeneration != sessionLoadGeneration ||
+                    mutableState.value.accountScope != scope) return@launch
                 mutableState.update { state ->
                     val knownIds = state.sessions.mapTo(mutableSetOf()) { it.id }
                     state.copy(
                         sessions = state.sessions + page.sessions.filter { knownIds.add(it.id) },
-                        nextSessionOffset = page.nextOffset.takeUnless { it == offset },
+                        nextSessionOffset = page.nextOffset?.takeIf { it > offset },
                         isSessionLoadingMore = false,
                         sessionPaginationError = null,
                     )
@@ -102,7 +108,20 @@ class PerformanceViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
+                currentCoroutineContext().ensureActive()
+                if (generation != sessionGeneration || loadGeneration != sessionLoadGeneration ||
+                    mutableState.value.accountScope != scope) return@launch
+                if (error is MyPiuApiException && (error.isUnauthorized || error.isAccountNotFound)) {
+                    sessionGeneration += 1
+                    sessionJob?.cancel()
+                    loadJob?.cancel()
+                    mutableState.value = PerformanceUiState(
+                        accountScope = scope,
+                        sessionError = error.message,
+                        sessionInvalidated = true,
+                    )
+                    return@launch
+                }
                 mutableState.update {
                     it.copy(
                         isSessionLoadingMore = false,
@@ -127,22 +146,29 @@ class PerformanceViewModel(
             mutableState.update { it.copy(isLoading = true, error = null) }
             try {
                 val dashboard = repository.dashboard()
+                currentCoroutineContext().ensureActive()
                 if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
                 mutableState.update { it.copy(dashboard = dashboard, isLoading = false, error = null) }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
+                currentCoroutineContext().ensureActive()
                 if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
                 val sessionInvalidated = error is MyPiuApiException &&
                     (error.isUnauthorized || error.isAccountNotFound)
                 if (sessionInvalidated) {
                     sessionGeneration += 1
                     sessionJob?.cancel()
+                    sessionPaginationJob?.cancel()
                 }
                 mutableState.update {
                     it.copy(
                         dashboard = if (sessionInvalidated) null else it.dashboard,
                         session = if (sessionInvalidated) null else it.session,
+                        sessions = if (sessionInvalidated) emptyList() else it.sessions,
+                        nextSessionOffset = if (sessionInvalidated) null else it.nextSessionOffset,
+                        isSessionLoadingMore = if (sessionInvalidated) false else it.isSessionLoadingMore,
+                        sessionPaginationError = if (sessionInvalidated) null else it.sessionPaginationError,
                         isSessionLoaded = if (sessionInvalidated) false else it.isSessionLoaded,
                         isSessionLoading = if (sessionInvalidated) false else it.isSessionLoading,
                         sessionError = if (sessionInvalidated) null else it.sessionError,
@@ -161,27 +187,29 @@ class PerformanceViewModel(
         if (!snapshot.isConnected || snapshot.accountScope == null) return
         val generation = sessionGeneration
         val scope = snapshot.accountScope
+        sessionLoadGeneration += 1
+        val loadGeneration = sessionLoadGeneration
         sessionPaginationJob?.cancel()
         sessionJob?.cancel()
         sessionJob = viewModelScope.launch {
             mutableState.update {
                 it.copy(
-                    session = null,
                     isSessionLoading = true,
                     isSessionLoadingMore = false,
-                    isSessionLoaded = false,
                     sessionError = null,
                     sessionPaginationError = null,
                 )
             }
             try {
                 val page = repository.sessionPage()
-                if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
+                currentCoroutineContext().ensureActive()
+                if (generation != sessionGeneration || loadGeneration != sessionLoadGeneration ||
+                    mutableState.value.accountScope != scope) return@launch
                 mutableState.update {
                     it.copy(
                         session = page.sessions.firstOrNull(),
-                        sessions = page.sessions,
-                        nextSessionOffset = page.nextOffset,
+                        sessions = page.sessions.distinctBy { session -> session.id },
+                        nextSessionOffset = page.nextOffset?.takeIf { offset -> offset > 0 },
                         isSessionLoading = false,
                         isSessionLoaded = true,
                         sessionError = null,
@@ -191,22 +219,24 @@ class PerformanceViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
+                currentCoroutineContext().ensureActive()
                 if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
                 val sessionInvalidated = error is MyPiuApiException &&
                     (error.isUnauthorized || error.isAccountNotFound)
                 if (sessionInvalidated) {
                     sessionGeneration += 1
                     loadJob?.cancel()
+                    sessionPaginationJob?.cancel()
                 }
                 mutableState.update {
                     it.copy(
                         dashboard = if (sessionInvalidated) null else it.dashboard,
-                        session = null,
-                        sessions = emptyList(),
-                        nextSessionOffset = null,
+                        session = if (sessionInvalidated) null else it.session,
+                        sessions = if (sessionInvalidated) emptyList() else it.sessions,
+                        nextSessionOffset = if (sessionInvalidated) null else it.nextSessionOffset,
                         isConnected = if (sessionInvalidated) false else it.isConnected,
                         isSessionLoading = false,
-                        isSessionLoaded = false,
+                        isSessionLoaded = if (sessionInvalidated) false else it.isSessionLoaded,
                         sessionError = error.message ?: "Recent session could not be loaded.",
                         sessionInvalidated = sessionInvalidated,
                     )

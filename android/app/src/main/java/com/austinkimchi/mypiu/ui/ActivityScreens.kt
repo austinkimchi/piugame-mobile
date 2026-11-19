@@ -175,20 +175,43 @@ fun PerformanceSessionsScreen(
 
     when {
         !state.isConnected -> ActivityUnavailable(connected = false, message = null, onRefresh = onRefresh)
-        state.isSessionLoading || !state.isSessionLoaded && state.sessionError == null -> {
+        state.sessions.isEmpty() && !state.isSessionLoaded && state.sessionError == null -> {
             CenteredActivityProgress("Loading sessions")
         }
-        state.sessionError != null -> ActivityUnavailable(
+        state.sessions.isEmpty() && !state.isSessionLoaded && state.sessionError != null -> ActivityUnavailable(
             connected = true,
             message = state.sessionError,
             onRefresh = onRefresh,
             title = "Sessions unavailable",
         )
-        state.sessions.isEmpty() -> EmptyActivity("No sessions yet", Modifier.fillMaxSize())
         else -> LazyColumn(
             modifier = Modifier.fillMaxSize().widthIn(max = 860.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         ) {
+            if (state.isSessionLoading) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Text("Updating sessions")
+                    }
+                }
+            }
+            state.sessionError?.let { message ->
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Couldn’t update sessions. Showing the last loaded history.")
+                        Text(message, style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = onRefresh) { Text("Try Again") }
+                    }
+                }
+            }
+            if (state.sessions.isEmpty()) {
+                item { EmptyActivity("No sessions yet", Modifier.fillMaxWidth()) }
+            }
             itemsIndexed(
                 state.sessions,
                 key = { index, session -> session.id.ifBlank { "${session.summary.endedAt}:$index" } },
@@ -201,8 +224,10 @@ fun PerformanceSessionsScreen(
                 )
                 if (index < state.sessions.lastIndex) HorizontalDivider()
                 if (index >= state.sessions.lastIndex - 3 && state.nextSessionOffset != null) {
-                    LaunchedEffect(state.nextSessionOffset, state.isSessionLoadingMore) {
-                        if (!state.isSessionLoadingMore) onLoadMore()
+                    LaunchedEffect(state.nextSessionOffset, state.isSessionLoading, state.sessionPaginationError) {
+                        if (!state.isSessionLoading && !state.isSessionLoadingMore && state.sessionPaginationError == null) {
+                            onLoadMore()
+                        }
                     }
                 }
             }
