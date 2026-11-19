@@ -5,6 +5,7 @@ import com.austinkimchi.mypiu.core.network.MyPiuApiClient
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.security.SecretStore
 import com.austinkimchi.mypiu.core.security.SessionStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -34,7 +35,7 @@ class PerformanceRepositoryTest {
     }
 
     @Test
-    fun oldAuthorizationFailureCannotClearReplacementToken() = runTest {
+    fun oldAuthorizationFailureIsCanceledWithoutClearingReplacementToken() = runTest {
         val store = SessionStore(PerformanceMemorySecretStore())
         store.saveAccessToken(MyPiuAccessToken("old", Long.MAX_VALUE, "installation"))
         val replacement = MyPiuAccessToken("replacement", Long.MAX_VALUE, "installation")
@@ -45,9 +46,9 @@ class PerformanceRepositoryTest {
 
         try {
             repository.dashboard()
-            fail("Expected authorization failure")
-        } catch (_: MyPiuApiException) {
-            // The replacement token must survive the old request's failure.
+            fail("Expected stale request cancellation")
+        } catch (_: CancellationException) {
+            // Do not forward an old 401 that could invalidate the replacement account's UI.
         }
 
         assertEquals(replacement, store.accessToken())
