@@ -19,6 +19,34 @@ import org.junit.Test
 
 class CatalogRepositoryTest {
     @Test
+    fun replacementTokenRejectsOldReadsButPreservesSuccessfulFavoriteWrites() = runTest {
+        for (write in listOf(false, true)) {
+            val sessions = SessionStore(MemorySecretStore())
+            val old = MyPiuAccessToken("old", Long.MAX_VALUE, "installation")
+            val replacement = MyPiuAccessToken("replacement", Long.MAX_VALUE, "installation")
+            sessions.saveAccessToken(old)
+            val http = OkHttpClient.Builder().addInterceptor { chain ->
+                assertEquals("Bearer old", chain.request().header("Authorization"))
+                sessions.saveAccessToken(replacement)
+                Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                    .body((if (write) """{"slug":"song","isFavorite":true}""" else """{"songs":[],"nextCursor":null,"total":0}""")
+                        .toResponseBody("application/json".toMediaType())).build()
+            }.build()
+            val directory = Files.createTempDirectory("catalog-session-replacement").toFile()
+            try {
+                val repository = CatalogRepository(sessions, MyPiuApiClient("https://mypiu.example/", client = http), CatalogCache(directory))
+                var canceled = false
+                try {
+                    if (write) assertTrue(repository.setFavorite("song", true, PiuGameVersion.PHOENIX_2))
+                    else repository.search("", null, PiuGameVersion.PHOENIX_2, true)
+                } catch (_: kotlinx.coroutines.CancellationException) { canceled = true }
+                assertEquals(!write, canceled)
+                assertEquals(replacement, sessions.accessToken())
+            } finally { directory.deleteRecursively() }
+        }
+    }
+
+    @Test
     fun lateUnauthorizedResponseDoesNotClearReplacementToken() = runTest {
         val secrets = MemorySecretStore()
         val sessionStore = SessionStore(secrets)

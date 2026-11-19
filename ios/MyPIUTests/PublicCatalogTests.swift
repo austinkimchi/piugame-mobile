@@ -122,6 +122,25 @@ final class PublicCatalogTests: XCTestCase {
     }
 
     @MainActor
+    func testAnonymousSongsUsesFullSnapshotWithoutOverlayOrLegacyRequests() async throws {
+        let directory = directory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = PublicCatalogStore(directory: directory.appendingPathComponent("public")) { request in
+            XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+            return (Data(Self.fixture.utf8), Self.response(request))
+        }
+        let model = SongCatalogModel(cache: CatalogCache(directory: directory), publicCatalog: store)
+        await model.loadIfNeeded(query: "", version: .phoenix2, cacheScope: "public", debounce: false,
+            using: { _, _, _ in XCTFail("Anonymous Songs used legacy pages"); throw CancellationError() },
+            usingOverlay: { _ in XCTFail("Anonymous Songs requested private overlay"); throw CancellationError() })
+        XCTAssertEqual(model.state, .loaded)
+        XCTAssertEqual(model.listing.songs.map(\.slug), ["one-phoenix2"])
+        XCTAssertEqual(model.listing.total, 1)
+        XCTAssertFalse(model.listing.hasMore)
+        XCTAssertFalse(model.listing.songs[0].isFavorite)
+    }
+
+    @MainActor
     func testSignedInSnapshotUsesTwoRequestsPreservesHintsAndDoesNotUseLegacySearch() async throws {
         let directory = directory()
         defer { try? FileManager.default.removeItem(at: directory) }

@@ -72,7 +72,9 @@ class CatalogRepository(
     }
 
     override suspend fun setFavorite(slug: String, saved: Boolean, version: PiuGameVersion): Boolean {
-        return withSession { token ->
+        // The ViewModel reconciles successful writes into their original account scope and
+        // refreshes a matching replacement session; only stale reads should be discarded.
+        return withSession(requireCurrentSession = false) { token ->
             apiClient.setFavorite(slug, saved, version, token)
         }
     }
@@ -120,7 +122,7 @@ class CatalogRepository(
 
     override fun resolveUrl(value: String?): String? = apiClient.resolveUrl(value)
 
-    private suspend fun <Value> withSession(operation: suspend (String) -> Value): Value {
+    private suspend fun <Value> withSession(requireCurrentSession: Boolean = true, operation: suspend (String) -> Value): Value {
         val storedToken = sessionStore.accessToken()
         val token = when {
             storedToken == null -> throw MyPiuApiException(401, "invalid_token")
@@ -132,7 +134,7 @@ class CatalogRepository(
         }
         return try {
             operation(token).also {
-                if (sessionStore.accessToken()?.value != token) throw CancellationException("Account changed")
+                if (requireCurrentSession && sessionStore.accessToken()?.value != token) throw CancellationException("Account changed")
             }
         } catch (error: MyPiuApiException) {
             if (
