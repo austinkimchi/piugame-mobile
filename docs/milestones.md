@@ -45,3 +45,7 @@ Current: the native Kotlin/Compose app connects directly to PIUGAME, parses prof
 - Kotlin/Compose app using the stable ingest contract.
 - Android Keystore credentials and WorkManager best-effort refresh.
 - Feature parity with the iOS production baseline.
+
+## Future exploration: Apple Watch
+
+The [Apple Watch workout companion](apple-watch-workouts.md) records the proposed MyPIU workout, play/rest detection, optional song recognition, Apple Workout integration, and a physical-device battery evaluation. This is a feasibility roadmap; no watchOS feature or release is implemented or scheduled.
