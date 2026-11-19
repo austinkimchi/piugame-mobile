@@ -70,4 +70,29 @@ class MyPiuApiClientCatalogTest {
         assertEquals("phoenix2", history.url.queryParameter("version"))
         assertEquals("https://mypiu.example/assets/piu/song.png", client.resolveUrl("/assets/piu/song.png"))
     }
+    @Test
+    fun publicSnapshotAndPrivateOverlayUseSeparateCredentialContracts() = runTest {
+        val requests = mutableListOf<Request>()
+        val http = OkHttpClient.Builder().addInterceptor { chain ->
+            val request = chain.request()
+            requests += request
+            val isPublic = request.url.encodedPath.startsWith("/api/catalog/")
+            Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
+                .code(if (isPublic) 304 else 200).message("OK")
+                .body((if (isPublic) "" else """{"schemaVersion":1,"version":"phoenix2","favoriteSlugs":[],"recommendations":{}}""")
+                    .toResponseBody("application/json".toMediaType())).build()
+        }.build()
+        val client = MyPiuApiClient("https://mypiu.example/", client = http)
+        assertTrue(client.publicCatalog(PiuGameVersion.PHOENIX_2, "v1").notModified)
+        val overlay = client.catalogOverlay(PiuGameVersion.PHOENIX_2, "private-token")
+        assertEquals("phoenix2", overlay.version)
+        assertEquals("/api/catalog/v1/phoenix2", requests[0].url.encodedPath)
+        assertNull(requests[0].header("Authorization"))
+        assertEquals("v1", requests[0].header("If-None-Match"))
+        assertEquals("/api/mobile/v1/catalog/overlay", requests[1].url.encodedPath)
+        assertEquals("phoenix2", requests[1].url.queryParameter("version"))
+        assertEquals("Bearer private-token", requests[1].header("Authorization"))
+        assertNull(requests[1].header("If-None-Match"))
+    }
+
 }

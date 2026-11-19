@@ -35,7 +35,7 @@ class PublicCatalogStore(
 
     suspend fun refresh(version: PiuGameVersion): PublicCatalogSnapshot {
         val task = mutex.withLock {
-            inFlight[version] ?: scope.async { download(version) }.also { inFlight[version] = it }
+            inFlight[version]?.takeUnless { it.isCompleted } ?: scope.async { download(version) }.also { inFlight[version] = it }
         }
         // A canceled view must not cancel the shared public request or release its coalescing entry early.
         task.invokeOnCompletion {

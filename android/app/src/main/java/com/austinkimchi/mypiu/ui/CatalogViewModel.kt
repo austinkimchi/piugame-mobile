@@ -170,6 +170,7 @@ class CatalogViewModel(
             try {
                 val page = repository.search(query, cursor, version, authenticated, sortBy, sortDirection)
                 if (generation != requestGeneration) return@launch
+                check(page.nextCursor != cursor) { "The catalog response repeated a page. Please retry." }
                 val listing = applyFavoriteOverrides(
                     mutableState.value.listing.append(page, cursor),
                     requestId,
@@ -429,7 +430,7 @@ class CatalogViewModel(
                 if (
                     useFreshCompleteCache && !authenticated && !repository.supportsSnapshot &&
                     snapshot.feed == CatalogFeed.CATALOG && query.isBlank() &&
-                    cached.listing.nextCursor == null && cacheIsFresh
+                    cached.listing.nextCursor == null && cached.listing.total == cached.listing.songs.size && cacheIsFresh
                 ) {
                     mutableState.update { it.copy(isLoading = false) }
                     return@launch

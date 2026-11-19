@@ -63,7 +63,7 @@ data class MobileCatalogOverlay(
 }
 
 private val seriesOrder = listOf("1st", "nx", "fiesta", "prime", "prime2", "xx", "phoenix", "phoenix2")
-private fun seriesRank(value: String?) = seriesOrder.indexOf(value?.lowercase(java.util.Locale.ROOT)?.replace(" ", ""))
+private fun seriesRank(value: String?) = seriesOrder.indexOf((value ?: "").lowercase(java.util.Locale.ROOT).replace(" ", ""))
 
 // Mongo uses Unicode scalar/binary ordering, not locale-aware or UTF-16 String ordering.
 private fun binaryCompare(left: String?, right: String?): Int {

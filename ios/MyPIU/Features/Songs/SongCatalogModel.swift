@@ -154,7 +154,7 @@ final class SongCatalogModel: ObservableObject {
             sortBy: filters.sortBy,
             sortDirection: filters.sortDirection
         )
-        if let cached, cached.listing.hasMore == false {
+        if let cached, cached.listing.hasMore == false, cached.listing.total == cached.listing.songs.count {
             mergeArtworkIndex(cached.listing.songs, overwrite: preferred)
             if Date().timeIntervalSince(cached.cachedAt) < Self.completeCatalogFreshness {
                 return
@@ -277,6 +277,7 @@ final class SongCatalogModel: ObservableObject {
            filters.isEmpty,
            let cached,
            cached.listing.hasMore == false,
+           cached.listing.total == cached.listing.songs.count,
            Date().timeIntervalSince(cached.cachedAt) < Self.completeCatalogFreshness {
             listingRequestID = requestID
             state = .loaded
@@ -512,6 +513,7 @@ final class SongCatalogModel: ObservableObject {
                 filters: currentFilters
             )
             guard !Task.isCancelled, self.requestID == requestID else { return }
+            guard page.nextCursor != cursor else { throw PublicCatalogError.invalidSnapshot }
             listing.append(
                 pageApplyingFavorites(page, confirmedAfter: startingFavoriteRevision),
                 requestedCursor: cursor
