@@ -109,7 +109,19 @@ class PerformanceViewModel(
                 throw error
             } catch (error: Exception) {
                 currentCoroutineContext().ensureActive()
-                if (generation != sessionGeneration || mutableState.value.accountScope != scope) return@launch
+                if (generation != sessionGeneration || loadGeneration != sessionLoadGeneration ||
+                    mutableState.value.accountScope != scope) return@launch
+                if (error is MyPiuApiException && (error.isUnauthorized || error.isAccountNotFound)) {
+                    sessionGeneration += 1
+                    sessionJob?.cancel()
+                    loadJob?.cancel()
+                    mutableState.value = PerformanceUiState(
+                        accountScope = scope,
+                        sessionError = error.message,
+                        sessionInvalidated = true,
+                    )
+                    return@launch
+                }
                 mutableState.update {
                     it.copy(
                         isSessionLoadingMore = false,

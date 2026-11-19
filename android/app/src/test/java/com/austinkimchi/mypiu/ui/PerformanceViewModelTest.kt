@@ -405,6 +405,28 @@ class PerformanceViewModelTest {
     }
 
     @Test
+    fun paginationAuthorizationFailureClearsCachedPrivateHistory() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = PendingSessionDataSource()
+            val model = PerformanceViewModel(source)
+            model.updateSession("one", true)
+            model.loadSession()
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("private", 20))
+            runCurrent()
+            model.loadMoreSessions()
+            runCurrent()
+            source.requests.removeFirst().resumeWithException(MyPiuApiException(401, "invalid_token"))
+            runCurrent()
+            assertTrue(model.state.value.sessions.isEmpty())
+            assertNull(model.state.value.nextSessionOffset)
+            assertFalse(model.state.value.isConnected)
+            assertTrue(model.state.value.sessionInvalidated)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
     fun dashboardAuthorizationFailureAlsoClearsSessionListAndCursor() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {

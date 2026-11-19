@@ -18,6 +18,11 @@ private struct PerformanceSessionsContent: View {
         let revision: Int
     }
 
+    private struct PaginationKey: Equatable {
+        let offset: Int?
+        let isRefreshing: Bool
+    }
+
     var body: some View {
         Group {
             if appModel.catalogCacheScope?.hasPrefix("account:") != true {
@@ -74,7 +79,9 @@ private struct PerformanceSessionsContent: View {
                     snapshotPlays: appModel.snapshot?.recentPlays ?? [],
                     catalogArtworkURL: songCatalog.artworkURL
                 )
-                .task { await loadMoreIfNeeded(after: session) }
+                .task(id: PaginationKey(offset: model.nextOffset, isRefreshing: model.isRefreshing)) {
+                    await loadMoreIfNeeded(after: session)
+                }
             }
             if model.isLoadingMore {
                 HStack {

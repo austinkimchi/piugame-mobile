@@ -67,7 +67,11 @@ final class AppModel: ObservableObject {
     private var credentials: PIUCredentials?
     private var accessToken: MyPIUAccessToken? {
         didSet {
-            if oldValue?.value != accessToken?.value { sessionsModel.updateScope(nil) }
+            if oldValue?.value != accessToken?.value {
+                // An account fetched with the previous token cannot scope new private requests.
+                myPIUAccount = nil
+                sessionsModel.updateScope(nil)
+            }
         }
     }
     private var volatilePendingRevocations: [MyPIUAccessToken] = []
