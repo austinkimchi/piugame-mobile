@@ -18,6 +18,7 @@ final class PublicCatalogTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = PublicCatalogStore(directory: directory) { request in
             XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+            XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "MyPIU-iOS/0.1")
             XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
             return (Data(Self.fixture.utf8), Self.response(request, etag: "\"v1\""))
         }

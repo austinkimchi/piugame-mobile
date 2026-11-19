@@ -138,6 +138,7 @@ actor PublicCatalogStore {
         let cached = readEntry(version: version)
         var request = URLRequest(url: baseURL.appendingPathComponent("api/catalog/v1/\(version.rawValue)"))
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("MyPIU-iOS/0.1", forHTTPHeaderField: "User-Agent")
         request.setValue(cached?.etag, forHTTPHeaderField: "If-None-Match")
         let (data, response) = try await transport(request)
         if response.statusCode == 304 {
