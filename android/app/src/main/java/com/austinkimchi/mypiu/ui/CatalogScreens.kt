@@ -56,6 +56,10 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -75,7 +79,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
 import com.austinkimchi.mypiu.BuildConfig
 import com.austinkimchi.mypiu.core.model.CatalogChartMode
 import com.austinkimchi.mypiu.core.model.CatalogSong
@@ -722,6 +726,8 @@ private fun JudgmentRow(judgments: JudgmentCounts) {
 
 @Composable
 internal fun SongArtwork(url: String?, modifier: Modifier) {
+    var loading by remember(url) { mutableStateOf(url != null) }
+    var failed by remember(url) { mutableStateOf(false) }
     Box(
         modifier = modifier.clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
@@ -729,16 +735,18 @@ internal fun SongArtwork(url: String?, modifier: Modifier) {
         if (url == null) {
             Icon(Icons.Default.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            SubcomposeAsyncImage(
+            // AsyncImage resolves the row's target size without subcomposing every lazy-list cell.
+            AsyncImage(
                 model = url,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
-                loading = { CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) },
-                error = {
-                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                },
+                onLoading = { loading = true; failed = false },
+                onSuccess = { loading = false; failed = false },
+                onError = { loading = false; failed = true },
             )
+            if (loading) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+            if (failed) Icon(Icons.Default.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

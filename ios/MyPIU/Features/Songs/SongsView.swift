@@ -23,11 +23,13 @@ struct SongsView: View {
         }
     }
 
+    @Environment(\.displayScale) private var displayScale
     @EnvironmentObject private var appModel: AppModel
     @ObservedObject private var catalog: SongCatalogModel
     @Binding private var query: String
     @State private var filters = CatalogFilters.empty
     @State private var showingFilters = false
+    @State private var artworkPrefetcher: CatalogArtworkPrefetcher?
     private let versionOverride: PIUGameVersion?
     private let feed: Feed
 
@@ -150,6 +152,7 @@ struct SongsView: View {
             cacheScope: appModel.catalogCacheScope,
             authGeneration: appModel.catalogAuthGeneration
         )) {
+            artworkPrefetcher?.stop()
             await catalog.loadIfNeeded(
                 query: query,
                 version: catalogVersion,
@@ -180,6 +183,7 @@ struct SongsView: View {
         .onChange(of: appModel.catalogRefreshGeneration) { _, _ in
             Task { await catalog.retry() }
         }
+        .onDisappear { artworkPrefetcher?.stop() }
         .onReceive(appModel.favoriteChanges) { change in
             guard change.accountID == appModel.myPIUAccount?.id,
                   change.version == catalogVersion else { return }
@@ -192,6 +196,17 @@ struct SongsView: View {
                 )
             }
         }
+    }
+
+    private func prefetchArtwork(near song: CatalogSong) {
+        if artworkPrefetcher == nil {
+            let pixelSize = 68 * displayScale
+            artworkPrefetcher = CatalogArtworkPrefetcher(
+                isCached: { RemoteImageCache.shared.cachedImage(for: $0, pixelSize: pixelSize) != nil },
+                load: { _ = await RemoteImageCache.shared.image(for: $0, pixelSize: pixelSize) }
+            )
+        }
+        artworkPrefetcher?.update(CatalogArtworkPrefetcher.nearbyURLs(songs: catalog.listing.songs, anchor: song.slug))
     }
 
     private var songList: some View {
@@ -218,6 +233,8 @@ struct SongsView: View {
                     }
                     .task(id: catalog.paginationGeneration) {
                         await catalog.loadMoreIfNeeded(after: song)
+                        guard !Task.isCancelled else { return }
+                        prefetchArtwork(near: song)
                     }
                 }
             } header: {
@@ -677,11 +694,12 @@ struct FavoriteButton: View {
 }
 
 struct CatalogArtwork: View {
+    @Environment(\.displayScale) private var displayScale
     let url: URL?
     let size: CGFloat
 
     var body: some View {
-        CachedRemoteImage(url: url) { image in
+        CachedRemoteImage(url: url, pixelSize: size * displayScale) { image in
             image
                 .resizable()
                 .scaledToFill()
