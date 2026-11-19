@@ -91,7 +91,7 @@ class PerformanceViewModel(
         val snapshot = mutableState.value
         val offset = snapshot.nextSessionOffset ?: return
         val scope = snapshot.accountScope ?: return
-        if (!snapshot.isConnected || sessionJob?.isActive == true || snapshot.isSessionLoading || snapshot.isSessionLoadingMore || sessionPaginationJob?.isActive == true) return
+        if (!snapshot.isConnected || snapshot.isSessionLoading || snapshot.isSessionLoadingMore || sessionPaginationJob?.isActive == true) return
         val generation = sessionGeneration
         val loadGeneration = sessionLoadGeneration
         sessionPaginationJob = viewModelScope.launch {

@@ -45,12 +45,16 @@ class PerformanceSessionsCacheViewModelTest {
             assertNull(model.state.value.nextSessionOffset)
             model.loadMoreSessions(); runCurrent()
             assertEquals(0, source.paginationCalls)
-            request.fresh(page("fresh")); request.finish(); runCurrent()
+            request.fresh(page("fresh")); runCurrent()
             assertEquals(20, model.state.value.nextSessionOffset)
             assertNull(model.state.value.sessionSavedAtEpochMillis)
             assertFalse(model.state.value.isSessionLoading)
             request.cached(CachedSessionsPage(page("late-saved"), 1000))
             assertEquals("fresh-session-0", model.state.value.sessions.first().id)
+            // Identity validation/storage may still be finishing after fresh rows arrive.
+            model.loadMoreSessions(); runCurrent()
+            assertEquals(1, source.paginationCalls)
+            request.finish(); runCurrent()
         } finally { source.close(); Dispatchers.resetMain() }
     }
 
