@@ -3,9 +3,11 @@ package com.austinkimchi.mypiu.ui
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceSession
 import com.austinkimchi.mypiu.core.model.PerformanceSessionsResponse
+import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.network.MyPiuApiException
 import com.austinkimchi.mypiu.core.performance.PerformanceDataSource
 import com.austinkimchi.mypiu.core.performance.PerformanceRefreshSignal
+import com.austinkimchi.mypiu.core.performance.CachedSessionsPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -26,6 +28,60 @@ import kotlin.coroutines.suspendCoroutine
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PerformanceViewModelTest {
+    @Test
+    fun resultArtworkVersionStaysWithEachPageInsteadOfAccountPreference() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val source = PendingSessionDataSource()
+            val model = PerformanceViewModel(source)
+            model.updateSession("one", true, PiuGameVersion.PHOENIX_2)
+            model.loadSession()
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("legacy", 20).copy(selectedVersion = "phoenix"))
+            runCurrent()
+            assertEquals(PiuGameVersion.PHOENIX, model.state.value.session?.resultVersion)
+            model.loadMoreSessions()
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("current", 40).copy(selectedVersion = "phoenix2"))
+            runCurrent()
+            model.loadMoreSessions()
+            runCurrent()
+            source.requests.removeFirst().resume(sessionPage("unknown").copy(selectedVersion = "future"))
+            runCurrent()
+            assertEquals(listOf(PiuGameVersion.PHOENIX, PiuGameVersion.PHOENIX_2, null),
+                model.state.value.sessions.map { it.resultVersion })
+            model.updateSession(null, false)
+            assertTrue(model.state.value.sessions.isEmpty())
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun cachedSessionKeepsItsVersionUntilFreshDataReplacesIt() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            lateinit var fresh: Continuation<PerformanceSessionsResponse>
+            val source = object : PerformanceDataSource {
+                override suspend fun dashboard() = dashboard("Player")
+                override suspend fun session(): MyPiuPerformanceSession? = null
+                override suspend fun firstSessionPage(accountId: String, onCached: (CachedSessionsPage) -> Unit,
+                    onFresh: (PerformanceSessionsResponse) -> Unit) {
+                    onCached(CachedSessionsPage(sessionPage("cached").copy(selectedVersion = "phoenix"), 123L))
+                    onFresh(suspendCoroutine { fresh = it })
+                }
+            }
+            val model = PerformanceViewModel(source)
+            model.updateSession("one", true, PiuGameVersion.PHOENIX_2)
+            model.loadSession()
+            runCurrent()
+            assertEquals(PiuGameVersion.PHOENIX, model.state.value.sessions.single().resultVersion)
+            assertEquals(123L, model.state.value.sessionSavedAtEpochMillis)
+            fresh.resume(sessionPage("fresh").copy(selectedVersion = "phoenix2"))
+            runCurrent()
+            assertEquals(PiuGameVersion.PHOENIX_2, model.state.value.sessions.single().resultVersion)
+            assertNull(model.state.value.sessionSavedAtEpochMillis)
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test
     fun connectedSessionLoadsAndRefreshesDashboard() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)

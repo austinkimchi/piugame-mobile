@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.austinkimchi.mypiu.core.model.JudgmentCounts
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceDashboard
 import com.austinkimchi.mypiu.core.model.MyPiuPerformanceSession
+import com.austinkimchi.mypiu.core.model.PiuGameVersion
 import com.austinkimchi.mypiu.core.model.RecentPlay
 import java.text.NumberFormat
 import java.time.Instant
@@ -462,6 +463,7 @@ private fun PerformancePlayRow(
 fun PerformancePlayDetailScreen(
     play: MyPiuPerformanceDashboard.Play,
     artworkUrl: String? = null,
+    resultVersion: PiuGameVersion? = null,
 ) {
     val failed = performancePlayIsFailed(play.grade, play.stageBreak)
     val score = if (failed) "FAILED" else formatActivityInteger(play.score)
@@ -501,7 +503,7 @@ fun PerformancePlayDetailScreen(
                         fontWeight = FontWeight.Black,
                         color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                     )
-                    Text(performanceGradeLabel(play.grade), style = MaterialTheme.typography.labelLarge)
+                    PerformanceResultArtwork(play, resultVersion)
                 }
             }
         }

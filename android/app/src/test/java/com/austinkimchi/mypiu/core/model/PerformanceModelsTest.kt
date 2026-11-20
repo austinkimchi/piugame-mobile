@@ -2,11 +2,30 @@ package com.austinkimchi.mypiu.core.model
 
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class PerformanceModelsTest {
     private val json = Json { ignoreUnknownKeys = true }
+
+    @Test
+    fun sessionResultVersionIsDerivedFromPageAndNeverChangesSerializedContract() {
+        val session = json.decodeFromString<PerformanceSessionResponse>(SESSION_FIXTURE).session!!
+        val page = PerformanceSessionsResponse(listOf(session), selectedVersion = "phoenix")
+        val decorated = page.copy(sessions = page.sessionsWithResultVersion())
+        assertEquals(PiuGameVersion.PHOENIX, decorated.sessions.single().resultVersion)
+        assertNull(page.sessions.single().resultVersion)
+        val encoder = Json { encodeDefaults = true }
+        val encoded = encoder.encodeToString(decorated)
+        assertFalse(encoded.contains("resultVersion"))
+        assertEquals(encoder.encodeToString(page), encoded)
+        val cached = encoder.decodeFromString<PerformanceSessionsResponse>(encoded)
+        assertNull(cached.sessions.single().resultVersion)
+        assertEquals(PiuGameVersion.PHOENIX, cached.sessionsWithResultVersion().single().resultVersion)
+        assertNull(decorated.copy(selectedVersion = "future-version").sessionsWithResultVersion().single().resultVersion)
+        assertNull(decorated.copy(selectedVersion = null).sessionsWithResultVersion().single().resultVersion)
+    }
 
     @Test
     fun dashboardDecodesPerformanceContract() {

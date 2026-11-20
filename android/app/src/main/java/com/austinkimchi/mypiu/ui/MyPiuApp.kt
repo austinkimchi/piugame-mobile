@@ -358,6 +358,7 @@ fun MyPiuApp(
                     PerformancePlayDetailScreen(
                         play = selectedSessionPlay,
                         artworkUrl = catalogViewModel.artworkUrl(selectedSessionPlay.songName),
+                        resultVersion = selectedPerformanceSession?.resultVersion,
                     )
                 }
                 destination == AppDestination.ACTIVITY && selectedPerformanceSession != null -> {
