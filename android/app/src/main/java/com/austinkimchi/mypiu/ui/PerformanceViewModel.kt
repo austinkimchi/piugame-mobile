@@ -108,7 +108,7 @@ class PerformanceViewModel(
                 mutableState.update { state ->
                     val knownIds = state.sessions.mapTo(mutableSetOf()) { it.id }
                     state.copy(
-                        sessions = state.sessions + page.sessions.filter { knownIds.add(it.id) },
+                        sessions = state.sessions + page.sessionsWithResultVersion().filter { knownIds.add(it.id) },
                         nextSessionOffset = page.nextOffset?.takeIf { it > offset },
                         isSessionLoadingMore = false,
                         sessionPaginationError = null,
@@ -211,22 +211,24 @@ class PerformanceViewModel(
             }
             try {
                 repository.firstSessionPage(scope.removePrefix("account:"), onCached = { cached ->
+                    val sessions = cached.page.sessionsWithResultVersion()
                     if (generation == sessionGeneration && loadGeneration == sessionLoadGeneration &&
                         mutableState.value.accountScope == scope) mutableState.update {
                         if (it.isSessionLoaded) it else it.copy(
-                            session = cached.page.sessions.firstOrNull(),
-                            sessions = cached.page.sessions.distinctBy { session -> session.id },
+                            session = sessions.firstOrNull(),
+                            sessions = sessions.distinctBy { session -> session.id },
                             nextSessionOffset = null,
                             isSessionLoaded = true,
                             sessionSavedAtEpochMillis = cached.savedAtEpochMillis,
                         )
                     }
                 }, onFresh = { page ->
+                    val sessions = page.sessionsWithResultVersion()
                     if (generation == sessionGeneration && loadGeneration == sessionLoadGeneration &&
                         mutableState.value.accountScope == scope) mutableState.update {
                         it.copy(
-                            session = page.sessions.firstOrNull(),
-                            sessions = page.sessions.distinctBy { session -> session.id },
+                            session = sessions.firstOrNull(),
+                            sessions = sessions.distinctBy { session -> session.id },
                             nextSessionOffset = page.nextOffset?.takeIf { offset -> offset > 0 },
                             isSessionLoading = false,
                             isSessionLoaded = true,

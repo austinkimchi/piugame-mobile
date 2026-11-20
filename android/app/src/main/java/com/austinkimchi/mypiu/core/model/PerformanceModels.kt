@@ -1,6 +1,7 @@
 package com.austinkimchi.mypiu.core.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class MyPiuPerformanceDashboard(
@@ -112,6 +113,8 @@ data class MyPiuPerformanceSession(
     val arcadeName: String? = null,
     val summary: Summary,
     val plays: List<MyPiuPerformanceDashboard.Play> = emptyList(),
+    // Presentation context comes from this page's selectedVersion, never a current account preference.
+    @Transient val resultVersion: PiuGameVersion? = null,
 ) {
     @Serializable
     data class Summary(
@@ -143,7 +146,12 @@ data class PerformanceSessionsResponse(
     val sessions: List<MyPiuPerformanceSession> = emptyList(),
     val nextOffset: Int? = null,
     val selectedVersion: String? = null,
-)
+) {
+    fun sessionsWithResultVersion(): List<MyPiuPerformanceSession> {
+        val version = PiuGameVersion.entries.firstOrNull { it.serialName == selectedVersion }
+        return sessions.map { it.copy(resultVersion = version) }
+    }
+}
 
 data class PerformanceProgressSummary(
     val clearedCharts: Int?,
