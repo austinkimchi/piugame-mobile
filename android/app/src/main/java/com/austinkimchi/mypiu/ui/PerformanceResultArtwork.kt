@@ -30,7 +30,7 @@ internal fun resultArtwork(
     version: PiuGameVersion?,
     stageBreak: Boolean = false,
 ): ResultArtwork {
-    if (stageBreak) return ResultArtwork(null, null)
+    if (stageBreak) return ResultArtwork(ResultArtworkBadge("Stage Break", "Stage Break", null), null)
     val resources = when (version) {
         PiuGameVersion.PHOENIX -> phoenixResults
         PiuGameVersion.PHOENIX_2 -> phoenix2Results

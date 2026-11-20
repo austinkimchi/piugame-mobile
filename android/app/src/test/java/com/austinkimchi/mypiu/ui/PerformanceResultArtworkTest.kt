@@ -50,7 +50,9 @@ class PerformanceResultArtworkTest {
         assertNull(missing.grade?.resourceId)
         assertNull(missing.plate)
         val interrupted = resultArtwork("sss_p", "pg", PiuGameVersion.PHOENIX_2, stageBreak = true)
-        assertNull(interrupted.grade)
+        assertEquals("Stage Break", interrupted.grade?.text)
+        assertEquals("Stage Break", interrupted.grade?.label)
+        assertNull(interrupted.grade?.resourceId)
         assertNull(interrupted.plate)
     }
 
