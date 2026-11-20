@@ -29,6 +29,8 @@ The generator stages the shared Safari extension and regenerates the checked-in 
 
 ## Development
 
+For ordinary edits or clean Git pulls, use `./scripts/dev-ios.sh check` followed by `./scripts/dev-ios.sh build` for an incremental Debug compile with a reusable cache. See the [native development loop](docs/native-development.md) for Simulator Run, SwiftUI previews, Android Live Edit, and explicit cache cleanup.
+
 Run the `MyPIU` scheme's tests on an available iPhone simulator in Xcode. Portable checks:
 
 ```sh

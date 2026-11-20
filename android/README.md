@@ -14,6 +14,8 @@ cd android
 
 The debug APK is written under `app/build/outputs/apk/debug/`.
 
+For ordinary edits, reuse `./gradlew :app:assembleDebug --build-cache` without cleaning first. See the [native development loop](../docs/native-development.md#android-incremental-iteration) for Compose Live Edit, Apply Changes, and deliberate cleanup.
+
 Release version and upload-key signing inputs are supplied through environment variables; ordinary local and pull-request builds remain unsigned. See the [Android beta checklist](../docs/android-beta.md) for the protected signed-bundle workflow and Play internal-test process.
 
 ## Security boundary
