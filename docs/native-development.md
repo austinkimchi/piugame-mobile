@@ -28,7 +28,9 @@ For interactive testing, open `ios/MyPIU.xcodeproj`, choose `MyPIU` and an exist
 
 Do not regenerate the project or clean the build on every edit. Run `./scripts/generate-ios-project.sh` when changing `ios/project.yml` or shared Safari extension sources/dependencies, and inspect the generated diff. It rewrites the Xcode project, so preserve any local signing edits first. Ordinary Swift changes to files already in the project need only an incremental build. New files must be included in the generated project.
 
-For isolated SwiftUI components, add fixture-backed `#Preview` declarations and use Xcode's Canvas/Live mode. Keep real account restoration, sync, and network calls out of preview fixtures. Previews are not yet set up throughout this repository. See [Apple's preview workflow](https://developer.apple.com/documentation/xcode/interacting-with-previews-in-the-canvas).
+For isolated SwiftUI components, use Xcode's Canvas/Live mode. Open `ios/MyPIU/Features/Songs/SongsView.swift` to select **Songs - Light** or **Songs - Dark, large text**. These Debug-only `#Preview` variants render the real catalog header and rows with synthetic songs and placeholder artwork; they do not instantiate account models or request images. Edit those components to inspect layout changes without signing in or loading the catalog. The dark variant includes the saved-data indicator and accessibility text size.
+
+Keep real account restoration, sync, and network calls out of additional preview fixtures. Full-screen navigation and loading behavior still require app testing. See [Apple's preview workflow](https://developer.apple.com/documentation/xcode/interacting-with-previews-in-the-canvas).
 
 ## Explicit iOS cache cleanup
 

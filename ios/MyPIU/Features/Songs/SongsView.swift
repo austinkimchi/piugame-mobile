@@ -238,16 +238,11 @@ struct SongsView: View {
                     }
                 }
             } header: {
-                HStack {
-                    Text("\(catalog.listing.total.formatted()) \(feed.resultLabel)")
-                    if catalog.isShowingCachedData {
-                        Spacer()
-                        Label("Saved", systemImage: "arrow.down.circle")
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 8)
-                .background(Color(uiColor: .systemBackground))
+                CatalogResultsHeader(
+                    total: catalog.listing.total,
+                    resultLabel: feed.resultLabel,
+                    isShowingCachedData: catalog.isShowingCachedData
+                )
             }
 
             if let refreshError = catalog.refreshError {
@@ -617,6 +612,25 @@ private struct FilterChip: View {
     }
 }
 
+private struct CatalogResultsHeader: View {
+    let total: Int
+    let resultLabel: String
+    let isShowingCachedData: Bool
+
+    var body: some View {
+        HStack {
+            Text("\(total.formatted()) \(resultLabel)")
+            if isShowingCachedData {
+                Spacer()
+                Label("Saved", systemImage: "arrow.down.circle")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 8)
+        .background(Color(uiColor: .systemBackground))
+    }
+}
+
 private struct CatalogSongRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let song: CatalogSong
@@ -722,3 +736,73 @@ struct CatalogArtwork: View {
         }
     }
 }
+
+#if DEBUG
+// Component previews deliberately avoid AppModel, account data, and remote artwork.
+private struct CatalogComponentsPreview: View {
+    let isShowingCachedData: Bool
+
+    private let songs = [
+        CatalogSong(
+            slug: "preview-rhythm",
+            title: "Preview Rhythm",
+            artist: "Fixture Artist",
+            supportedVersions: ["phoenix2"],
+            imagePath: nil,
+            bpm: "160",
+            chartSummary: ["S10", "S16", "D18"],
+            folder: "Preview Folder",
+            folderPosition: 1,
+            series: "PHOENIX2",
+            tags: [],
+            isPremium: false,
+            isFavorite: false,
+            recommendedChartToken: "S16"
+        ),
+        CatalogSong(
+            slug: "preview-long-title",
+            title: "A Long Synthetic Song Title for Layout Checks",
+            artist: "Another Fixture Artist with a Longer Name",
+            supportedVersions: ["phoenix2"],
+            imagePath: nil,
+            bpm: "185",
+            chartSummary: ["S8", "S13", "S18", "D16", "D21", "C2"],
+            folder: "Preview Folder",
+            folderPosition: 2,
+            series: "PHOENIX2",
+            tags: [],
+            isPremium: true,
+            isFavorite: false,
+            recommendedChartToken: nil
+        )
+    ]
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(songs) { song in
+                    CatalogSongRow(song: song)
+                }
+            } header: {
+                CatalogResultsHeader(
+                    total: songs.count,
+                    resultLabel: "songs",
+                    isShowingCachedData: isShowingCachedData
+                )
+            }
+        }
+        .listStyle(.plain)
+    }
+}
+
+#Preview("Songs - Light") {
+    CatalogComponentsPreview(isShowingCachedData: false)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Songs - Dark, large text") {
+    CatalogComponentsPreview(isShowingCachedData: true)
+        .preferredColorScheme(.dark)
+        .dynamicTypeSize(.accessibility1)
+}
+#endif
