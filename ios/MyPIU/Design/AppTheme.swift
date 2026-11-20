@@ -75,6 +75,7 @@ private actor ArtworkImageWorker {
     }
 
     func cachedResponse(for request: URLRequest) -> CachedURLResponse? {
+        guard !Task.isCancelled else { return nil }
         guard let response = responseCache.cachedResponse(for: request) else { return nil }
         guard validImageData(response.data),
               ((response.response as? HTTPURLResponse)?.statusCode ?? 200) < 400 else {
@@ -85,12 +86,14 @@ private actor ArtworkImageWorker {
     }
 
     func store(_ data: Data, response: URLResponse, for request: URLRequest) -> Bool {
+        guard !Task.isCancelled else { return false }
         guard validImageData(data) else { return false }
         responseCache.storeCachedResponse(CachedURLResponse(response: response, data: data), for: request)
         return true
     }
 
     func prepare(_ data: Data, pixelSize: Int?, for request: URLRequest) -> CGImage? {
+        guard !Task.isCancelled else { return nil }
         let image = decode(data, pixelSize)
         if image == nil { responseCache.removeCachedResponse(for: request) }
         return image
@@ -108,7 +111,7 @@ final class RemoteImageCache {
     typealias ImageDecoder = @Sendable (Data, Int?) -> CGImage?
     static let shared = RemoteImageCache()
 
-    private struct Key: Hashable {
+    private struct Key: Hashable, Sendable {
         let url: URL
         let pixelSize: Int?
         var cacheKey: NSString { "\(pixelSize ?? 0):\(url.absoluteString)" as NSString }
@@ -122,8 +125,23 @@ final class RemoteImageCache {
     private let images = NSCache<NSString, UIImage>()
     private let worker: ArtworkImageWorker
     private let loadData: DataLoader
-    private var inFlightImages: [Key: Task<UIImage?, Never>] = [:]
-    private var inFlightData: [URL: Task<Data?, Never>] = [:]
+
+    // Image viewers share a URL+size task; those tasks in turn subscribe to raw URL data.
+    // IDs keep a cancelled task's delayed cleanup from touching a replacement request.
+    private struct ImageFlight {
+        let id = UUID()
+        let task: Task<UIImage?, Never>
+        var subscribers: Set<UUID>
+    }
+
+    private struct DataFlight {
+        let id = UUID()
+        let task: Task<Data?, Never>
+        var subscribers: Set<UUID>
+    }
+
+    private var inFlightImages: [Key: ImageFlight] = [:]
+    private var inFlightData: [URL: DataFlight] = [:]
 
     init(responseCache: URLCache? = nil, loadData: DataLoader? = nil,
          decode: @escaping ImageDecoder = ArtworkImageDecoder.decode) {
@@ -152,39 +170,95 @@ final class RemoteImageCache {
         guard !Task.isCancelled else { return nil }
         let key = Key(url: url, pixelSize: pixelSize)
         if let cached = images.object(forKey: key.cacheKey) { return cached }
-        if let existing = inFlightImages[key] { return await existing.value }
 
-        // Same-size viewers share preparation; different sizes share the raw request.
-        // A canceled viewer cannot cancel artwork still needed by another visible row.
-        let task = Task<UIImage?, Never> { @MainActor in
-            guard let data = await data(for: url),
-                  let decoded = await worker.prepare(data, pixelSize: key.pixelSize, for: URLRequest(url: url)) else { return nil as UIImage? }
-            let image = UIImage(cgImage: decoded)
-            images.setObject(image, forKey: key.cacheKey, cost: ArtworkImageDecoder.decodedCost(decoded))
-            return image
+        let subscriber = UUID()
+        let flight: ImageFlight
+        if var existing = inFlightImages[key] {
+            existing.subscribers.insert(subscriber)
+            inFlightImages[key] = existing
+            flight = existing
+        } else {
+            let task = Task<UIImage?, Never> { @MainActor in
+                guard !Task.isCancelled, let data = await data(for: url), !Task.isCancelled,
+                      let decoded = await worker.prepare(data, pixelSize: key.pixelSize, for: URLRequest(url: url)),
+                      !Task.isCancelled else { return nil }
+                let image = UIImage(cgImage: decoded)
+                images.setObject(image, forKey: key.cacheKey, cost: ArtworkImageDecoder.decodedCost(decoded))
+                return image
+            }
+            flight = ImageFlight(task: task, subscribers: [subscriber])
+            inFlightImages[key] = flight
         }
-        inFlightImages[key] = task
-        let result = await task.value
-        inFlightImages[key] = nil
-        return result
+
+        let flightID = flight.id
+        defer { releaseImageSubscriber(subscriber, key: key, flightID: flightID) }
+        let result = await withTaskCancellationHandler {
+            await flight.task.value
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.releaseImageSubscriber(subscriber, key: key, flightID: flightID)
+            }
+        }
+        return Task.isCancelled ? nil : result
     }
 
     private func data(for url: URL) async -> Data? {
-        if let existing = inFlightData[url] { return await existing.value }
-        let task = Task<Data?, Never> { @MainActor in
-            let request = URLRequest(url: url)
-            if let cached = await worker.cachedResponse(for: request) { return cached.data }
-            do {
-                let (data, response) = try await loadData(request)
-                guard ((response as? HTTPURLResponse)?.statusCode ?? 200) < 400,
-                      await worker.store(data, response: response, for: request) else { return nil as Data? }
-                return data
-            } catch { return nil }
+        guard !Task.isCancelled else { return nil }
+        let subscriber = UUID()
+        let flight: DataFlight
+        if var existing = inFlightData[url] {
+            existing.subscribers.insert(subscriber)
+            inFlightData[url] = existing
+            flight = existing
+        } else {
+            let task = Task<Data?, Never> { @MainActor in
+                let request = URLRequest(url: url)
+                if let cached = await worker.cachedResponse(for: request), !Task.isCancelled { return cached.data }
+                guard !Task.isCancelled else { return nil }
+                do {
+                    let (data, response) = try await loadData(request)
+                    guard !Task.isCancelled, ((response as? HTTPURLResponse)?.statusCode ?? 200) < 400,
+                          await worker.store(data, response: response, for: request),
+                          !Task.isCancelled else { return nil }
+                    return data
+                } catch { return nil }
+            }
+            flight = DataFlight(task: task, subscribers: [subscriber])
+            inFlightData[url] = flight
         }
-        inFlightData[url] = task
-        let result = await task.value
-        inFlightData[url] = nil
-        return result
+
+        let flightID = flight.id
+        defer { releaseDataSubscriber(subscriber, url: url, flightID: flightID) }
+        let result = await withTaskCancellationHandler {
+            await flight.task.value
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.releaseDataSubscriber(subscriber, url: url, flightID: flightID)
+            }
+        }
+        return Task.isCancelled ? nil : result
+    }
+
+    private func releaseImageSubscriber(_ subscriber: UUID, key: Key, flightID: UUID) {
+        guard var flight = inFlightImages[key], flight.id == flightID,
+              flight.subscribers.remove(subscriber) != nil else { return }
+        if flight.subscribers.isEmpty {
+            inFlightImages[key] = nil
+            flight.task.cancel()
+        } else {
+            inFlightImages[key] = flight
+        }
+    }
+
+    private func releaseDataSubscriber(_ subscriber: UUID, url: URL, flightID: UUID) {
+        guard var flight = inFlightData[url], flight.id == flightID,
+              flight.subscribers.remove(subscriber) != nil else { return }
+        if flight.subscribers.isEmpty {
+            inFlightData[url] = nil
+            flight.task.cancel()
+        } else {
+            inFlightData[url] = flight
+        }
     }
 }
 
